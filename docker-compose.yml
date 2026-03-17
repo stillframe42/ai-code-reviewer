@@ -1,0 +1,26 @@
+services:
+  postgres:
+    # pgvector 사용 시 이미지를 아래로 교체:
+    # image: pgvector/pgvector:pg15
+    image: postgres:15
+    container_name: aireviewer-postgres
+    environment:
+      POSTGRES_DB: aireviewer
+      POSTGRES_USER: aireviewer
+      POSTGRES_PASSWORD: aireviewer
+    ports:
+      - "15432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      # pgvector 초기화 스크립트 자리표시자:
+      # - ./docker/init:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U aireviewer -d aireviewer"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+volumes:
+  postgres_data:
+    driver: local
