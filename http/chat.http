@@ -1,0 +1,17 @@
+### AI 채팅 메시지 전송
+# @name chat
+POST {{baseUrl}}/api/chat
+Content-Type: application/json
+
+{
+  "message": "안녕하세요! 코드 리뷰를 도와주세요."
+}
+
+### 빈 메시지 전송 (유효성 검증 오류 확인)
+# @name chat_blank_message
+POST {{baseUrl}}/api/chat
+Content-Type: application/json
+
+{
+  "message": ""
+}

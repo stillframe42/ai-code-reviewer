@@ -4,5 +4,8 @@ spring:
   ai:
     anthropic:
       api-key: ${anthropic.api-key}
+      chat:
+        options:
+          model: claude-haiku-4-5-20251001
     openai:
       api-key: ${openai.api-key}
