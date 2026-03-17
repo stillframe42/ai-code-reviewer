@@ -2,6 +2,9 @@ server:
   port: 8080
 
 spring:
+  jackson:
+    mapper:
+      accept-case-insensitive-enums: true
   config:
     import:
       - classpath:application-ai.yml          # AI 관련 설정

@@ -17,5 +17,5 @@ class ChatController(private val chatService: ChatService) {
 
     @PostMapping
     fun chat(@RequestBody @Valid request: ChatRequest): ResponseEntity<ChatResponse> =
-        ResponseEntity.ok(ChatResponse(answer = chatService.chat(request.message)))
+        ResponseEntity.ok(ChatResponse(answer = chatService.chat(request.message, request.provider ?: AiProvider.ANTHROPIC)))
 }

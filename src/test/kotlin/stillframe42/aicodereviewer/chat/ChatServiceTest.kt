@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test
 import org.assertj.core.api.Assertions.assertThat
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
+import stillframe42.aicodereviewer.chat.AiProvider
 
 // ChatService 통합 테스트 — 실제 AI API를 호출합니다.
 // 실제 API 키가 설정된 환경에서만 실행됩니다.
@@ -24,7 +25,7 @@ class ChatServiceTest {
             "실제 ANTHROPIC_API_KEY가 설정된 환경에서만 실행됩니다"
         )
 
-        val answer = chatService.chat("안녕하세요. 한 문장으로 자기소개 해주세요.")
+        val answer = chatService.chat("안녕하세요. 한 문장으로 자기소개 해주세요.", AiProvider.ANTHROPIC)
 
         assertThat(answer).isNotBlank()
     }

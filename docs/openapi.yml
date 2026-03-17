@@ -18,7 +18,7 @@ paths:
       tags:
         - chat
       summary: AI에게 메시지 전송
-      description: Anthropic Claude에게 메시지를 전송하고 응답을 반환합니다.
+      description: 지정된 AI 프로바이더에게 메시지를 전송하고 응답을 반환합니다. provider 생략 시 기본값은 ANTHROPIC입니다.
       operationId: chat
       requestBody:
         required: true
@@ -28,6 +28,7 @@ paths:
               $ref: '#/components/schemas/ChatRequest'
             example:
               message: "이 코드를 리뷰해줘"
+              provider: "ANTHROPIC"
       responses:
         '200':
           description: AI 응답 성공
@@ -65,6 +66,13 @@ paths:
 
 components:
   schemas:
+    AiProvider:
+      type: string
+      enum: [ANTHROPIC, OPENAI]
+      default: ANTHROPIC
+      description: "AI 응답 프로바이더. 생략 시 기본값은 ANTHROPIC"
+      example: "ANTHROPIC"
+
     ChatRequest:
       type: object
       required:
@@ -75,6 +83,8 @@ components:
           minLength: 1
           description: AI에게 전송할 메시지 (공백 불가)
           example: "이 코드를 리뷰해줘"
+        provider:
+          $ref: '#/components/schemas/AiProvider'
 
     ChatResponse:
       type: object

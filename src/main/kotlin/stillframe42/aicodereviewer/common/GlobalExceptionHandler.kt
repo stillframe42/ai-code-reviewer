@@ -1,5 +1,7 @@
 package stillframe42.aicodereviewer.common
 
+import org.springframework.core.Ordered
+import org.springframework.core.annotation.Order
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.http.converter.HttpMessageNotReadableException
@@ -7,7 +9,8 @@ import org.springframework.web.bind.MethodArgumentNotValidException
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.RestControllerAdvice
 
-// 전역 예외 처리 핸들러
+// 전역 예외 처리 핸들러 — Problem Details 자동 핸들러보다 높은 우선순위로 등록
+@Order(Ordered.HIGHEST_PRECEDENCE)
 @RestControllerAdvice
 class GlobalExceptionHandler {
 

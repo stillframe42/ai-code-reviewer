@@ -56,7 +56,26 @@ class ChatControllerTest {
 
         client.post().uri("/api/chat")
             .contentType(MediaType.APPLICATION_JSON)
-            .body("""{"message": "한 문장으로 답해주세요: 1+1은?"}""")
+            .body("""{"message": "한 문장으로 답해주세요: 1+1은?", "provider": "ANTHROPIC"}""")
+            .exchange()
+            .expectStatus().isOk
+            .expectBody()
+            .jsonPath("$.answer").exists()
+    }
+
+    @Test
+    fun `provider 생략 시 기본값 ANTHROPIC으로 200 OK 반환`() {
+        // 더미 키인 경우 테스트 스킵
+        val apiKey = System.getenv("ANTHROPIC_API_KEY")
+            ?: System.getProperty("anthropic.api-key")
+        assumeTrue(
+            apiKey != null && apiKey.isNotBlank() && apiKey != "test-dummy-key",
+            "실제 ANTHROPIC_API_KEY가 설정된 환경에서만 실행됩니다"
+        )
+
+        client.post().uri("/api/chat")
+            .contentType(MediaType.APPLICATION_JSON)
+            .body("""{"message": "한 문장으로 답해주세요: 2+2는?"}""")
             .exchange()
             .expectStatus().isOk
             .expectBody()
