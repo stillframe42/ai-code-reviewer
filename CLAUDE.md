@@ -87,6 +87,13 @@ chore: Gradle 의존성 버전 업데이트
 - **변수명/함수명**: 영어 (카멜케이스)
 - **클래스명**: 영어 (파스칼케이스)
 
+### Service 레이어 구조
+
+- Service 클래스는 반드시 **인터페이스와 구현 클래스로 분리**한다.
+- 구현 클래스 이름은 인터페이스 이름 앞에 `Default`를 붙인다.
+  - 예: `ChatService` (인터페이스) → `DefaultChatService` (구현 클래스)
+- Controller는 인터페이스 타입으로 의존한다 (`@Autowired ChatService chatService`).
+
 ---
 
 ## 패키지 구조
@@ -99,7 +106,8 @@ stillframe42.aicodereviewer/
 ├── common/          # 공통 컴포넌트 (예외 핸들러 등)
 └── {기능}/          # 기능별 패키지 (예: chat, review, github)
     ├── {기능}Controller.kt
-    ├── {기능}Service.kt
+    ├── {기능}Service.kt         # Service 인터페이스
+    ├── Default{기능}Service.kt  # Service 구현 클래스
     └── dto/
         ├── {기능}Request.kt
         └── {기능}Response.kt
