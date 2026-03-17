@@ -1,0 +1,105 @@
+openapi: 3.1.0
+info:
+  title: AI Code Reviewer API
+  description: GitHub PR 자동 코드 리뷰를 위한 AI 기반 REST API
+  version: 0.0.1
+
+servers:
+  - url: http://localhost:8080
+    description: 로컬 개발 서버
+
+tags:
+  - name: chat
+    description: AI 채팅 API
+
+paths:
+  /api/chat:
+    post:
+      tags:
+        - chat
+      summary: AI에게 메시지 전송
+      description: Anthropic Claude에게 메시지를 전송하고 응답을 반환합니다.
+      operationId: chat
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChatRequest'
+            example:
+              message: "이 코드를 리뷰해줘"
+      responses:
+        '200':
+          description: AI 응답 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatResponse'
+              example:
+                answer: "코드를 분석한 결과..."
+        '400':
+          description: 잘못된 요청 (유효성 검증 실패 또는 요청 본문 파싱 오류)
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/ValidationErrorResponse'
+                  - $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                validationError:
+                  summary: 필드 유효성 검증 실패
+                  value:
+                    message: "메시지를 입력해주세요"
+                parseError:
+                  summary: 요청 본문 파싱 오류
+                  value:
+                    error: "요청 본문을 읽을 수 없습니다. 필드 누락 또는 타입 오류를 확인해주세요"
+        '500':
+          description: 서버 내부 오류
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "서버 오류가 발생했습니다"
+
+components:
+  schemas:
+    ChatRequest:
+      type: object
+      required:
+        - message
+      properties:
+        message:
+          type: string
+          minLength: 1
+          description: AI에게 전송할 메시지 (공백 불가)
+          example: "이 코드를 리뷰해줘"
+
+    ChatResponse:
+      type: object
+      required:
+        - answer
+      properties:
+        answer:
+          type: string
+          description: AI의 응답 메시지
+          example: "코드를 분석한 결과..."
+
+    ValidationErrorResponse:
+      type: object
+      description: 필드별 유효성 검증 오류 응답 (필드명을 키로, 오류 메시지를 값으로 가지는 Map)
+      additionalProperties:
+        type: string
+      example:
+        message: "메시지를 입력해주세요"
+
+    ErrorResponse:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+          description: 오류 메시지
+          example: "서버 오류가 발생했습니다"

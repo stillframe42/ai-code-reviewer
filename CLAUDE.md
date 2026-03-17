@@ -86,7 +86,51 @@ chore: Gradle 의존성 버전 업데이트
 - **주석**: 한국어로 작성
 - **변수명/함수명**: 영어 (카멜케이스)
 - **클래스명**: 영어 (파스칼케이스)
-- **테스트**: 기능 추가 시 단위 테스트 함께 작성
+
+---
+
+## 패키지 구조
+
+기능(feature) 단위로 패키지를 구성한다.
+
+```
+stillframe42.aicodereviewer/
+├── config/          # 전역 빈 설정 (@Configuration)
+├── common/          # 공통 컴포넌트 (예외 핸들러 등)
+└── {기능}/          # 기능별 패키지 (예: chat, review, github)
+    ├── {기능}Controller.kt
+    ├── {기능}Service.kt
+    └── dto/
+        ├── {기능}Request.kt
+        └── {기능}Response.kt
+```
+
+---
+
+## OpenAPI 명세 관례
+
+- API 명세는 프로젝트 루트의 `openapi.yml` 파일에 **OpenAPI 3.1.0** 형식으로 유지한다.
+- **새 API를 추가하거나 기존 API를 변경할 때는 반드시 `openapi.yml`도 함께 업데이트한다.**
+- 스키마는 `components/schemas`에 별도로 정의하고 `$ref`로 참조한다 (인라인 작성 금지).
+- 에러 응답 스키마는 구조가 다를 경우 별도 스키마로 분리한다.
+  - 필드별 유효성 오류: `ValidationErrorResponse` (Map 구조)
+  - 단일 메시지 오류: `ErrorResponse` (`error` 필드)
+- 각 엔드포인트에는 `operationId`, `summary`, `description`, `tags`를 반드시 작성한다.
+- 가능한 모든 HTTP 응답 코드(`200`, `400`, `500` 등)에 대한 응답 스키마와 예시(`example`)를 포함한다.
+
+---
+
+## 테스트 관례
+
+- **코드를 생성할 때는 반드시 테스트 코드를 함께 작성한다.**
+- DTO 등 순수 로직 테스트: Spring 컨텍스트 없이 직접 단위 테스트
+- **Service 레이어 이상(Service, Controller)**: `@SpringBootTest` 통합 테스트로 작성한다. 통합 테스트 작성 시에 Mock 테스트 금지
+- Controller 통합 테스트는 `@SpringBootTest(webEnvironment = RANDOM_PORT)` + `@LocalServerPort` + `RestTestClient.bindToServer().baseUrl(...).build()` 사용
+  - `RestTestClient` 패키지: `org.springframework.test.web.servlet.client.RestTestClient`
+  - `@LocalServerPort` 패키지: `org.springframework.boot.test.web.server.LocalServerPort`
+  - 요청 바디는 `.body(value)` 사용 (`bodyValue()` 없음)
+  - `TestRestTemplate`, `MockMvc`/`@AutoConfigureMockMvc`, `@Autowired RestTestClient` 자동 주입은 Spring Boot 4에서 사용 불가
+- 외부 API 실호출이 필요한 테스트는 `assumeTrue`로 실제 키 존재 여부를 확인해 더미 키 환경에서는 자동 스킵한다
 
 ---
 
