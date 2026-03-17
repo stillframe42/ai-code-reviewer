@@ -32,6 +32,9 @@ src/main/resources/application-local.properties
 src/main/resources/application-dev.yml
 src/main/resources/application-prod.yml
 
+# 로컬 시크릿 파일 (API 키 등 민감 정보)
+src/main/resources/application-secret.yml
+
 # ===========================
 # OS
 # ===========================

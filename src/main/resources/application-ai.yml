@@ -1,0 +1,8 @@
+# AI 관련 설정
+# 실제 API 키는 application-secret.yml 또는 환경 변수에서 주입됩니다.
+spring:
+  ai:
+    anthropic:
+      api-key: ${anthropic.api-key}
+    openai:
+      api-key: ${openai.api-key}
