@@ -29,4 +29,21 @@ class ChatServiceTest {
 
         assertThat(answer).isNotBlank()
     }
+
+    @Test
+    fun `시스템 프롬프트가 적용되어 코드 리뷰어로서 응답한다`() {
+        val apiKey = System.getenv("ANTHROPIC_API_KEY")
+            ?: System.getProperty("anthropic.api-key")
+        assumeTrue(
+            apiKey != null && apiKey.isNotBlank() && apiKey != "test-dummy-key",
+            "실제 ANTHROPIC_API_KEY가 설정된 환경에서만 실행됩니다"
+        )
+
+        val answer = chatService.chat(
+            "다음 코드의 문제점을 한 줄로 말해주세요: fun add(a: Int, b: Int) = a + b",
+            AiProvider.ANTHROPIC
+        )
+
+        assertThat(answer).isNotBlank()
+    }
 }
