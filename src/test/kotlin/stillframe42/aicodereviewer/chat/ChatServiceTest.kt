@@ -1,5 +1,6 @@
 package stillframe42.aicodereviewer.chat
 
+import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.runBlocking
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Assumptions.assumeTrue
@@ -46,5 +47,21 @@ class ChatServiceTest {
         )
 
         assertThat(answer).isNotBlank()
+    }
+
+    @Test
+    fun `스트리밍으로 AI 응답을 토큰 단위로 수신한다`() = runBlocking {
+        val apiKey = System.getenv("ANTHROPIC_API_KEY")
+            ?: System.getProperty("anthropic.api-key")
+        assumeTrue(
+            apiKey != null && apiKey.isNotBlank() && apiKey != "test-dummy-key",
+            "실제 ANTHROPIC_API_KEY가 설정된 환경에서만 실행됩니다"
+        )
+
+        val tokens = chatService.streamChat("한 문장으로: 1+1은?", AiProvider.ANTHROPIC)
+            .toList()
+
+        assertThat(tokens).isNotEmpty
+        assertThat(tokens.joinToString("")).isNotBlank()
     }
 }

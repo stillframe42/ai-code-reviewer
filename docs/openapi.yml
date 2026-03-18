@@ -64,6 +64,56 @@ paths:
               example:
                 error: "서버 오류가 발생했습니다"
 
+  /api/chat/stream:
+    post:
+      tags:
+        - chat
+      summary: AI에게 메시지 전송 (SSE 스트리밍)
+      description: 지정된 AI 프로바이더에게 메시지를 전송하고 토큰 단위로 SSE 스트리밍 응답을 반환합니다. provider 생략 시 기본값은 ANTHROPIC입니다.
+      operationId: chatStream
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChatRequest'
+            example:
+              message: "이 코드를 리뷰해줘"
+              provider: "ANTHROPIC"
+      responses:
+        '200':
+          description: SSE 스트리밍 성공 (토큰 단위 응답)
+          content:
+            text/event-stream:
+              schema:
+                type: string
+              example: "data: 코드를\n\ndata: 분석한\n\ndata: 결과...\n\n"
+        '400':
+          description: 잘못된 요청 (유효성 검증 실패 또는 요청 본문 파싱 오류)
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/ValidationErrorResponse'
+                  - $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                validationError:
+                  summary: 필드 유효성 검증 실패
+                  value:
+                    message: "메시지를 입력해주세요"
+                parseError:
+                  summary: 요청 본문 파싱 오류
+                  value:
+                    error: "요청 본문을 읽을 수 없습니다. 필드 누락 또는 타입 오류를 확인해주세요"
+        '500':
+          description: 서버 내부 오류
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "서버 오류가 발생했습니다"
+
 components:
   schemas:
     AiProvider:
