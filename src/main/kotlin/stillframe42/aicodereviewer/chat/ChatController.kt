@@ -16,6 +16,6 @@ import stillframe42.aicodereviewer.chat.dto.ChatResponse
 class ChatController(private val chatService: ChatService) {
 
     @PostMapping
-    fun chat(@RequestBody @Valid request: ChatRequest): ResponseEntity<ChatResponse> =
+    suspend fun chat(@RequestBody @Valid request: ChatRequest): ResponseEntity<ChatResponse> =
         ResponseEntity.ok(ChatResponse(answer = chatService.chat(request.message, request.provider ?: AiProvider.ANTHROPIC)))
 }

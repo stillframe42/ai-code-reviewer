@@ -1,8 +1,9 @@
 package stillframe42.aicodereviewer.chat
 
+import kotlinx.coroutines.runBlocking
+import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Assumptions.assumeTrue
 import org.junit.jupiter.api.Test
-import org.assertj.core.api.Assertions.assertThat
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import stillframe42.aicodereviewer.chat.AiProvider
@@ -16,7 +17,7 @@ class ChatServiceTest {
     private lateinit var chatService: ChatService
 
     @Test
-    fun `실제 AI에게 메시지를 보내고 응답을 받는다`() {
+    fun `실제 AI에게 메시지를 보내고 응답을 받는다`() = runBlocking {
         // 더미 키("test-dummy-key")인 경우 테스트 스킵
         val apiKey = System.getenv("ANTHROPIC_API_KEY")
             ?: System.getProperty("anthropic.api-key")
@@ -31,7 +32,7 @@ class ChatServiceTest {
     }
 
     @Test
-    fun `시스템 프롬프트가 적용되어 코드 리뷰어로서 응답한다`() {
+    fun `시스템 프롬프트가 적용되어 코드 리뷰어로서 응답한다`() = runBlocking {
         val apiKey = System.getenv("ANTHROPIC_API_KEY")
             ?: System.getProperty("anthropic.api-key")
         assumeTrue(
