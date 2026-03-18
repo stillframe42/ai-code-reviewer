@@ -3,7 +3,8 @@ server:
 
 logging:
   level:
-    stillframe42.aicodereviewer: DEBUG
+    root: DEBUG
+    # stillframe42.aicodereviewer: DEBUG
     # Netty 4.2.x에서 macOS 네이티브 DNS 라이브러리 미지원으로 인한 오류 메시지 숨김
     # 실제 동작은 JVM 기본 DNS 폴백으로 정상 처리됨
     io.netty.resolver.dns.macos: OFF
