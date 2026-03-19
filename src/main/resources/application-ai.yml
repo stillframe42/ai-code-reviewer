@@ -7,5 +7,9 @@ spring:
       chat:
         options:
           model: claude-haiku-4-5-20251001
+          max-tokens: 4096
     openai:
       api-key: ${openai.api-key}
+      chat:
+        options:
+          max-tokens: 4096
