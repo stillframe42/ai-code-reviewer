@@ -15,14 +15,6 @@ spring:
       accept-case-insensitive-enums: true
   config:
     import:
+      - classpath:application-db.yml          # DB 관련 설정
       - classpath:application-ai.yml          # AI 관련 설정
       - optional:classpath:application-secret.yml  # 로컬 시크릿 (없어도 기동 가능)
-  datasource:
-    url: jdbc:h2:mem:devdb
-    driver-class-name: org.h2.Driver
-  jpa:
-    hibernate:
-      ddl-auto: create-drop
-  h2:
-    console:
-      enabled: true
