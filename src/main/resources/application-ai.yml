@@ -3,7 +3,7 @@
 
 app:
   prompt:
-    review-system: classpath:prompts/review-system-v2.st
+    review-system: classpath:prompts/review-system-v3.st
 
 spring:
   ai:
