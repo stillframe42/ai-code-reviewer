@@ -4,7 +4,7 @@ import org.springframework.ai.chat.client.ChatClient
 import org.springframework.ai.chat.prompt.PromptTemplate
 import org.springframework.core.io.Resource
 import org.springframework.stereotype.Component
-import stillframe42.aicodereviewer.chat.AiProvider
+import stillframe42.aicodereviewer.core.AiProvider
 
 // AI 서비스에서 공통으로 사용하는 프롬프트 빌드 로직을 캡슐화한 헬퍼 컴포넌트
 @Component
