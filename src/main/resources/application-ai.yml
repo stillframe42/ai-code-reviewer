@@ -1,5 +1,10 @@
 # AI 관련 설정
 # 실제 API 키는 application-secret.yml 또는 환경 변수에서 주입됩니다.
+
+app:
+  prompt:
+    review-system: classpath:prompts/review-system-v2.st
+
 spring:
   ai:
     anthropic:

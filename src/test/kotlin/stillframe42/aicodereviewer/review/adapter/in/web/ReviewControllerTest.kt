@@ -59,7 +59,7 @@ class ReviewControllerTest {
             .exchange()
             .expectStatus().isOk
             .expectBody()
-            .jsonPath("$.score").exists()
+            .jsonPath("$.overall_score").exists()
             .jsonPath("$.summary").exists()
             .jsonPath("$.issues").exists()
             .jsonPath("$.positives").exists()
@@ -80,7 +80,7 @@ class ReviewControllerTest {
             .exchange()
             .expectStatus().isOk
             .expectBody()
-            .jsonPath("$.score").exists()
+            .jsonPath("$.overall_score").exists()
             .jsonPath("$.summary").exists()
     }
 }

@@ -140,7 +140,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/CodeReviewResult'
               example:
-                score: 8
+                overall_score: 8
                 summary: "간단하고 명확한 덧셈 함수입니다. 특별한 문제는 없습니다."
                 issues: []
                 positives:
@@ -237,22 +237,36 @@ components:
 
     IssueSeverity:
       type: string
-      enum: [CRITICAL, WARNING, INFO]
-      description: "이슈 심각도. CRITICAL(버그/보안), WARNING(잠재적 문제), INFO(개선 제안)"
-      example: "WARNING"
+      enum: [CRITICAL, MAJOR, MINOR, SUGGESTION]
+      description: "이슈 심각도. CRITICAL(운영 장애/보안 취약점), MAJOR(잠재적 버그/성능 저하), MINOR(컨벤션/가독성), SUGGESTION(선택적 개선)"
+      example: "MAJOR"
+
+    IssueCategory:
+      type: string
+      enum: [PERFORMANCE, SECURITY, READABILITY, ARCHITECTURE]
+      description: "이슈 카테고리. PERFORMANCE(성능), SECURITY(보안), READABILITY(가독성), ARCHITECTURE(아키텍처)"
+      example: "PERFORMANCE"
 
     CodeIssue:
       type: object
       required:
+        - id
+        - category
         - severity
         - description
         - suggestion
       properties:
-        location:
+        id:
           type: string
+          description: 이슈 식별자 ('ISSUE-1', 'ISSUE-2' 형식)
+          example: "ISSUE-1"
+        category:
+          $ref: '#/components/schemas/IssueCategory'
+        line:
+          type: integer
           nullable: true
-          description: 이슈가 발생한 파일 경로 또는 코드 위치. 위치를 특정할 수 없으면 null
-          example: "Line 3"
+          description: 이슈가 발생한 라인 번호. 특정할 수 없으면 null
+          example: 3
         severity:
           $ref: '#/components/schemas/IssueSeverity'
         description:
@@ -267,12 +281,12 @@ components:
     CodeReviewResult:
       type: object
       required:
-        - score
+        - overall_score
         - summary
         - issues
         - positives
       properties:
-        score:
+        overall_score:
           type: integer
           minimum: 1
           maximum: 10

@@ -16,7 +16,7 @@ import stillframe42.aicodereviewer.review.domain.port.out.AiReviewPort
 class SpringAiReviewAdapter(
     private val promptBuilder: AiPromptBuilder,
 
-    @param:Value("classpath:prompts/review-system.st")
+    @param:Value("\${app.prompt.review-system}")
     private val systemPromptResource: Resource,
 
     @param:Value("classpath:prompts/review-user.st")

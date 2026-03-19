@@ -1,3 +1,7 @@
+app:
+  prompt:
+    review-system: classpath:prompts/review-system-v2.st
+
 spring:
   config:
     import:
