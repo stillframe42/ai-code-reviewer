@@ -11,6 +11,8 @@ servers:
 tags:
   - name: chat
     description: AI 채팅 API
+  - name: review
+    description: AI 코드 리뷰 API
 
 paths:
   /api/chat:
@@ -114,6 +116,62 @@ paths:
               example:
                 error: "서버 오류가 발생했습니다"
 
+  /api/review:
+    post:
+      tags:
+        - review
+      summary: 코드 구조화 리뷰 요청
+      description: 코드를 분석하여 점수, 요약, 이슈 목록, 긍정 평가를 포함한 구조화된 JSON 리뷰 결과를 반환합니다. provider 생략 시 기본값은 ANTHROPIC입니다.
+      operationId: reviewCode
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReviewRequest'
+            example:
+              code: "fun add(a: Int, b: Int) = a + b"
+              provider: "ANTHROPIC"
+      responses:
+        '200':
+          description: 구조화된 코드 리뷰 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CodeReviewResult'
+              example:
+                score: 8
+                summary: "간단하고 명확한 덧셈 함수입니다. 특별한 문제는 없습니다."
+                issues: []
+                positives:
+                  - "단일 표현식 함수로 간결하게 작성되었습니다"
+                  - "파라미터 타입이 명시적으로 선언되었습니다"
+        '400':
+          description: 잘못된 요청 (유효성 검증 실패 또는 요청 본문 파싱 오류)
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/ValidationErrorResponse'
+                  - $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                validationError:
+                  summary: 필드 유효성 검증 실패
+                  value:
+                    code: "코드를 입력해주세요"
+                parseError:
+                  summary: 요청 본문 파싱 오류
+                  value:
+                    error: "요청 본문을 읽을 수 없습니다. 필드 누락 또는 타입 오류를 확인해주세요"
+        '500':
+          description: 서버 내부 오류
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "서버 오류가 발생했습니다"
+
 components:
   schemas:
     AiProvider:
@@ -163,3 +221,76 @@ components:
           type: string
           description: 오류 메시지
           example: "서버 오류가 발생했습니다"
+
+    ReviewRequest:
+      type: object
+      required:
+        - code
+      properties:
+        code:
+          type: string
+          minLength: 1
+          description: 리뷰할 코드 (공백 불가)
+          example: "fun add(a: Int, b: Int) = a + b"
+        provider:
+          $ref: '#/components/schemas/AiProvider'
+
+    IssueSeverity:
+      type: string
+      enum: [CRITICAL, WARNING, INFO]
+      description: "이슈 심각도. CRITICAL(버그/보안), WARNING(잠재적 문제), INFO(개선 제안)"
+      example: "WARNING"
+
+    CodeIssue:
+      type: object
+      required:
+        - severity
+        - description
+        - suggestion
+      properties:
+        location:
+          type: string
+          nullable: true
+          description: 이슈가 발생한 파일 경로 또는 코드 위치. 위치를 특정할 수 없으면 null
+          example: "Line 3"
+        severity:
+          $ref: '#/components/schemas/IssueSeverity'
+        description:
+          type: string
+          description: 이슈에 대한 한국어 설명
+          example: "변수명이 너무 짧아 의도를 파악하기 어렵습니다"
+        suggestion:
+          type: string
+          description: 구체적인 개선 방법 또는 수정 코드 예시
+          example: "a, b 대신 firstNumber, secondNumber와 같이 명확한 이름을 사용하세요"
+
+    CodeReviewResult:
+      type: object
+      required:
+        - score
+        - summary
+        - issues
+        - positives
+      properties:
+        score:
+          type: integer
+          minimum: 1
+          maximum: 10
+          description: 전반적인 코드 품질 점수 (1~10, 10이 최고)
+          example: 8
+        summary:
+          type: string
+          description: 코드 전반에 대한 한국어 총평 요약
+          example: "간단하고 명확한 덧셈 함수입니다. 특별한 문제는 없습니다."
+        issues:
+          type: array
+          items:
+            $ref: '#/components/schemas/CodeIssue'
+          description: 발견된 이슈 목록. 이슈가 없으면 빈 배열
+        positives:
+          type: array
+          items:
+            type: string
+          description: 코드의 잘된 점 목록 (한국어). 없으면 빈 배열
+          example:
+            - "단일 표현식 함수로 간결하게 작성되었습니다"
