@@ -129,9 +129,22 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/ReviewRequest'
-            example:
-              code: "fun add(a: Int, b: Int) = a + b"
-              provider: "ANTHROPIC"
+            examples:
+              simpleCode:
+                summary: 일반 코드 리뷰
+                value:
+                  code: "fun add(a: Int, b: Int) = a + b"
+                  provider: "ANTHROPIC"
+              prDiff:
+                summary: PR diff 전처리 적용
+                value:
+                  code: "diff --git a/Foo.kt b/Foo.kt\n--- a/Foo.kt\n+++ b/Foo.kt\n@@ -1 +1 @@\n-old\n+new"
+                  provider: "ANTHROPIC"
+                  diffOptions:
+                    filterTestFiles: true
+                    filterLockFiles: true
+                    additionalExcludePatterns: ["generated/**"]
+                    contextLines: 0
       responses:
         '200':
           description: 구조화된 코드 리뷰 성공
@@ -230,10 +243,40 @@ components:
         code:
           type: string
           minLength: 1
-          description: 리뷰할 코드 (공백 불가)
+          description: 리뷰할 코드 또는 PR diff 문자열 (공백 불가)
           example: "fun add(a: Int, b: Int) = a + b"
         provider:
           $ref: '#/components/schemas/AiProvider'
+        diffOptions:
+          $ref: '#/components/schemas/DiffFilterOptions'
+
+    DiffFilterOptions:
+      type: object
+      description: PR diff 전처리 옵션. 제공 시 AI 전달 전 불필요한 청크·줄을 제거하여 토큰을 절감한다. 생략 시 전처리 없이 raw code 전달.
+      properties:
+        filterTestFiles:
+          type: boolean
+          default: true
+          description: "테스트 파일(*Test.kt, *Spec.kt 등) 제외 여부"
+          example: true
+        filterLockFiles:
+          type: boolean
+          default: true
+          description: "잠금 파일(*.lock, package-lock.json 등) 제외 여부"
+          example: true
+        additionalExcludePatterns:
+          type: array
+          items:
+            type: string
+          default: []
+          description: "추가 제외 glob 패턴 목록 (예: generated/**, **/*.pb.go)"
+          example: ["generated/**", "**/*.pb.go"]
+        contextLines:
+          type: integer
+          minimum: 0
+          default: 3
+          description: "변경 전후 유지할 context 줄 수. 0이면 +/- 줄만 전송 (최대 절감), 3이면 기본 unified diff 수준"
+          example: 0
 
     IssueSeverity:
       type: string

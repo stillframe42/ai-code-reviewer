@@ -18,6 +18,6 @@ class ReviewController(private val reviewUseCase: ReviewUseCase) {
     @PostMapping
     suspend fun review(@RequestBody @Valid request: ReviewRequest): ResponseEntity<CodeReview> =
         ResponseEntity.ok(
-            reviewUseCase.reviewCode(request.code, request.provider ?: AiProvider.ANTHROPIC)
+            reviewUseCase.reviewCode(request.code, request.provider ?: AiProvider.ANTHROPIC, request.diffOptions)
         )
 }
