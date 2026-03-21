@@ -1,6 +1,8 @@
 app:
   prompt:
     review-system: classpath:prompts/review-system-v2.st
+    chat-system: classpath:prompts/chat-system.st
+    chat-user: classpath:prompts/chat-user.st
 
 spring:
   config:

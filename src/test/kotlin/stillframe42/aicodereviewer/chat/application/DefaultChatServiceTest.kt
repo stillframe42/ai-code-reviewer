@@ -10,10 +10,10 @@ import org.springframework.boot.test.context.SpringBootTest
 import stillframe42.aicodereviewer.chat.domain.port.`in`.ChatUseCase
 import stillframe42.aicodereviewer.core.AiProvider
 
-// ChatService 통합 테스트 — 실제 AI API를 호출합니다.
+// DefaultChatService 통합 테스트 — 실제 AI API를 호출합니다.
 // 실제 API 키가 설정된 환경에서만 실행됩니다.
 @SpringBootTest
-class ChatServiceTest {
+class DefaultChatServiceTest {
 
     @Autowired
     private lateinit var chatUseCase: ChatUseCase

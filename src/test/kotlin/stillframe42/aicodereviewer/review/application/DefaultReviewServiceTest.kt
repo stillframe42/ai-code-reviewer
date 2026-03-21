@@ -9,10 +9,10 @@ import org.springframework.boot.test.context.SpringBootTest
 import stillframe42.aicodereviewer.core.AiProvider
 import stillframe42.aicodereviewer.review.domain.port.`in`.ReviewUseCase
 
-// ReviewService 통합 테스트 — 실제 AI API를 호출합니다.
+// DefaultReviewService 통합 테스트 — 실제 AI API를 호출합니다.
 // 실제 API 키가 설정된 환경에서만 실행됩니다.
 @SpringBootTest
-class ReviewServiceTest {
+class DefaultReviewServiceTest {
 
     @Autowired
     private lateinit var reviewUseCase: ReviewUseCase

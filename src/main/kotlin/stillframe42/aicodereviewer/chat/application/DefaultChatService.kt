@@ -8,7 +8,7 @@ import stillframe42.aicodereviewer.core.AiProvider
 
 // 채팅 유스케이스 구현 — AI 포트에 위임하며, 향후 이력 저장·사용량 제한 등 비즈니스 로직이 추가되는 레이어
 @Service
-class ChatService(private val aiChatPort: AiChatPort) : ChatUseCase {
+class DefaultChatService(private val aiChatPort: AiChatPort) : ChatUseCase {
 
     override suspend fun chat(message: String, provider: AiProvider): String =
         aiChatPort.chat(message, provider)

@@ -1,0 +1,351 @@
+openapi: 3.1.0
+info:
+  title: AI Code Reviewer API
+  description: Spring AI 기반 AI 코드 리뷰 자동화 시스템 API
+  version: 1.0.0
+
+tags:
+  - name: chat
+    description: AI 채팅 엔드포인트
+  - name: review
+    description: AI 코드 리뷰 엔드포인트
+
+paths:
+  /api/chat:
+    post:
+      operationId: chat
+      summary: 단일 채팅 응답
+      description: AI 프로바이더에게 메시지를 전달하고 단일 응답을 반환합니다.
+      tags:
+        - chat
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChatRequest'
+            example:
+              message: "다음 코드의 문제점을 알려주세요: fun add(a: Int, b: Int) = a + b"
+              provider: ANTHROPIC
+      responses:
+        '200':
+          description: AI 응답 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatResponse'
+              example:
+                answer: "해당 함수는 단순하지만 오버플로우 처리가 없습니다."
+        '400':
+          description: 요청 유효성 검증 실패
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationErrorResponse'
+              example:
+                errors:
+                  message: "메시지를 입력해주세요"
+        '500':
+          description: 서버 내부 오류
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "AI로부터 응답을 받지 못했습니다"
+
+  /api/chat/stream:
+    post:
+      operationId: streamChat
+      summary: SSE 스트리밍 채팅
+      description: AI 프로바이더에게 메시지를 전달하고 응답 토큰을 Server-Sent Events 형식으로 스트리밍합니다.
+      tags:
+        - chat
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChatRequest'
+            example:
+              message: "코루틴과 쓰레드의 차이를 설명해주세요"
+              provider: ANTHROPIC
+      responses:
+        '200':
+          description: SSE 스트림 시작 성공
+          content:
+            text/event-stream:
+              schema:
+                type: string
+                description: 토큰 단위로 전송되는 SSE 데이터 스트림
+              example: |
+                data: 코루틴은
+                data:  경량
+                data:  스레드입니다.
+        '400':
+          description: 요청 유효성 검증 실패
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationErrorResponse'
+              example:
+                errors:
+                  message: "메시지를 입력해주세요"
+        '500':
+          description: 서버 내부 오류
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "스트리밍 중 오류가 발생했습니다"
+
+  /api/review:
+    post:
+      operationId: reviewCode
+      summary: AI 코드 리뷰
+      description: |
+        코드(또는 Git diff)를 AI에 전달하여 구조화된 코드 리뷰 결과를 반환합니다.
+        `diffOptions`를 지정하면 테스트 파일·잠금 파일 필터링, context 줄 수 조절 등 diff 전처리가 적용됩니다.
+      tags:
+        - review
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReviewRequest'
+            example:
+              code: |
+                fun divide(a: Int, b: Int): Int {
+                    return a / b
+                }
+              provider: ANTHROPIC
+              diffOptions:
+                filterTestFiles: true
+                filterLockFiles: true
+                contextLines: 3
+      responses:
+        '200':
+          description: 코드 리뷰 결과 반환
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CodeReview'
+              example:
+                overall_score: 5
+                summary: "기본 동작은 올바르나 0으로 나누기 예외 처리가 누락되어 있습니다."
+                issues:
+                  - id: "issue-1"
+                    category: SECURITY
+                    line: 2
+                    severity: MAJOR
+                    description: "b가 0일 때 ArithmeticException이 발생합니다."
+                    suggestion: "b == 0 검사를 추가하거나 require(b != 0)을 사용하세요."
+                positives:
+                  - "함수 시그니처가 명확합니다."
+        '400':
+          description: 요청 유효성 검증 실패
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationErrorResponse'
+              example:
+                errors:
+                  code: "코드를 입력해주세요"
+        '500':
+          description: 서버 내부 오류
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "AI로부터 리뷰 결과를 받지 못했습니다"
+
+components:
+  schemas:
+    # ── 요청 스키마 ──────────────────────────────────────────────────────────
+
+    ChatRequest:
+      type: object
+      required:
+        - message
+      properties:
+        message:
+          type: string
+          minLength: 1
+          description: AI에게 전달할 메시지
+          example: "다음 코드의 문제점을 알려주세요"
+        provider:
+          $ref: '#/components/schemas/AiProvider'
+
+    ReviewRequest:
+      type: object
+      required:
+        - code
+      properties:
+        code:
+          type: string
+          minLength: 1
+          description: 리뷰할 코드 또는 Git diff 문자열
+          example: "fun add(a: Int, b: Int) = a + b"
+        provider:
+          $ref: '#/components/schemas/AiProvider'
+        diffOptions:
+          $ref: '#/components/schemas/DiffFilterOptions'
+
+    DiffFilterOptions:
+      type: object
+      description: PR diff 전처리 옵션 — AI에 전달하기 전 불필요한 파일·줄을 제거하는 동작을 제어합니다.
+      properties:
+        filterTestFiles:
+          type: boolean
+          default: true
+          description: 테스트 파일(*Test.kt, *Spec.kt 등) 제외 여부
+        filterLockFiles:
+          type: boolean
+          default: true
+          description: 잠금 파일(*.lock, package-lock.json 등) 제외 여부
+        additionalExcludePatterns:
+          type: array
+          items:
+            type: string
+          default: []
+          description: 사용자 정의 추가 제외 glob 패턴 목록
+          example: ["**/generated/**", "**/*.pb.go"]
+        contextLines:
+          type: integer
+          default: 3
+          minimum: 0
+          description: 변경 전후 유지할 context 줄 수 (0 = +/- 줄만)
+
+    # ── 응답 스키마 ──────────────────────────────────────────────────────────
+
+    ChatResponse:
+      type: object
+      required:
+        - answer
+      properties:
+        answer:
+          type: string
+          description: AI 응답 텍스트
+
+    CodeReview:
+      type: object
+      required:
+        - overall_score
+        - summary
+        - issues
+        - positives
+      properties:
+        overall_score:
+          type: integer
+          minimum: 1
+          maximum: 10
+          description: 코드 전체 품질 점수 (1 = 최하, 10 = 최상)
+        summary:
+          type: string
+          description: 코드 리뷰 총평
+        issues:
+          type: array
+          items:
+            $ref: '#/components/schemas/CodeIssue'
+          description: 발견된 이슈 목록
+        positives:
+          type: array
+          items:
+            type: string
+          description: 잘 작성된 부분 목록
+
+    CodeIssue:
+      type: object
+      required:
+        - id
+        - category
+        - severity
+        - description
+        - suggestion
+      properties:
+        id:
+          type: string
+          description: 이슈 고유 식별자
+          example: "issue-1"
+        category:
+          $ref: '#/components/schemas/IssueCategory'
+        line:
+          type: integer
+          nullable: true
+          description: 이슈가 발생한 줄 번호 (특정 줄을 지목할 수 없는 경우 null)
+        severity:
+          $ref: '#/components/schemas/IssueSeverity'
+        description:
+          type: string
+          description: 이슈 설명
+        suggestion:
+          type: string
+          description: 개선 제안
+
+    # ── 공통 열거형 ──────────────────────────────────────────────────────────
+
+    AiProvider:
+      type: string
+      enum:
+        - ANTHROPIC
+        - OPENAI
+      default: ANTHROPIC
+      description: 사용할 AI 프로바이더
+
+    IssueSeverity:
+      type: string
+      enum:
+        - CRITICAL
+        - MAJOR
+        - MINOR
+        - SUGGESTION
+      description: |
+        이슈 심각도:
+        - `CRITICAL`: 운영 장애 / 보안 취약점 — 즉시 수정 필수
+        - `MAJOR`: 잠재적 버그 / 성능 저하 — 머지 전 수정 권고
+        - `MINOR`: 컨벤션 / 가독성 — 수정 권장
+        - `SUGGESTION`: 선택적 개선 / 리팩토링 아이디어
+
+    IssueCategory:
+      type: string
+      enum:
+        - PERFORMANCE
+        - SECURITY
+        - READABILITY
+        - ARCHITECTURE
+      description: |
+        이슈 카테고리:
+        - `PERFORMANCE`: N+1 쿼리, 비효율적 시간복잡도, 캐싱 누락
+        - `SECURITY`: SQL Injection, 인증/인가 누락, 민감정보 노출
+        - `READABILITY`: 불명확한 네이밍, 함수 길이 초과, 매직넘버
+        - `ARCHITECTURE`: SRP 위반, 레이어 의존성 역전, 과도한 결합
+
+    # ── 에러 응답 ────────────────────────────────────────────────────────────
+
+    ErrorResponse:
+      type: object
+      description: 단일 메시지 오류 응답
+      required:
+        - error
+      properties:
+        error:
+          type: string
+          description: 오류 메시지
+
+    ValidationErrorResponse:
+      type: object
+      description: 필드별 유효성 검증 오류 응답
+      required:
+        - errors
+      properties:
+        errors:
+          type: object
+          additionalProperties:
+            type: string
+          description: 필드명 → 오류 메시지 맵
+          example:
+            message: "메시지를 입력해주세요"
+            code: "코드를 입력해주세요"

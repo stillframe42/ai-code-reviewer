@@ -3,7 +3,9 @@
 
 app:
   prompt:
-    review-system: classpath:prompts/review-system-v1.st
+    review-system: classpath:prompts/review-system-v1.st   # v1 유지 (벤치마크 최고 성능)
+    chat-system: classpath:prompts/chat-system.st
+    chat-user: classpath:prompts/chat-user.st
 
 spring:
   ai:

@@ -16,10 +16,10 @@ import stillframe42.aicodereviewer.core.AiProvider
 class SpringAiChatAdapter(
     private val promptBuilder: AiPromptBuilder,
 
-    @param:Value("classpath:prompts/chat-system.st")
+    @param:Value("\${app.prompt.chat-system}")
     private val systemPromptResource: Resource,
 
-    @param:Value("classpath:prompts/chat-user.st")
+    @param:Value("\${app.prompt.chat-user}")
     private val userPromptResource: Resource,
 ) : AiChatPort {
 
