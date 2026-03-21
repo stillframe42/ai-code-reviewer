@@ -11,7 +11,7 @@ object BenchmarkResultStore {
 
     // 등록된 버전 추적 — 마지막 버전인지 판단에 사용
     private val completedVersions = CopyOnWriteArrayList<String>()
-    private val allVersions = listOf("v1", "v2", "v3")
+    private val allVersions = listOf("v1", "v2", "v3", "v4")
 
     fun addResult(result: PromptBenchmarkResult) {
         results.add(result)
