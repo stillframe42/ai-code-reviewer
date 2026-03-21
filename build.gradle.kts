@@ -75,6 +75,9 @@ tasks.withType<Test> {
         showStandardStreams = true
     }
 
+    // byte-buddy(Mockito) 동적 에이전트 로딩 경고 억제 (JDK 21+)
+    jvmArgs("-XX:+EnableDynamicAgentLoading")
+
     // ANTHROPIC_API_KEY 변경 시 Gradle 캐시 무효화 (up-to-date 방지)
     inputs.property("anthropicApiKey", System.getenv("ANTHROPIC_API_KEY") ?: "")
 }
