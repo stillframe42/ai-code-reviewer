@@ -69,4 +69,12 @@ tasks.withType<KotlinCompile> {
 
 tasks.withType<Test> {
     useJUnitPlatform()
+
+    // 테스트 stdout(println) 콘솔에 출력
+    testLogging {
+        showStandardStreams = true
+    }
+
+    // ANTHROPIC_API_KEY 변경 시 Gradle 캐시 무효화 (up-to-date 방지)
+    inputs.property("anthropicApiKey", System.getenv("ANTHROPIC_API_KEY") ?: "")
 }

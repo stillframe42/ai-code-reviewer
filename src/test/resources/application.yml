@@ -7,9 +7,17 @@ spring:
     import:
       - classpath:application-db.yml  # 테스트용 DB 설정
 
-  # Spring AI 테스트용 더미 API 키 (실제 호출 없음)
+  # 환경변수가 있으면 실제 키 사용, 없으면 더미 키 폴백 (실제 AI 호출 스킵됨)
+  # application-ai.yml을 import하지 않으므로 모델 설정을 여기서 명시 (미설정 시 Spring AI 기본값 사용)
   ai:
     anthropic:
-      api-key: test-dummy-key
+      api-key: ${ANTHROPIC_API_KEY:test-dummy-key}
+      chat:
+        options:
+          model: claude-haiku-4-5-20251001
+          max-tokens: 4096
     openai:
-      api-key: test-dummy-key
+      api-key: ${OPENAI_API_KEY:test-dummy-key}
+      chat:
+        options:
+          max-tokens: 4096
