@@ -2,19 +2,16 @@ package stillframe42.aicodereviewer.github.adapter.out.github
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.stereotype.Component
-import org.springframework.web.reactive.function.client.WebClient
-import org.springframework.web.reactive.function.client.awaitBody
-import stillframe42.aicodereviewer.github.adapter.out.github.dto.InstallationTokenResponse
 import stillframe42.aicodereviewer.github.domain.port.out.GitHubTokenPort
+import stillframe42.aicodereviewer.github.infrastructure.GitHubHttpClient
 import java.time.Instant
 import java.util.concurrent.ConcurrentHashMap
 
 // GitHub App Installation Access Token 발급 및 캐싱
 @Component
 class GitHubAppTokenProvider(
-    @param:Qualifier("gitHubWebClient") private val webClient: WebClient,
+    private val gitHubHttpClient: GitHubHttpClient,
     private val jwtGenerator: GitHubAppJwtGenerator,
 ) : GitHubTokenPort {
 
@@ -33,12 +30,7 @@ class GitHubAppTokenProvider(
     private suspend fun fetchAndCacheToken(installationId: Long): String =
         withContext(Dispatchers.IO) {
             val jwt = jwtGenerator.generate()
-
-            val response = webClient.post()
-                .uri("/app/installations/{id}/access_tokens", installationId)
-                .header("Authorization", "Bearer $jwt")
-                .retrieve()
-                .awaitBody<InstallationTokenResponse>()
+            val response = gitHubHttpClient.fetchInstallationToken(installationId, jwt)
 
             val cached = CachedToken(
                 token = response.token,
