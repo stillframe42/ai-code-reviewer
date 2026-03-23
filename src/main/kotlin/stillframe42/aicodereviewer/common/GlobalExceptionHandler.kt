@@ -8,6 +8,7 @@ import org.springframework.http.converter.HttpMessageNotReadableException
 import org.springframework.web.bind.MethodArgumentNotValidException
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.RestControllerAdvice
+import org.springframework.web.servlet.resource.NoResourceFoundException
 
 // 전역 예외 처리 핸들러 — Problem Details 자동 핸들러보다 높은 우선순위로 등록
 @Order(Ordered.HIGHEST_PRECEDENCE)
@@ -25,6 +26,12 @@ class GlobalExceptionHandler {
     @ExceptionHandler(HttpMessageNotReadableException::class)
     fun handleMessageNotReadable(ex: HttpMessageNotReadableException): ResponseEntity<Map<String, String>> =
         ResponseEntity.badRequest().body(mapOf("error" to "요청 본문을 읽을 수 없습니다. 필드 누락 또는 타입 오류를 확인해주세요"))
+
+    // 존재하지 않는 경로 요청 시 404 Not Found 반환
+    @ExceptionHandler(NoResourceFoundException::class)
+    fun handleNoResourceFound(ex: NoResourceFoundException): ResponseEntity<Map<String, String>> =
+        ResponseEntity.status(HttpStatus.NOT_FOUND)
+            .body(mapOf("error" to "요청한 경로를 찾을 수 없습니다: ${ex.resourcePath}"))
 
     // 일반 예외 처리 — 500 Internal Server Error 반환
     @ExceptionHandler(Exception::class)
