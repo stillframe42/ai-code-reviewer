@@ -1,0 +1,7 @@
+github:
+  app:
+    private-key-path: secrets/stillframe42-ai-code-reviewer.2026-03-22.private-key.pem
+    app-id: 0
+    webhook-secret: dummy-secret
+  api:
+    base-url: https://api.github.com

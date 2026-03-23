@@ -17,4 +17,5 @@ spring:
     import:
       - classpath:application-db.yml          # DB 관련 설정
       - classpath:application-ai.yml          # AI 관련 설정
+      - classpath:application-github.yml      # Github 관련 설정
       - optional:classpath:application-secret.yml  # 로컬 시크릿 (없어도 기동 가능)
