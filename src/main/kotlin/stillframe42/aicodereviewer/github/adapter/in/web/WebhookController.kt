@@ -5,6 +5,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Qualifier
+import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
@@ -36,7 +37,7 @@ class WebhookController(
         // 1단계: HMAC-SHA256 서명 검증
         if (!signatureVerifier.verify(body.toByteArray(Charsets.UTF_8), signature)) {
             logger.warn("Webhook 서명 검증 실패: event={}", eventType)
-            return ResponseEntity.status(401).build()
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build()
         }
 
         // 2단계: pull_request 이벤트만 처리, 나머지는 무시
