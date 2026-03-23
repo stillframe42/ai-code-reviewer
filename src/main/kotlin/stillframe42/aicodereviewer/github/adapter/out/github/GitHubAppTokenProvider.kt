@@ -1,0 +1,56 @@
+package stillframe42.aicodereviewer.github.adapter.out.github
+
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import org.springframework.beans.factory.annotation.Qualifier
+import org.springframework.stereotype.Component
+import org.springframework.web.reactive.function.client.WebClient
+import org.springframework.web.reactive.function.client.awaitBody
+import stillframe42.aicodereviewer.github.adapter.out.github.dto.InstallationTokenResponse
+import stillframe42.aicodereviewer.github.domain.port.out.GitHubTokenPort
+import java.time.Instant
+import java.util.concurrent.ConcurrentHashMap
+
+// GitHub App Installation Access Token 발급 및 캐싱
+@Component
+class GitHubAppTokenProvider(
+    @param:Qualifier("gitHubWebClient") private val webClient: WebClient,
+    private val jwtGenerator: GitHubAppJwtGenerator,
+) : GitHubTokenPort {
+
+    // 토큰 캐시 — installationId → CachedToken
+    private val tokenCache = ConcurrentHashMap<Long, CachedToken>()
+
+    override suspend fun getInstallationToken(installationId: Long): String {
+        // 유효한 캐시가 있으면 즉시 반환
+        tokenCache[installationId]
+            ?.takeUnless { it.isExpiredOrExpiringSoon() }
+            ?.let { return it.token }
+
+        return fetchAndCacheToken(installationId)
+    }
+
+    private suspend fun fetchAndCacheToken(installationId: Long): String =
+        withContext(Dispatchers.IO) {
+            val jwt = jwtGenerator.generate()
+
+            val response = webClient.post()
+                .uri("/app/installations/{id}/access_tokens", installationId)
+                .header("Authorization", "Bearer $jwt")
+                .retrieve()
+                .awaitBody<InstallationTokenResponse>()
+
+            val cached = CachedToken(
+                token = response.token,
+                expiresAt = Instant.parse(response.expiresAt),
+            )
+            tokenCache[installationId] = cached
+            response.token
+        }
+
+    // 만료 5분 전이면 갱신 대상으로 판단
+    internal data class CachedToken(val token: String, val expiresAt: Instant) {
+        fun isExpiredOrExpiringSoon(): Boolean =
+            Instant.now().isAfter(expiresAt.minusSeconds(300))
+    }
+}
