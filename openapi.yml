@@ -9,6 +9,8 @@ tags:
     description: AI 채팅 엔드포인트
   - name: review
     description: AI 코드 리뷰 엔드포인트
+  - name: webhook
+    description: GitHub Webhook 수신 엔드포인트
 
 paths:
   /api/chat:
@@ -161,6 +163,62 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
               example:
                 error: "AI로부터 리뷰 결과를 받지 못했습니다"
+
+  /api/github/webhook:
+    post:
+      operationId: handleGitHubWebhook
+      summary: GitHub Webhook 수신
+      description: |
+        GitHub App Webhook 이벤트를 수신합니다.
+        X-Hub-Signature-256 헤더로 HMAC-SHA256 서명을 검증하며,
+        pull_request 이벤트(opened, synchronize, reopened)에 대해 AI 코드 리뷰를 비동기로 실행합니다.
+        처리는 fire-and-forget 방식이므로 즉시 202를 반환합니다.
+      tags:
+        - webhook
+      parameters:
+        - in: header
+          name: X-Hub-Signature-256
+          required: true
+          schema:
+            type: string
+          description: "HMAC-SHA256 서명 (형식: sha256=<hex>)"
+          example: "sha256=abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890"
+        - in: header
+          name: X-GitHub-Event
+          required: true
+          schema:
+            type: string
+          description: "GitHub 이벤트 타입 (예: pull_request, ping)"
+          example: "pull_request"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GitHubWebhookPayload'
+            example:
+              action: "opened"
+              installation:
+                id: 12345678
+              repository:
+                full_name: "owner/repo"
+              pull_request:
+                number: 42
+                head:
+                  sha: "abc123def456"
+      responses:
+        '202':
+          description: Webhook 수신 완료, AI 코드 리뷰 비동기 처리 시작 (pull_request 이벤트)
+        '200':
+          description: Webhook 수신 완료, 처리 없이 무시 (지원하지 않는 이벤트 타입 또는 action)
+        '401':
+          description: HMAC-SHA256 서명 검증 실패
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "Webhook 서명 검증에 실패했습니다"
 
 components:
   schemas:
@@ -322,6 +380,58 @@ components:
         - `SECURITY`: SQL Injection, 인증/인가 누락, 민감정보 노출
         - `READABILITY`: 불명확한 네이밍, 함수 길이 초과, 매직넘버
         - `ARCHITECTURE`: SRP 위반, 레이어 의존성 역전, 과도한 결합
+
+    GitHubWebhookPayload:
+      type: object
+      description: GitHub pull_request Webhook 페이로드
+      required:
+        - action
+        - installation
+        - repository
+        - pull_request
+      properties:
+        action:
+          type: string
+          description: "PR 이벤트 액션 타입 (opened, synchronize, reopened 등)"
+          example: "opened"
+        installation:
+          type: object
+          required:
+            - id
+          properties:
+            id:
+              type: integer
+              format: int64
+              description: GitHub App 설치 ID
+              example: 12345678
+        repository:
+          type: object
+          required:
+            - full_name
+          properties:
+            full_name:
+              type: string
+              description: "레포지토리 전체 이름 (owner/repo 형식)"
+              example: "octocat/Hello-World"
+        pull_request:
+          type: object
+          required:
+            - number
+            - head
+          properties:
+            number:
+              type: integer
+              description: PR 번호
+              example: 42
+            head:
+              type: object
+              required:
+                - sha
+              properties:
+                sha:
+                  type: string
+                  description: 최신 커밋 SHA
+                  example: "abc123def456"
 
     # ── 에러 응답 ────────────────────────────────────────────────────────────
 
