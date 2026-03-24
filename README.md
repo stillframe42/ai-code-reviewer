@@ -43,15 +43,15 @@
 │  │  POST /api/chat/   │  │                    │             │
 │  │       stream (SSE) │  │                    │             │
 │  └────────┬───────────┘  └──────────┬─────────┘             │
-│           │ ChatUseCase             │ ReviewUseCase          │
+│           │ ChatUseCase             │ ReviewUseCase         │
 │  ┌────────▼───────────┐  ┌──────────▼─────────┐             │
 │  │ DefaultChatService │  │DefaultReviewService│  Application│
 │  └────────┬───────────┘  └──────────┬─────────┘             │
-│           │ AiChatPort              │ AiReviewPort           │
-│  ┌────────▼───────────────────────── ▼─────────┐             │
+│           │ AiChatPort              │ AiReviewPort          │
+│  ┌────────▼───────────────────────── ▼─────────┐            │
 │  │         SpringAiChatAdapter / SpringAiReviewAdapter      │
 │  │                  (Outbound Adapters)                     │
-│  └─────────────────────────────────────────────┘             │
+│  └─────────────────────────────────────────────┘            │
 │                         │                                   │
 │                    Spring AI                                │
 │              (Anthropic Claude / OpenAI)                    │
@@ -370,7 +370,7 @@ ANTHROPIC_API_KEY=sk-ant-... ./gradlew test --tests "*.benchmark.*"
 
 ```
 ╔══════════════════════════════════════════════╗
-║       프롬프트 버전별 벤치마크 통합 결과          ║
+║       프롬프트 버전별 벤치마크 통합 결과             ║
 ╚══════════════════════════════════════════════╝
 시스템 프롬프트 토큰 추정: v1=35 / v2=290 / v3=240 / v4=61
 

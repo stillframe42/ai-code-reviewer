@@ -1,5 +1,6 @@
 package stillframe42.aicodereviewer.review.application
 
+import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import stillframe42.aicodereviewer.config.ReviewProperties
 import stillframe42.aicodereviewer.core.AiProvider
@@ -30,10 +31,16 @@ class DefaultReviewService(
                     reviewProperties.diff.additionalExcludePatterns,
                 maxTokens = diffOptions.maxTokens ?: reviewProperties.diff.maxTokens,
             )
-            diffPreprocessor.preprocess(code, merged).diff
+            val preprocessResult = diffPreprocessor.preprocess(code, merged)
+            logger.debug("=== 전처리된 diff (AI 전달 내용) ===\n{}", preprocessResult.diff)
+            preprocessResult.diff
         } else {
             code
         }
         return aiReviewPort.reviewCode(processedCode, provider)
+    }
+
+    companion object {
+        private val logger = LoggerFactory.getLogger(DefaultReviewService::class.java)
     }
 }

@@ -76,12 +76,12 @@ class DiffPreprocessor {
 
         // 7. INFO 로그 출력
         log.info(
-            "Diff 전처리 완료: {}토큰 → {}토큰 ({}% 절감, 제외 파일 {}개: {})",
+            "전처리 완료 — 토큰: {} → {} ({}% 절감), 제외 파일: {}개",
             tokensBefore, tokensAfter,
             if (tokensBefore > 0) (tokensBefore - tokensAfter) * 100 / tokensBefore else 0,
             filteredFiles.size,
-            filteredFiles,
         )
+        filteredFiles.forEach { log.info("  제외: {}", it) }
 
         return DiffPreprocessResult(
             diff = resultDiff,

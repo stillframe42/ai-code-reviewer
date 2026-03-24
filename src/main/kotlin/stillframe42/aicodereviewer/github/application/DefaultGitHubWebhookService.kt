@@ -8,6 +8,7 @@ import stillframe42.aicodereviewer.github.domain.port.`in`.GitHubWebhookUseCase
 import stillframe42.aicodereviewer.github.domain.port.out.GitHubApiPort
 import stillframe42.aicodereviewer.github.domain.port.out.ProcessedEventPort
 import stillframe42.aicodereviewer.github.domain.port.out.ReviewCommentFormatterPort
+import stillframe42.aicodereviewer.review.domain.model.DiffFilterOptions
 import stillframe42.aicodereviewer.review.domain.port.`in`.ReviewUseCase
 
 // GitHub Webhook 유스케이스 구현 — PR 이벤트 수신 시 diff 조회 → AI 리뷰 → 코멘트 등록 흐름을 조율한다
@@ -39,7 +40,7 @@ class DefaultGitHubWebhookService(
             return
         }
 
-        // 1단계: PR diff 조회
+        // 1단계: PR diff 및 변경 파일 목록 조회
         val prDiff = gitHubApiPort.getPrDiff(
             repositoryFullName = event.repositoryFullName,
             pullRequestNumber = event.pullRequestNumber,
@@ -55,10 +56,11 @@ class DefaultGitHubWebhookService(
             return
         }
 
-        // 2단계: AI 코드 리뷰 실행
+        // 2단계: AI 코드 리뷰 실행 (전처리 활성화)
         val review = reviewUseCase.reviewCode(
             code = prDiff,
             provider = AiProvider.ANTHROPIC,
+            diffOptions = DiffFilterOptions(),
         )
 
         // 3단계: 마크다운 포맷 변환 후 PR 코멘트 등록
