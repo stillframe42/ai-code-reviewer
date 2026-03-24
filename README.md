@@ -197,6 +197,46 @@ curl -X POST http://localhost:8080/api/review \
 }
 ```
 
+#### `diffOptions` 파라미터
+
+`diffOptions`를 생략하면 전처리 없이 raw 코드가 AI에 전달됩니다.
+
+| 파라미터 | 타입 | 기본값 | 설명 |
+|---------|------|--------|------|
+| `filterTestFiles` | boolean | `true` | `*Test.kt`, `*Spec.kt` 등 테스트 파일 제외 |
+| `filterLockFiles` | boolean | `true` | `*.lock`, `package-lock.json` 등 잠금 파일 제외 |
+| `additionalExcludePatterns` | string[] | `[]` | 추가 제외 glob 패턴 목록 |
+| `contextLines` | integer | `3` | 변경 전후 유지할 context 줄 수 (0 = +/- 줄만) |
+| `maxTokens` | integer? | `null` | 최대 허용 토큰 수 — 초과 시 변경량이 적은 청크부터 제거 |
+| `strategyOverrides` | Map | `{}` | 파일별 리뷰 전략 오버라이드 (glob 패턴 → `FileReviewStrategy`) |
+
+#### `strategyOverrides` 사용 예시
+
+`FileExtensionClassifier`의 자동 분류를 덮어쓸 때 사용합니다.
+
+```bash
+curl -X POST http://localhost:8080/api/review \
+  -H "Content-Type: application/json" \
+  -d '{
+    "code": "<git diff 문자열>",
+    "diffOptions": {
+      "strategyOverrides": {
+        "docs/**": "Skip",
+        "infra/**": "QueryReview",
+        "src/main/kotlin/**": "FullReview"
+      }
+    }
+  }'
+```
+
+#### `FileReviewStrategy` 값
+
+| 값 | 설명 | 기본 적용 확장자 |
+|----|------|----------------|
+| `FullReview` | 코드 품질 전체 리뷰 | `.kt`, `.java`, `.ts`, `.py` 등 |
+| `QueryReview` | 변경 의도·설정값 위주 리뷰 | `.yml`, `.sql`, `.json`, `Dockerfile` 등 |
+| `Skip` | 리뷰 대상에서 완전히 제외 | `.png`, `.jar`, `gradlew` 등 |
+
 #### 이슈 카테고리
 
 | 값 | 설명 |

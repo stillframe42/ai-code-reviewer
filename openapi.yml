@@ -126,7 +126,13 @@ paths:
               diffOptions:
                 filterTestFiles: true
                 filterLockFiles: true
+                additionalExcludePatterns:
+                  - "**/generated/**"
                 contextLines: 3
+                maxTokens: 8000
+                strategyOverrides:
+                  "docs/**": "Skip"
+                  "infra/**": "QueryReview"
       responses:
         '200':
           description: 코드 리뷰 결과 반환
@@ -276,6 +282,24 @@ components:
           default: 3
           minimum: 0
           description: 변경 전후 유지할 context 줄 수 (0 = +/- 줄만)
+        maxTokens:
+          type: integer
+          nullable: true
+          default: null
+          minimum: 1
+          description: 최대 허용 토큰 수 — 초과 시 변경량이 적은 파일 청크부터 제거 (null = 한도 없음)
+          example: 8000
+        strategyOverrides:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/FileReviewStrategy'
+          default: {}
+          description: |
+            파일별 리뷰 전략 오버라이드 — FileExtensionClassifier의 자동 분류보다 우선 적용됩니다.
+            키: glob 패턴 (예: "src/main/kotlin/**"), 값: FileReviewStrategy
+          example:
+            "docs/**": "Skip"
+            "src/main/kotlin/**": "FullReview"
 
     # ── 응답 스키마 ──────────────────────────────────────────────────────────
 
@@ -342,6 +366,18 @@ components:
         suggestion:
           type: string
           description: 개선 제안
+
+    FileReviewStrategy:
+      type: string
+      enum:
+        - FullReview
+        - QueryReview
+        - Skip
+      description: |
+        파일별 AI 리뷰 처리 전략:
+        - `FullReview`: 일반 코드 품질 리뷰 (기본값 — .kt, .java, .ts 등)
+        - `QueryReview`: 변경 의도·설정값 위주 리뷰 (.yml, .sql, .json, Dockerfile 등)
+        - `Skip`: 리뷰 대상에서 완전히 제외 (이미지, 바이너리, 빌드 산출물 등)
 
     # ── 공통 열거형 ──────────────────────────────────────────────────────────
 
