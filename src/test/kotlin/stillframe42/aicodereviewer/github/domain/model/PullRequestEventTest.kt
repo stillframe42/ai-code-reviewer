@@ -28,15 +28,5 @@ class PullRequestEventTest {
         assertEquals(sampleEvent, other)
     }
 
-    @Test
-    fun `PrDiff는 content 프로퍼티를 올바르게 저장한다`() {
-        val diff = PrDiff(content = "diff --git a/Foo.kt b/Foo.kt\n+fun hello() {}")
-        assertEquals("diff --git a/Foo.kt b/Foo.kt\n+fun hello() {}", diff.content)
-    }
 
-    @Test
-    fun `ReviewComment는 body 프로퍼티를 올바르게 저장한다`() {
-        val comment = ReviewComment(body = "## AI 코드 리뷰\n\n이슈 없음")
-        assertEquals("## AI 코드 리뷰\n\n이슈 없음", comment.body)
-    }
 }

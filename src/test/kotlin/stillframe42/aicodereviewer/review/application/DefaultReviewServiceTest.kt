@@ -32,7 +32,7 @@ class DefaultReviewServiceTest {
         )
 
         // 점수 범위 검증
-        assertThat(result.overall_score).isBetween(1, 10)
+        assertThat(result.overallScore).isBetween(1, 10)
         // 총평 비어있지 않음 검증
         assertThat(result.summary).isNotBlank()
         // issues, positives는 null이 아닌 리스트여야 함
@@ -59,7 +59,7 @@ class DefaultReviewServiceTest {
             provider = AiProvider.ANTHROPIC
         )
 
-        assertThat(result.overall_score).isBetween(1, 10)
+        assertThat(result.overallScore).isBetween(1, 10)
         assertThat(result.summary).isNotBlank()
         assertThat(result.issues).isNotEmpty
     }

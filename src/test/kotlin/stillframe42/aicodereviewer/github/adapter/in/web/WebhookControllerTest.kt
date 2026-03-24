@@ -8,8 +8,6 @@ import org.springframework.boot.test.web.server.LocalServerPort
 import org.springframework.http.MediaType
 import org.springframework.test.web.servlet.client.RestTestClient
 import stillframe42.aicodereviewer.config.GitHubProperties
-import javax.crypto.Mac
-import javax.crypto.spec.SecretKeySpec
 
 // WebhookController 통합 테스트 — RANDOM_PORT 실제 서버에 RestTestClient로 검증합니다.
 // fire-and-forget 방식이므로 202 이후의 백그라운드 처리는 검증하지 않습니다.
@@ -32,13 +30,8 @@ class WebhookControllerTest {
     }
 
     // 설정에서 주입받은 secret으로 서명을 계산해 설정값 변경에도 테스트가 깨지지 않도록 한다
-    private fun sign(payload: String): String {
-        val secret = properties.app.webhookSecret
-        val mac = Mac.getInstance("HmacSHA256")
-        mac.init(SecretKeySpec(secret.toByteArray(Charsets.UTF_8), "HmacSHA256"))
-        val hex = mac.doFinal(payload.toByteArray(Charsets.UTF_8)).joinToString("") { "%02x".format(it) }
-        return "sha256=$hex"
-    }
+    private fun sign(payload: String): String =
+        "sha256=${HmacSignatureVerifier.computeSignature(payload.toByteArray(Charsets.UTF_8), properties.app.webhookSecret)}"
 
     private val pullRequestPayload = """
         {

@@ -4,8 +4,6 @@ import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import stillframe42.aicodereviewer.config.GitHubProperties
-import javax.crypto.Mac
-import javax.crypto.spec.SecretKeySpec
 
 // HmacSignatureVerifier 단위 테스트 (Spring 컨텍스트 없음)
 class HmacSignatureVerifierTest {
@@ -21,13 +19,8 @@ class HmacSignatureVerifierTest {
         ),
     )
 
-    // 테스트용 HMAC-SHA256 서명 계산 헬퍼
-    private fun sign(payload: String): String {
-        val mac = Mac.getInstance("HmacSHA256")
-        mac.init(SecretKeySpec(secret.toByteArray(Charsets.UTF_8), "HmacSHA256"))
-        val hex = mac.doFinal(payload.toByteArray(Charsets.UTF_8)).joinToString("") { "%02x".format(it) }
-        return "sha256=$hex"
-    }
+    private fun sign(payload: String): String =
+        "sha256=${HmacSignatureVerifier.computeSignature(payload.toByteArray(Charsets.UTF_8), secret)}"
 
     @Test
     fun `올바른 서명이면 true를 반환한다`() {

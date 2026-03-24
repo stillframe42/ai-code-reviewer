@@ -16,7 +16,7 @@ class HmacSignatureVerifier(private val properties: GitHubProperties) {
         if (signatureHeader == null || !signatureHeader.startsWith("sha256=")) return false
 
         val expected = signatureHeader.removePrefix("sha256=")
-        val actual = computeHmacSha256(payload, properties.app.webhookSecret)
+        val actual = computeSignature(payload, properties.app.webhookSecret)
 
         // 상수 시간 비교 — 타이밍 공격 방지
         return MessageDigest.isEqual(
@@ -25,9 +25,12 @@ class HmacSignatureVerifier(private val properties: GitHubProperties) {
         )
     }
 
-    private fun computeHmacSha256(data: ByteArray, secret: String): String {
-        val mac = Mac.getInstance("HmacSHA256")
-        mac.init(SecretKeySpec(secret.toByteArray(Charsets.UTF_8), "HmacSHA256"))
-        return mac.doFinal(data).joinToString("") { "%02x".format(it) }
+    companion object {
+        // 테스트 코드에서 재사용할 수 있도록 internal로 노출
+        internal fun computeSignature(data: ByteArray, secret: String): String {
+            val mac = Mac.getInstance("HmacSHA256")
+            mac.init(SecretKeySpec(secret.toByteArray(Charsets.UTF_8), "HmacSHA256"))
+            return mac.doFinal(data).joinToString("") { "%02x".format(it) }
+        }
     }
 }

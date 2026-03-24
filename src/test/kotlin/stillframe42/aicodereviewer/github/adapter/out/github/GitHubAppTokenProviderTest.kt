@@ -2,12 +2,12 @@ package stillframe42.aicodereviewer.github.adapter.out.github
 
 import kotlinx.coroutines.runBlocking
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.Assumptions.assumeTrue
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import stillframe42.aicodereviewer.github.adapter.out.github.GitHubAppTokenProvider.CachedToken
 import stillframe42.aicodereviewer.github.domain.port.out.GitHubTokenPort
+import stillframe42.aicodereviewer.github.support.GitHubTestCredentials
 import java.time.Instant
 
 // GitHubAppTokenProvider 테스트
@@ -52,14 +52,9 @@ class GitHubAppTokenProviderTest {
 
     @Test
     fun `유효한 Installation ID로 Access Token을 발급받는다`() = runBlocking {
-        val appId = System.getenv("GITHUB_APP_ID")
-        val installationId = System.getenv("GITHUB_INSTALLATION_ID")?.toLongOrNull()
-        assumeTrue(
-            appId != null && appId != "0" && installationId != null,
-            "실제 GITHUB_APP_ID, GITHUB_INSTALLATION_ID가 설정된 환경에서만 실행됩니다",
-        )
+        val installationId = GitHubTestCredentials.assumeTokenCredentials()
 
-        val token = tokenProvider.getInstallationToken(installationId!!)
+        val token = tokenProvider.getInstallationToken(installationId)
 
         assertThat(token).isNotBlank()
         // GitHub Installation Access Token은 "ghs_" 접두사를 가진다
@@ -69,14 +64,9 @@ class GitHubAppTokenProviderTest {
 
     @Test
     fun `동일한 Installation ID로 두 번 요청하면 캐시된 동일 토큰을 반환한다`() = runBlocking {
-        val appId = System.getenv("GITHUB_APP_ID")
-        val installationId = System.getenv("GITHUB_INSTALLATION_ID")?.toLongOrNull()
-        assumeTrue(
-            appId != null && appId != "0" && installationId != null,
-            "실제 GITHUB_APP_ID, GITHUB_INSTALLATION_ID가 설정된 환경에서만 실행됩니다",
-        )
+        val installationId = GitHubTestCredentials.assumeTokenCredentials()
 
-        val token1 = tokenProvider.getInstallationToken(installationId!!)
+        val token1 = tokenProvider.getInstallationToken(installationId)
         val token2 = tokenProvider.getInstallationToken(installationId)
 
         // 두 번째 호출은 캐시에서 반환되므로 동일한 토큰이어야 한다

@@ -82,7 +82,7 @@ abstract class AbstractVersionBenchmark {
         val result = PromptBenchmarkResult(
             version = version,
             fixtureName = fixtureName.removeSuffix(".kt"),
-            overallScore = review.overall_score,
+            overallScore = review.overallScore,
             issuesByCategory = issuesByCategory,
             issuesBySeverity = issuesBySeverity,
             positiveCount = review.positives.size,

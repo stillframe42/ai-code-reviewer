@@ -26,8 +26,6 @@ class WebhookController(
     @param:Qualifier("applicationScope") private val applicationScope: CoroutineScope,
 ) {
 
-    private val logger = LoggerFactory.getLogger(WebhookController::class.java)
-
     @PostMapping("/webhook")
     fun handleWebhook(
         @RequestBody body: String,
@@ -72,5 +70,9 @@ class WebhookController(
         }
 
         return ResponseEntity.accepted().build()
+    }
+
+    companion object {
+        private val logger = LoggerFactory.getLogger(WebhookController::class.java)
     }
 }
