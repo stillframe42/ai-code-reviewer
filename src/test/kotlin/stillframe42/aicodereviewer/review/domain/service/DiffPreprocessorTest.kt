@@ -221,6 +221,119 @@ class DiffPreprocessorTest {
         assertTrue(result.reductionPercent in 0..100, "절감률은 0~100% 범위여야 한다")
     }
 
+    // ─── 토큰 한도 기반 자르기 테스트 ───────────────────────────────────────
+
+    @Test
+    fun `maxTokens가 충분히 크면 모든 청크 유지`() {
+        val diff = makeDiff("A.kt", changedLines = 3) + makeDiff("B.kt", changedLines = 2)
+
+        val result = preprocessor.preprocess(diff, DiffFilterOptions(maxTokens = 100_000))
+
+        assertTrue(result.diff.contains("A.kt"), "A.kt는 유지되어야 한다")
+        assertTrue(result.diff.contains("B.kt"), "B.kt는 유지되어야 한다")
+        assertEquals(0, result.filteredFiles.size, "토큰 한도로 제거된 파일이 없어야 한다")
+    }
+
+    @Test
+    fun `maxTokens 초과 시 변경량 적은 청크 제거`() {
+        // A.kt: 변경 10줄, B.kt: 변경 1줄
+        val chunkA = makeDiff("A.kt", changedLines = 10)
+        val chunkB = makeDiff("B.kt", changedLines = 1)
+        val diff = chunkA + chunkB
+
+        // A.kt 청크만 수용하는 토큰 한도 (B.kt 청크 토큰 수보다 약간 작게)
+        val aOnlyTokens = estimateTokens(chunkA) + 5
+
+        val result = preprocessor.preprocess(diff, DiffFilterOptions(maxTokens = aOnlyTokens))
+
+        assertTrue(result.diff.contains("A.kt"), "변경량 많은 A.kt는 유지되어야 한다")
+        assertFalse(result.diff.contains("B.kt"), "변경량 적은 B.kt는 제거되어야 한다")
+        assertTrue(result.filteredFiles.contains("B.kt"), "B.kt가 filteredFiles에 포함되어야 한다")
+    }
+
+    @Test
+    fun `변경량 기준 내림차순 정렬이 diff 순서에 반영`() {
+        // 먼저 추가된 X.kt는 변경 1줄, 나중 추가된 Y.kt는 변경 5줄
+        val diff = makeDiff("X.kt", changedLines = 1) + makeDiff("Y.kt", changedLines = 5)
+
+        // 두 파일 모두 수용 가능한 한도
+        val result = preprocessor.preprocess(diff, DiffFilterOptions(maxTokens = 100_000))
+
+        // 변경량 내림차순 정렬이면 Y.kt가 X.kt보다 앞에 나온다
+        val yPos = result.diff.indexOf("Y.kt")
+        val xPos = result.diff.indexOf("X.kt")
+        assertTrue(yPos < xPos, "변경량 많은 Y.kt가 X.kt보다 앞에 위치해야 한다")
+    }
+
+    @Test
+    fun `maxTokens=null이면 자르기 미적용`() {
+        val diff = makeDiff("A.kt", changedLines = 3) + makeDiff("B.kt", changedLines = 2)
+
+        val result = preprocessor.preprocess(diff, DiffFilterOptions(maxTokens = null))
+
+        assertTrue(result.diff.contains("A.kt"))
+        assertTrue(result.diff.contains("B.kt"))
+    }
+
+    @Test
+    fun `maxTokens가 극히 작으면 모든 청크 제거`() {
+        val diff = makeDiff("A.kt", changedLines = 3) + makeDiff("B.kt", changedLines = 2)
+
+        val result = preprocessor.preprocess(diff, DiffFilterOptions(maxTokens = 1))
+
+        assertTrue(result.filteredFiles.containsAll(listOf("A.kt", "B.kt")), "모든 파일이 filteredFiles에 포함되어야 한다")
+    }
+
+    @Test
+    fun `패턴 필터 + 토큰 한도 복합 적용`() {
+        val testChunk = makeDiff("FooTest.kt", changedLines = 5)
+        val bigChunk = makeDiff("Main.kt", changedLines = 10)
+        val smallChunk = makeDiff("Util.kt", changedLines = 1)
+        val diff = testChunk + bigChunk + smallChunk
+
+        // Main.kt 청크만 수용하는 토큰 한도
+        val mainOnlyTokens = estimateTokens(bigChunk) + 5
+
+        val result = preprocessor.preprocess(
+            diff,
+            DiffFilterOptions(filterTestFiles = true, maxTokens = mainOnlyTokens),
+        )
+
+        assertFalse(result.diff.contains("FooTest.kt"), "테스트 파일은 패턴 필터로 제거되어야 한다")
+        assertTrue(result.diff.contains("Main.kt"), "변경량 많은 Main.kt는 유지되어야 한다")
+        assertFalse(result.diff.contains("Util.kt"), "변경량 적은 Util.kt는 토큰 한도로 제거되어야 한다")
+        assertTrue(result.filteredFiles.containsAll(listOf("FooTest.kt", "Util.kt")))
+    }
+
+    @Test
+    fun `토큰 한도로 제거된 파일이 filteredFiles에 포함`() {
+        val diff = makeDiff("A.kt", changedLines = 5) + makeDiff("B.kt", changedLines = 1)
+
+        val result = preprocessor.preprocess(diff, DiffFilterOptions(maxTokens = 1))
+
+        assertTrue(result.filteredFiles.isNotEmpty(), "filteredFiles가 비어있지 않아야 한다")
+        assertTrue(
+            result.filteredFiles.any { it == "A.kt" || it == "B.kt" },
+            "제거된 파일명이 filteredFiles에 포함되어야 한다",
+        )
+    }
+
+    // 테스트용 diff 청크 생성 헬퍼 — fileName 기준으로 changedLines 수만큼 +줄을 포함한다
+    private fun makeDiff(fileName: String, changedLines: Int): String {
+        val changes = (1..changedLines).joinToString("\n") { "+changed line $it" }
+        return """
+            |diff --git a/$fileName b/$fileName
+            |--- a/$fileName
+            |+++ b/$fileName
+            |@@ -1,$changedLines +1,$changedLines @@
+            |$changes
+            |
+        """.trimMargin()
+    }
+
+    // TokenEstimator와 동일한 방식으로 토큰 수 추정 (4자 ≈ 1토큰)
+    private fun estimateTokens(text: String): Int = kotlin.math.ceil(text.length / 4.0).toInt()
+
     @Test
     fun `diffOptions null이 아닐 때 전처리 결과가 원본보다 짧거나 같음`() {
         val diff = """

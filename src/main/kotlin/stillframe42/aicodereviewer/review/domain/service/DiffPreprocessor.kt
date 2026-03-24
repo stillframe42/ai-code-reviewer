@@ -47,8 +47,15 @@ class DiffPreprocessor {
             processed.trim().ifBlank { null }
         }
 
+        // 5.5. maxTokens 초과 시 변경량 기준 내림차순 정렬 후 한도 내 청크만 유지
+        val finalChunks = if (options.maxTokens != null) {
+            applyTokenLimit(processedChunks, options.maxTokens, filteredFiles)
+        } else {
+            processedChunks
+        }
+
         // 6. 공백/빈줄 정리
-        val resultDiff = processedChunks
+        val resultDiff = finalChunks
             .joinToString("\n")
             .cleanWhitespace()
 
@@ -88,10 +95,12 @@ class DiffPreprocessor {
     }
 
     // diff --git a/... b/... 에서 b/ 이후 파일명 추출
+    // removeMetadataLines 이후 처리된 청크에서는 --- a/filename 패턴으로 폴백
     private fun extractFileName(chunk: String): String {
-        val firstLine = chunk.lines().firstOrNull() ?: return ""
-        return Regex("""^diff --git a/.+ b/(.+)$""").find(firstLine)
-            ?.groupValues?.get(1) ?: firstLine
+        val firstLine = chunk.lines().firstOrNull { it.isNotBlank() } ?: return ""
+        Regex("""^diff --git a/.+ b/(.+)$""").find(firstLine)?.groupValues?.get(1)?.let { return it }
+        Regex("""^--- a/(.+)$""").find(firstLine)?.groupValues?.get(1)?.let { return it }
+        return firstLine
     }
 
     // Binary files ... differ 문자열을 포함하면 바이너리 청크로 판단
@@ -201,6 +210,35 @@ class DiffPreprocessor {
 
         return hunkLines.filterIndexed { idx, _ -> idx in keepIndices }
     }
+
+    // 변경량 기준 내림차순 정렬 후 누적 토큰이 maxTokens 이하인 청크만 유지
+    // 초과된 청크의 파일명은 filteredFiles에 추가
+    private fun applyTokenLimit(
+        chunks: List<String>,
+        maxTokens: Int,
+        filteredFiles: MutableList<String>,
+    ): List<String> {
+        val sorted = chunks.sortedByDescending { countChangedLines(it) }
+        val kept = mutableListOf<String>()
+        var accumulated = 0
+        for (chunk in sorted) {
+            val tokens = TokenEstimator.estimate(chunk)
+            if (accumulated + tokens <= maxTokens) {
+                kept.add(chunk)
+                accumulated += tokens
+            } else {
+                filteredFiles.add(extractFileName(chunk))
+            }
+        }
+        return kept
+    }
+
+    // +/- 로 시작하는 변경 줄 수를 반환한다 (헤더 줄 +++/--- 제외)
+    private fun countChangedLines(chunk: String): Int =
+        chunk.lines().count { line ->
+            (line.startsWith("+") && !line.startsWith("+++")) ||
+                (line.startsWith("-") && !line.startsWith("---"))
+        }
 
     // trailing whitespace 제거 및 연속 빈줄(2개 이상) 압축
     private fun String.cleanWhitespace(): String =

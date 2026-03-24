@@ -10,6 +10,8 @@ data class DiffFilterOptions(
     val additionalExcludePatterns: List<String> = emptyList(),
     // 변경 전후 유지할 context 줄 수 (0 = +/- 줄만, 3 = 기본값)
     val contextLines: Int = 3,
+    // 최대 허용 토큰 수 — 초과 시 변경량 적은 파일 청크부터 제거 (null = 한도 없음)
+    val maxTokens: Int? = null,
 ) {
     object Defaults {
         val TEST_FILE_PATTERNS = listOf(
