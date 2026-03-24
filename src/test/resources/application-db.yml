@@ -1,8 +1,11 @@
-# 테스트용 인메모리 H2 데이터베이스
+# 테스트용 인메모리 H2 — 로컬 개발 환경(PostgreSQL) 설정을 덮어쓴다
 spring:
   datasource:
     url: jdbc:h2:mem:testdb
+    username: sa
+    password:
     driver-class-name: org.h2.Driver
   jpa:
     hibernate:
       ddl-auto: create-drop
+    database-platform: org.hibernate.dialect.H2Dialect

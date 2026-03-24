@@ -56,8 +56,8 @@ dependencies {
     // Test
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
-    // 로컬 실행 및 테스트용 인메모리 DB
-    runtimeOnly("com.h2database:h2")
+    // 테스트용 인메모리 DB (로컬 개발은 PostgreSQL 사용)
+    testRuntimeOnly("com.h2database:h2")
 }
 
 dependencyManagement {
