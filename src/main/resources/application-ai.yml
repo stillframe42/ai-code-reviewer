@@ -8,7 +8,7 @@ app:
       additional-exclude-patterns: []
       # max-tokens: 30000  # 주석 해제 시 토큰 한도 활성화 (null = 한도 없음)
   prompt:
-    review-system: classpath:prompts/review-system-v1.st   # v1 유지 (벤치마크 최고 성능)
+    review-system: classpath:prompts/review-system-v5.st   # v5: v1 기반 + QUERY_REVIEW 파일 유형별 지침 추가
     chat-system: classpath:prompts/chat-system.st
     chat-user: classpath:prompts/chat-user.st
 

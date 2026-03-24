@@ -12,6 +12,9 @@ data class DiffFilterOptions(
     val contextLines: Int = 3,
     // 최대 허용 토큰 수 — 초과 시 변경량 적은 파일 청크부터 제거 (null = 한도 없음)
     val maxTokens: Int? = null,
+    // 파일별 전략 오버라이드 — 키: glob 패턴, 값: FileReviewStrategy
+    // FileExtensionClassifier의 자동 분류보다 우선 적용된다
+    val strategyOverrides: Map<String, FileReviewStrategy> = emptyMap(),
 ) {
     object Defaults {
         val TEST_FILE_PATTERNS = listOf(

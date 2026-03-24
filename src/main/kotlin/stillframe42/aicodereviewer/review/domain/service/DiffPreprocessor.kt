@@ -5,6 +5,7 @@ import org.springframework.stereotype.Component
 import stillframe42.aicodereviewer.common.TokenEstimator
 import stillframe42.aicodereviewer.review.domain.model.DiffFilterOptions
 import stillframe42.aicodereviewer.review.domain.model.DiffPreprocessResult
+import stillframe42.aicodereviewer.review.domain.model.FileReviewStrategy
 
 // diff 전처리 도메인 서비스
 // 불필요한 청크(바이너리, 테스트 파일 등)와 메타데이터 줄을 제거하여 AI에 전달할 토큰을 절감한다
@@ -36,8 +37,20 @@ class DiffPreprocessor {
                 return@mapNotNull null
             }
 
+            // 3.5. 확장자 전략 결정 — strategyOverrides glob 우선, 없으면 Classifier 결과 사용
+            val strategy = resolveStrategy(fileName, options)
+            if (strategy == FileReviewStrategy.Skip) {
+                filteredFiles.add(fileName)
+                return@mapNotNull null
+            }
+
             // 4. 메타데이터 줄 제거 (diff --git, index, new/deleted/old/new file mode)
             var processed = removeMetadataLines(chunk)
+
+            // 4.5. QUERY_REVIEW 청크에 리뷰 지침 헤더 주석 삽입
+            if (strategy == FileReviewStrategy.QueryReview) {
+                processed = insertQueryReviewHeader(processed, fileName)
+            }
 
             // 5. contextLines < 3 이면 각 hunk에서 불필요한 context 줄 잘라냄
             if (options.contextLines < 3) {
@@ -106,6 +119,22 @@ class DiffPreprocessor {
     // Binary files ... differ 문자열을 포함하면 바이너리 청크로 판단
     private fun isBinaryChunk(chunk: String): Boolean =
         chunk.contains("Binary files") && chunk.contains("differ")
+
+    // strategyOverrides glob 패턴을 먼저 확인하고, 매칭되는 패턴이 없으면 Classifier 결과를 반환한다
+    // 정책 우선순위: 명시적 glob 제외(shouldExclude) > strategyOverrides > FileExtensionClassifier
+    private fun resolveStrategy(fileName: String, options: DiffFilterOptions): FileReviewStrategy {
+        for ((pattern, strategy) in options.strategyOverrides) {
+            if (matchesGlob(fileName, pattern)) return strategy
+        }
+        return FileExtensionClassifier.classify(fileName)
+    }
+
+    // QUERY_REVIEW 청크 맨 앞에 리뷰 지침 헤더 주석을 삽입한다
+    // '#' 접두사로 diff 형식(---, +++, @@)과 구별하며 hunk 파싱에 영향을 주지 않는다
+    private fun insertQueryReviewHeader(chunk: String, fileName: String): String {
+        val header = "# [QUERY_REVIEW] $fileName: 변경 의도와 구조적 영향을 중심으로 리뷰하세요."
+        return "$header\n$chunk"
+    }
 
     // 제외 패턴에 매칭되는 파일이면 true 반환
     private fun shouldExclude(fileName: String, options: DiffFilterOptions): Boolean {
