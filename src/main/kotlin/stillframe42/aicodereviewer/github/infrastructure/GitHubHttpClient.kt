@@ -8,6 +8,7 @@ import org.springframework.web.reactive.function.client.awaitBody
 import org.springframework.web.reactive.function.client.awaitBodilessEntity
 import stillframe42.aicodereviewer.github.adapter.out.github.dto.CreateIssueCommentRequest
 import stillframe42.aicodereviewer.github.adapter.out.github.dto.InstallationTokenResponse
+import stillframe42.aicodereviewer.github.adapter.out.github.dto.PrFileResponse
 
 // GitHub REST API raw HTTP 호출을 캡슐화하는 클라이언트
 // 모든 WebClient 호출은 이 클래스 한 곳에서 관리한다
@@ -32,6 +33,20 @@ class GitHubHttpClient(
             .uri("/repos/{owner}/{repo}/pulls/{number}", owner, repo, pullRequestNumber)
             .header("Authorization", "Bearer $token")
             .header("Accept", "application/vnd.github.v3.diff")
+            .retrieve()
+            .awaitBody()
+    }
+
+    // GET /repos/{owner}/{repo}/pulls/{number}/files — PR 변경 파일 목록과 메타데이터 조회
+    suspend fun fetchPrFiles(
+        repositoryFullName: String,
+        pullRequestNumber: Int,
+        token: String,
+    ): List<PrFileResponse> {
+        val (owner, repo) = repositoryFullName.ownerAndRepo()
+        return webClient.get()
+            .uri("/repos/{owner}/{repo}/pulls/{number}/files", owner, repo, pullRequestNumber)
+            .header("Authorization", "Bearer $token")
             .retrieve()
             .awaitBody()
     }

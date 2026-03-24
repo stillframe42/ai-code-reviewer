@@ -38,6 +38,24 @@ class GitHubApiAdapterTest {
     }
 
     @Test
+    fun `PR 파일 목록을 조회하면 파일 정보가 반환된다`() = runBlocking {
+        val (installationId, repo, prNumber) = GitHubTestCredentials.assumeValidAndGet()
+
+        val files = gitHubApiPort.getPrFiles(
+            repositoryFullName = repo,
+            pullRequestNumber = prNumber,
+            installationId = installationId,
+        )
+
+        assertThat(files).isNotEmpty()
+        assertThat(files).allSatisfy { file ->
+            assertThat(file.filename).isNotBlank()
+            assertThat(file.changes).isGreaterThanOrEqualTo(0)
+        }
+        Unit
+    }
+
+    @Test
     fun `유효한 PR에 코멘트를 등록하면 예외가 발생하지 않는다`() = runBlocking {
         val (installationId, repo, prNumber) = GitHubTestCredentials.assumeValidAndGet()
 
