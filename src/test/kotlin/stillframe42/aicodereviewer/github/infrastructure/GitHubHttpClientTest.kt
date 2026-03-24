@@ -74,7 +74,15 @@ class GitHubHttpClientTest {
         val tokenResponse = gitHubHttpClient.fetchInstallationToken(installationId, jwt)
 
         // 예외 없이 완료되면 성공
-        gitHubHttpClient.postIssueComment(repo, prNumber, "[테스트] GitHubHttpClient 통합 테스트 자동 코멘트", tokenResponse.token)
+        gitHubHttpClient.postPrReview(
+            repositoryFullName = repo,
+            pullRequestNumber = prNumber,
+            request = stillframe42.aicodereviewer.github.adapter.out.github.dto.CreatePullRequestReviewRequest(
+                body = "[테스트] GitHubHttpClient PR Reviews API 통합 테스트",
+                event = "COMMENT",
+            ),
+            token = tokenResponse.token,
+        )
         Unit
     }
 }

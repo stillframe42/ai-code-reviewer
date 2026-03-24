@@ -6,7 +6,7 @@ import org.springframework.stereotype.Component
 import org.springframework.web.reactive.function.client.WebClient
 import org.springframework.web.reactive.function.client.awaitBody
 import org.springframework.web.reactive.function.client.awaitBodilessEntity
-import stillframe42.aicodereviewer.github.adapter.out.github.dto.CreateIssueCommentRequest
+import stillframe42.aicodereviewer.github.adapter.out.github.dto.CreatePullRequestReviewRequest
 import stillframe42.aicodereviewer.github.adapter.out.github.dto.InstallationTokenResponse
 import stillframe42.aicodereviewer.github.adapter.out.github.dto.PrFileResponse
 
@@ -51,15 +51,19 @@ class GitHubHttpClient(
             .awaitBody()
     }
 
-    // POST /repos/{owner}/{repo}/issues/{number}/comments — PR에 이슈 코멘트 등록
-    // GitHub PR 코멘트는 issues API를 통해 등록한다
-    suspend fun postIssueComment(repositoryFullName: String, pullRequestNumber: Int, body: String, token: String) {
+    // POST /repos/{owner}/{repo}/pulls/{number}/reviews — PR Reviews API로 코드 리뷰 등록
+    suspend fun postPrReview(
+        repositoryFullName: String,
+        pullRequestNumber: Int,
+        request: CreatePullRequestReviewRequest,
+        token: String,
+    ) {
         val (owner, repo) = repositoryFullName.ownerAndRepo()
         webClient.post()
-            .uri("/repos/{owner}/{repo}/issues/{number}/comments", owner, repo, pullRequestNumber)
+            .uri("/repos/{owner}/{repo}/pulls/{number}/reviews", owner, repo, pullRequestNumber)
             .header("Authorization", "Bearer $token")
             .contentType(MediaType.APPLICATION_JSON)
-            .bodyValue(CreateIssueCommentRequest(body = body))
+            .bodyValue(request)
             .retrieve()
             .awaitBodilessEntity()
     }

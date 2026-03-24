@@ -56,14 +56,16 @@ class GitHubApiAdapterTest {
     }
 
     @Test
-    fun `유효한 PR에 코멘트를 등록하면 예외가 발생하지 않는다`() = runBlocking {
+    fun `유효한 PR에 리뷰를 등록하면 예외가 발생하지 않는다`() = runBlocking {
         val (installationId, repo, prNumber) = GitHubTestCredentials.assumeValidAndGet()
 
-        // 예외 없이 완료되면 성공 (postReviewComment는 Unit 반환)
-        gitHubApiPort.postReviewComment(
+        // 예외 없이 완료되면 성공 (postPrReview는 Unit 반환)
+        gitHubApiPort.postPrReview(
             repositoryFullName = repo,
             pullRequestNumber = prNumber,
-            comment = "[테스트] GitHubApiAdapter 통합 테스트 자동 코멘트",
+            review = stillframe42.aicodereviewer.github.domain.model.PrReview(
+                body = "[테스트] GitHubApiAdapter PR Reviews API 통합 테스트",
+            ),
             installationId = installationId,
         )
         Unit

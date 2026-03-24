@@ -3,6 +3,7 @@ package stillframe42.aicodereviewer.github.application
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import stillframe42.aicodereviewer.core.AiProvider
+import stillframe42.aicodereviewer.github.domain.model.PrReview
 import stillframe42.aicodereviewer.github.domain.model.PullRequestEvent
 import stillframe42.aicodereviewer.github.domain.port.`in`.GitHubWebhookUseCase
 import stillframe42.aicodereviewer.github.domain.port.out.GitHubApiPort
@@ -74,11 +75,11 @@ class DefaultGitHubWebhookService(
             null
         }
 
-        // 3단계: PR 코멘트 등록 — 성공 시 리뷰, 실패 시 에러 안내
-        gitHubApiPort.postReviewComment(
+        // 3단계: PR Reviews API로 등록 — 성공 시 리뷰, 실패 시 에러 안내
+        gitHubApiPort.postPrReview(
             repositoryFullName = event.repositoryFullName,
             pullRequestNumber = event.pullRequestNumber,
-            comment = reviewComment ?: "⚠️ 코드 리뷰 생성 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.",
+            review = PrReview(body = reviewComment ?: "⚠️ 코드 리뷰 생성 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요."),
             installationId = event.installationId,
         )
 

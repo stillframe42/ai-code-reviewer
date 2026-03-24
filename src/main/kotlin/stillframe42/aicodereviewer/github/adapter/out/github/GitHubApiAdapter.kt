@@ -1,7 +1,10 @@
 package stillframe42.aicodereviewer.github.adapter.out.github
 
 import org.springframework.stereotype.Component
+import stillframe42.aicodereviewer.github.adapter.out.github.dto.CreatePullRequestReviewRequest
+import stillframe42.aicodereviewer.github.adapter.out.github.dto.ReviewLineComment
 import stillframe42.aicodereviewer.github.domain.model.PrFile
+import stillframe42.aicodereviewer.github.domain.model.PrReview
 import stillframe42.aicodereviewer.github.domain.port.out.GitHubApiPort
 import stillframe42.aicodereviewer.github.domain.port.out.GitHubTokenPort
 import stillframe42.aicodereviewer.github.infrastructure.GitHubHttpClient
@@ -34,14 +37,19 @@ class GitHubApiAdapter(
             .map { it.toDomain() }
     }
 
-    // PR에 이슈 코멘트를 등록한다
-    override suspend fun postReviewComment(
+    // PR Reviews API로 코드 리뷰를 등록한다 — PrReview 도메인 모델을 DTO로 변환하여 전달
+    override suspend fun postPrReview(
         repositoryFullName: String,
         pullRequestNumber: Int,
-        comment: String,
+        review: PrReview,
         installationId: Long,
     ) {
         val token = tokenPort.getInstallationToken(installationId)
-        gitHubHttpClient.postIssueComment(repositoryFullName, pullRequestNumber, comment, token)
+        val request = CreatePullRequestReviewRequest(
+            body = review.body,
+            event = review.event.name,
+            comments = review.lineComments.map { ReviewLineComment(path = it.path, position = it.position, body = it.body) },
+        )
+        gitHubHttpClient.postPrReview(repositoryFullName, pullRequestNumber, request, token)
     }
 }

@@ -1,6 +1,7 @@
 package stillframe42.aicodereviewer.github.domain.port.out
 
 import stillframe42.aicodereviewer.github.domain.model.PrFile
+import stillframe42.aicodereviewer.github.domain.model.PrReview
 
 // GitHub API 출력 포트 — GitHub REST API 호출을 추상화하는 인터페이스
 interface GitHubApiPort {
@@ -18,11 +19,11 @@ interface GitHubApiPort {
         installationId: Long,
     ): List<PrFile>
 
-    // PR에 코드 리뷰 코멘트를 등록한다
-    suspend fun postReviewComment(
+    // PR에 코드 리뷰를 등록한다 (Pull Request Reviews API)
+    suspend fun postPrReview(
         repositoryFullName: String,
         pullRequestNumber: Int,
-        comment: String,
+        review: PrReview,
         installationId: Long,
     )
 }
