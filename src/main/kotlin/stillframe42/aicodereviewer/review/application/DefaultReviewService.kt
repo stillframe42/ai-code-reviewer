@@ -1,5 +1,8 @@
 package stillframe42.aicodereviewer.review.application
 
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import stillframe42.aicodereviewer.config.ReviewProperties
@@ -23,21 +26,40 @@ class DefaultReviewService(
         provider: AiProvider,
         diffOptions: DiffFilterOptions?,
     ): CodeReview {
-        // diffOptions가 있을 때만 전처리 수행 — null이면 기존 동작 유지
-        val processedCode = if (diffOptions != null) {
-            // 요청 옵션에 외부 설정값을 병합 (요청값 우선, 패턴은 합산)
-            val merged = diffOptions.copy(
-                additionalExcludePatterns = diffOptions.additionalExcludePatterns +
-                    reviewProperties.diff.additionalExcludePatterns,
-                maxTokens = diffOptions.maxTokens ?: reviewProperties.diff.maxTokens,
-            )
-            val preprocessResult = diffPreprocessor.preprocess(code, merged)
-            logger.debug("=== 전처리된 diff (AI 전달 내용) ===\n{}", preprocessResult.diff)
-            preprocessResult.diff
+        // diffOptions가 없으면 전처리 없이 바로 AI 호출
+        val options = diffOptions ?: return aiReviewPort.reviewCode(code, provider)
+
+        // 요청 옵션에 외부 설정값을 병합 (요청값 우선, 패턴은 합산)
+        val merged = options.copy(
+            additionalExcludePatterns = options.additionalExcludePatterns +
+                reviewProperties.diff.additionalExcludePatterns,
+            maxTokens = options.maxTokens ?: reviewProperties.diff.maxTokens,
+        )
+        val preprocessResult = diffPreprocessor.preprocess(code, merged)
+        logger.debug("=== 전처리된 diff (AI 전달 내용) ===\n{}", preprocessResult.diff)
+
+        val fileDiffs = preprocessResult.fileDiffs.filter { it.isNotBlank() }
+        return if (fileDiffs.size > 1) {
+            // 파일 2개 이상 — 파일별로 병렬 LLM 호출 후 결과 집계
+            logger.info("파일별 병렬 리뷰 시작: {}개 파일", fileDiffs.size)
+            coroutineScope { fileDiffs.map { async { aiReviewPort.reviewCode(it, provider) } } }
+                .awaitAll()
+                .let(::aggregate)
         } else {
-            code
+            // 파일 1개 이하 — 단일 호출
+            aiReviewPort.reviewCode(preprocessResult.diff, provider)
         }
-        return aiReviewPort.reviewCode(processedCode, provider)
+    }
+
+    // 파일별 리뷰 결과를 하나의 CodeReview로 집계한다
+    private fun aggregate(reviews: List<CodeReview>): CodeReview {
+        if (reviews.size == 1) return reviews.first()
+        return CodeReview(
+            overallScore = reviews.map { it.overallScore }.average().toInt().coerceIn(0, 10),
+            summary = reviews.joinToString("\n") { it.summary },
+            issues = reviews.flatMap { it.issues },
+            positives = reviews.flatMap { it.positives }.distinct(),
+        )
     }
 
     companion object {

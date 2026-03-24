@@ -6,7 +6,10 @@ import kotlinx.coroutines.SupervisorJob
 import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
+import org.springframework.http.client.reactive.ReactorClientHttpConnector
 import org.springframework.web.reactive.function.client.WebClient
+import reactor.netty.http.client.HttpClient
+import java.time.Duration
 
 @Configuration
 @EnableConfigurationProperties(GitHubProperties::class)
@@ -18,13 +21,16 @@ class GitHubConfig {
     fun applicationScope(): CoroutineScope =
         CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
-    // GitHub REST API 호출용 WebClient
+    // GitHub REST API 호출용 WebClient — 응답 타임아웃 30초
     @Bean("gitHubWebClient")
-    fun gitHubWebClient(properties: GitHubProperties): WebClient =
-        WebClient.builder()
+    fun gitHubWebClient(properties: GitHubProperties): WebClient {
+        val httpClient = HttpClient.create().responseTimeout(Duration.ofSeconds(30))
+        return WebClient.builder()
+            .clientConnector(ReactorClientHttpConnector(httpClient))
             .baseUrl(properties.api.baseUrl)
             .defaultHeader("Accept", "application/vnd.github+json")
             .defaultHeader("X-GitHub-Api-Version", "2022-11-28")
             .defaultHeader("User-Agent", "ai-code-reviewer")
             .build()
+    }
 }

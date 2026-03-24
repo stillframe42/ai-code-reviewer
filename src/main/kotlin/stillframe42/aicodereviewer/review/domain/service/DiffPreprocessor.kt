@@ -67,12 +67,10 @@ class DiffPreprocessor {
             processedChunks
         }
 
-        // 6. 공백/빈줄 정리
-        val resultDiff = finalChunks
-            .joinToString("\n")
-            .cleanWhitespace()
+        // 6. 파일별 공백/빈줄 정리
+        val fileDiffsClean = finalChunks.map { it.cleanWhitespace() }
 
-        val tokensAfter = TokenEstimator.estimate(resultDiff)
+        val tokensAfter = TokenEstimator.estimate(fileDiffsClean.joinToString("\n"))
 
         // 7. INFO 로그 출력
         log.info(
@@ -84,7 +82,7 @@ class DiffPreprocessor {
         filteredFiles.forEach { log.info("  제외: {}", it) }
 
         return DiffPreprocessResult(
-            diff = resultDiff,
+            fileDiffs = fileDiffsClean,
             estimatedTokensBefore = tokensBefore,
             estimatedTokensAfter = tokensAfter,
             filteredFiles = filteredFiles,

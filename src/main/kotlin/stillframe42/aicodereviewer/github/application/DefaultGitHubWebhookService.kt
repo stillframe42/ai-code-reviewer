@@ -57,26 +57,35 @@ class DefaultGitHubWebhookService(
         }
 
         // 2단계: AI 코드 리뷰 실행 (전처리 활성화)
-        val review = reviewUseCase.reviewCode(
-            code = prDiff,
-            provider = AiProvider.ANTHROPIC,
-            diffOptions = DiffFilterOptions(),
-        )
+        // 실패 시 null을 반환하고, 3단계에서 에러 코멘트를 등록한다
+        val reviewComment = try {
+            val review = reviewUseCase.reviewCode(
+                code = prDiff,
+                provider = AiProvider.ANTHROPIC,
+                diffOptions = DiffFilterOptions(),
+            )
+            logger.info(
+                "AI 리뷰 생성 완료: repo={}, pr={}, score={}",
+                event.repositoryFullName, event.pullRequestNumber, review.overallScore,
+            )
+            reviewCommentFormatterPort.format(review)
+        } catch (e: Exception) {
+            logger.error("리뷰 생성 실패: repo={}, pr={}", event.repositoryFullName, event.pullRequestNumber, e)
+            null
+        }
 
-        // 3단계: 마크다운 포맷 변환 후 PR 코멘트 등록
+        // 3단계: PR 코멘트 등록 — 성공 시 리뷰, 실패 시 에러 안내
         gitHubApiPort.postReviewComment(
             repositoryFullName = event.repositoryFullName,
             pullRequestNumber = event.pullRequestNumber,
-            comment = reviewCommentFormatterPort.format(review),
+            comment = reviewComment ?: "⚠️ 코드 리뷰 생성 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.",
             installationId = event.installationId,
         )
 
-        logger.info(
-            "PR 리뷰 코멘트 등록 완료: repo={}, pr={}, score={}",
-            event.repositoryFullName, event.pullRequestNumber, review.overallScore,
-        )
+        // 리뷰 실패 시 markAsProcessed 호출 안 함 — 다음 이벤트에서 재처리 허용
+        if (reviewComment == null) return
 
-        // 4단계: 처리 완료 기록 (중복 방지)
+        // 4단계: 처리 완료 기록 (중복 방지) — 성공 시에만 기록
         processedEventPort.markAsProcessed(
             repositoryFullName = event.repositoryFullName,
             pullRequestNumber = event.pullRequestNumber,
