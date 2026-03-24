@@ -11,6 +11,8 @@ class PullRequestEventTest {
         repositoryFullName = "myorg/myrepo",
         pullRequestNumber = 42,
         headSha = "abc123def456",
+        title = "feat: 새로운 기능 추가",
+        author = "octocat",
     )
 
     @Test
@@ -20,6 +22,8 @@ class PullRequestEventTest {
         assertEquals("myorg/myrepo", sampleEvent.repositoryFullName)
         assertEquals(42, sampleEvent.pullRequestNumber)
         assertEquals("abc123def456", sampleEvent.headSha)
+        assertEquals("feat: 새로운 기능 추가", sampleEvent.title)
+        assertEquals("octocat", sampleEvent.author)
     }
 
     @Test

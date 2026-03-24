@@ -25,7 +25,9 @@ class WebhookPayloadDtoTest {
               "repository": { "full_name": "owner/repo" },
               "pull_request": {
                 "number": 42,
-                "head": { "sha": "abc123def456" }
+                "head": { "sha": "abc123def456" },
+                "title": "feat: 새로운 기능",
+                "user": { "login": "octocat" }
               }
             }
         """.trimIndent()
@@ -37,6 +39,8 @@ class WebhookPayloadDtoTest {
         assertEquals("owner/repo", dto.repository.fullName)
         assertEquals(42, dto.pullRequest.number)
         assertEquals("abc123def456", dto.pullRequest.head.sha)
+        assertEquals("feat: 새로운 기능", dto.pullRequest.title)
+        assertEquals("octocat", dto.pullRequest.user.login)
     }
 
     @Test
@@ -51,6 +55,8 @@ class WebhookPayloadDtoTest {
         assertEquals("owner/repo", event.repositoryFullName)
         assertEquals(42, event.pullRequestNumber)
         assertEquals("abc123", event.headSha)
+        assertEquals("feat: 새로운 기능", event.title)
+        assertEquals("octocat", event.author)
     }
 
     @Test
@@ -82,6 +88,8 @@ class WebhookPayloadDtoTest {
         pullRequest = WebhookPayloadDto.PullRequestDto(
             number = 42,
             head = WebhookPayloadDto.PullRequestDto.HeadDto(sha = "abc123"),
+            title = "feat: 새로운 기능",
+            user = WebhookPayloadDto.PullRequestDto.UserDto(login = "octocat"),
         ),
     )
 }

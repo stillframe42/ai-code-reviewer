@@ -46,6 +46,8 @@ class DefaultGitHubWebhookServiceTest {
                 repositoryFullName = repo,
                 pullRequestNumber = prNumber,
                 headSha = "HEAD",
+                title = "통합 테스트 PR",
+                author = "test-user",
             ),
         )
         Unit
@@ -62,6 +64,8 @@ class DefaultGitHubWebhookServiceTest {
                 repositoryFullName = repo,
                 pullRequestNumber = prNumber,
                 headSha = "HEAD",
+                title = "통합 테스트 PR",
+                author = "test-user",
             ),
         )
         Unit

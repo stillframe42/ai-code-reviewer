@@ -24,8 +24,11 @@ data class WebhookPayloadDto(
     data class PullRequestDto(
         val number: Int,
         val head: HeadDto,
+        val title: String,
+        val user: UserDto,
     ) {
         data class HeadDto(val sha: String)
+        data class UserDto(val login: String)
     }
 
     // GitHub의 소문자 action 문자열을 도메인 모델로 변환한다
@@ -38,6 +41,8 @@ data class WebhookPayloadDto(
             repositoryFullName = repository.fullName,
             pullRequestNumber = pullRequest.number,
             headSha = pullRequest.head.sha,
+            title = pullRequest.title,
+            author = pullRequest.user.login,
         )
     }
 }

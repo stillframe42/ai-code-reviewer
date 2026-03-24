@@ -40,7 +40,9 @@ class WebhookControllerTest {
           "repository": { "full_name": "owner/repo" },
           "pull_request": {
             "number": 42,
-            "head": { "sha": "abc123def456" }
+            "head": { "sha": "abc123def456" },
+            "title": "feat: 새로운 기능",
+            "user": { "login": "octocat" }
           }
         }
     """.trimIndent()

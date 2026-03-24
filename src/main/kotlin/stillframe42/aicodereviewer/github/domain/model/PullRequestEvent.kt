@@ -7,4 +7,6 @@ data class PullRequestEvent(
     val repositoryFullName: String,      // "owner/repo" 형식
     val pullRequestNumber: Int,          // PR 번호
     val headSha: String,                 // 최신 커밋 SHA (diff 조회용)
+    val title: String,                   // PR 제목
+    val author: String,                  // PR 작성자 GitHub 로그인명
 )
