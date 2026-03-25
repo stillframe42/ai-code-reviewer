@@ -3,6 +3,8 @@ package stillframe42.aicodereviewer.review.application
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import stillframe42.aicodereviewer.config.ReviewProperties
@@ -40,9 +42,11 @@ class DefaultReviewService(
 
         val fileDiffs = preprocessResult.fileDiffs.filter { it.isNotBlank() }
         return if (fileDiffs.size > 1) {
-            // 파일 2개 이상 — 파일별로 병렬 LLM 호출 후 결과 집계
-            logger.info("파일별 병렬 리뷰 시작: {}개 파일", fileDiffs.size)
-            coroutineScope { fileDiffs.map { async { aiReviewPort.reviewCode(it, provider) } } }
+            // 파일 2개 이상 — Semaphore로 동시 호출 수를 제한하며 병렬 LLM 호출 후 결과 집계
+            val concurrency = reviewProperties.diff.maxConcurrency
+            logger.info("파일별 병렬 리뷰 시작: {}개 파일 (최대 동시 호출: {})", fileDiffs.size, concurrency)
+            val semaphore = Semaphore(concurrency)
+            coroutineScope { fileDiffs.map { async { semaphore.withPermit { aiReviewPort.reviewCode(it, provider) } } } }
                 .awaitAll()
                 .let(::aggregate)
         } else {
@@ -58,7 +62,7 @@ class DefaultReviewService(
             overallScore = reviews.map { it.overallScore }.average().toInt().coerceIn(0, 10),
             summary = reviews.joinToString("\n") { it.summary },
             issues = reviews.flatMap { it.issues },
-            positives = reviews.flatMap { it.positives }.distinct(),
+            positives = reviews.flatMap { it.positives }.distinct().take(3),
         )
     }
 

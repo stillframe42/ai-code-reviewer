@@ -13,6 +13,7 @@
 | v4 | review-system-v4.st | 2026-03-21 | v1 기반 재정립: few-shot·카테고리·심각도 정의 제거, 필수 스키마 규칙만 유지 |
 | v5 | review-system-v5.st | 2026-03-24 | v1 기반 + 파일 유형별 지침: [QUERY_REVIEW] 헤더 파일에 대한 리뷰 방식 안내 추가 |
 | v6 | review-system-v6.st | 2026-03-25 | v5 기반 + filename 필드 안내 추가 (diff position 매핑을 위한 파일 경로 반환 요청) |
+| v7 | review-system-v7.st | 2026-03-25 | v6 기반 + summary 2문장 제한, positives 최대 3개 제한 (가독성 개선) |
 
 ## 버전 전환 방법
 
@@ -27,6 +28,14 @@ app:
 ```
 
 ## 변경 이력
+
+### v7 (2026-03-25)
+
+- **변경 이유**: PR summary 코멘트가 너무 길고 개별 이슈와 내용이 중복됨. Positives 항목도 과다하여 가독성이 떨어짐
+- **주요 변경**:
+  - v6을 베이스로 유지
+  - `summary`: 2문장 이내 총평, 개별 이슈 내용 반복 금지
+  - `positives`: 최대 3개만 반환
 
 ### v6 (2026-03-25)
 

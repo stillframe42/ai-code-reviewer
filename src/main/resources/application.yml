@@ -11,6 +11,12 @@ logging:
     # 실제 동작은 JVM 기본 DNS 폴백으로 정상 처리됨
     io.netty.resolver.dns.macos: OFF
 
+app:
+  review:
+    diff:
+      # 파일별 병렬 AI 호출 최대 동시 실행 수 — API rate limit 초과 방지 (기본: 3)
+      max-concurrency: 3
+
 spring:
   jackson:
     mapper:

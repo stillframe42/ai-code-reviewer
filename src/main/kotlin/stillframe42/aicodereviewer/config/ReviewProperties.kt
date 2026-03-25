@@ -13,5 +13,7 @@ data class ReviewProperties(
         val additionalExcludePatterns: List<String> = emptyList(),
         // 최대 허용 토큰 수 — null이면 한도 없음
         val maxTokens: Int? = null,
+        // 파일별 병렬 AI 호출 최대 동시 실행 수 — API rate limit 초과 방지
+        val maxConcurrency: Int = 3,
     )
 }

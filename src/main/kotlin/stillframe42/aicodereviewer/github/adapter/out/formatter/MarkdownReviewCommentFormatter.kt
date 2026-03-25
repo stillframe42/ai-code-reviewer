@@ -41,11 +41,12 @@ class MarkdownReviewCommentFormatter(
         }
         appendLine()
 
-        // 항목이 없으면 섹션 전체 생략
-        if (review.positives.isNotEmpty()) {
+        // 항목이 없으면 섹션 전체 생략, 최대 3개까지만 표시
+        val positives = review.positives.take(3)
+        if (positives.isNotEmpty()) {
             appendLine("### ✅ Positives")
             appendLine()
-            review.positives.forEach { positive ->
+            positives.forEach { positive ->
                 appendLine("- $positive")
             }
             appendLine()
