@@ -115,6 +115,7 @@ class DefaultGitHubWebhookService(
                     body = body,
                     event = if (hasNoIssues) PrReviewEvent.APPROVE else PrReviewEvent.REQUEST_CHANGES,
                     lineComments = lineComments,
+                    commitId = event.headSha,
                 )
             } else {
                 PrReview(body = "⚠️ 코드 리뷰 생성 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.")

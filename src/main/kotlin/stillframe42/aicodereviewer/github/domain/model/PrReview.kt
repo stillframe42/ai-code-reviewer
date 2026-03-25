@@ -4,7 +4,9 @@ package stillframe42.aicodereviewer.github.domain.model
 data class PrReview(
     val body: String,
     val event: PrReviewEvent = PrReviewEvent.COMMENT,
-    val lineComments: List<PrReviewLineComment> = emptyList(),  // Phase 2에서 채워짐
+    val lineComments: List<PrReviewLineComment> = emptyList(),
+    // 리뷰를 앵커링할 커밋 SHA — 인라인 코멘트 포함 시 GitHub API 필수값
+    val commitId: String? = null,
 )
 
 // GitHub PR Review 이벤트 타입

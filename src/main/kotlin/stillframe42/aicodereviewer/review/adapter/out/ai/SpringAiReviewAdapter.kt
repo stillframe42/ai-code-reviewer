@@ -1,9 +1,14 @@
 package stillframe42.aicodereviewer.review.adapter.out.ai
 
+import com.fasterxml.jackson.core.JsonParser
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 import org.slf4j.LoggerFactory
+import org.springframework.ai.converter.BeanOutputConverter
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.core.io.Resource
 import org.springframework.stereotype.Component
@@ -25,31 +30,43 @@ class SpringAiReviewAdapter(
     private val userPromptResource: Resource,
 ) : AiReviewPort {
 
-    // .entity()로 BeanOutputConverter가 JSON Schema를 프롬프트에 append하고 응답을 역직렬화
-    // withTimeout: 총 30초 초과 시 TimeoutCancellationException (재시도 포함한 전체 한도)
-    // 재시도: 일반 오류에 한해 1회 재시도 (타임아웃은 즉시 포기)
-    override suspend fun reviewCode(code: String, provider: AiProvider): CodeReview =
-        withTimeout(TIMEOUT_MS) {
-            var lastEx: Exception? = null
-            for (attempt in 1..MAX_ATTEMPTS) {
-                try {
-                    return@withTimeout withContext(Dispatchers.IO) {
+    // LLM이 Kotlin/Shell 코드의 $ 앞에 \를 붙이는 경우가 있어 \$ → $ 전처리 허용
+    // Kotlin data class 역직렬화를 위해 KotlinModule 등록 필수
+    private val lenientMapper = ObjectMapper().apply {
+        registerKotlinModule()
+        configure(JsonParser.Feature.ALLOW_BACKSLASH_ESCAPING_ANY_CHARACTER, true)
+    }
+    private val converter = BeanOutputConverter(CodeReviewAiResponse::class.java, lenientMapper)
+
+    // .entity(converter)로 JSON Schema를 프롬프트에 append하고 lenient ObjectMapper로 역직렬화
+    // withTimeout: 시도별로 적용 — 1차 타임아웃이 2차 시도 시간을 잠식하지 않도록 분리
+    override suspend fun reviewCode(code: String, provider: AiProvider): CodeReview {
+        var lastEx: Exception? = null
+        for (attempt in 1..MAX_ATTEMPTS) {
+            try {
+                return withTimeout(TIMEOUT_MS) {
+                    withContext(Dispatchers.IO) {
                         promptBuilder.build(systemPromptResource, userPromptResource, mapOf("code" to code), provider)
                             .call()
-                            .entity(CodeReviewAiResponse::class.java)
+                            .entity(converter)
                             ?.toDomain()
                             ?: throw IllegalStateException("AI로부터 리뷰 결과를 받지 못했습니다")
                     }
-                } catch (e: Exception) {
-                    lastEx = e
-                    logger.warn("AI 리뷰 실패 (시도 {}/{}): {}", attempt, MAX_ATTEMPTS, e.message)
                 }
+            } catch (e: TimeoutCancellationException) {
+                // 시도별 타임아웃 — 외부 코루틴 취소와 구분하기 위해 별도 처리
+                lastEx = e
+                logger.warn("AI 리뷰 타임아웃 (시도 {}/{}): {}ms 초과", attempt, MAX_ATTEMPTS, TIMEOUT_MS)
+            } catch (e: Exception) {
+                lastEx = e
+                logger.warn("AI 리뷰 실패 (시도 {}/{}): {}", attempt, MAX_ATTEMPTS, e.message)
             }
-            throw lastEx!!
         }
+        throw lastEx!!
+    }
 
     companion object {
-        private const val TIMEOUT_MS = 30_000L
+        private const val TIMEOUT_MS = 60_000L  // 시도별 타임아웃 — 파일당 AI 응답에 충분한 여유 확보
         private const val MAX_ATTEMPTS = 2
         private val logger = LoggerFactory.getLogger(SpringAiReviewAdapter::class.java)
     }

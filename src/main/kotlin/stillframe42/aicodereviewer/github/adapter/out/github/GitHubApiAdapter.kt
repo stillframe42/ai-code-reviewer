@@ -49,6 +49,7 @@ class GitHubApiAdapter(
             body = review.body,
             event = review.event.name,
             comments = review.lineComments.map { ReviewLineComment(path = it.path, position = it.position, body = it.body) },
+            commitId = review.commitId,
         )
         return gitHubHttpClient.postPrReview(repositoryFullName, pullRequestNumber, request, token)
     }
