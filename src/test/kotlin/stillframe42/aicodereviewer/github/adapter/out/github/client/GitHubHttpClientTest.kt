@@ -1,4 +1,4 @@
-package stillframe42.aicodereviewer.github.infrastructure
+package stillframe42.aicodereviewer.github.adapter.out.github.client
 
 import kotlinx.coroutines.runBlocking
 import org.assertj.core.api.Assertions.assertThat

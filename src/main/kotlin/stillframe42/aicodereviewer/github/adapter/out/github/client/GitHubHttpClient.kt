@@ -1,4 +1,4 @@
-package stillframe42.aicodereviewer.github.infrastructure
+package stillframe42.aicodereviewer.github.adapter.out.github.client
 
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.http.MediaType

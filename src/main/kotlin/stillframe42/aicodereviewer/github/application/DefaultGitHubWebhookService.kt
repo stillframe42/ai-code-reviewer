@@ -1,7 +1,7 @@
 package stillframe42.aicodereviewer.github.application
 
-import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
+import stillframe42.aicodereviewer.common.Logging
 import stillframe42.aicodereviewer.core.AiProvider
 import stillframe42.aicodereviewer.github.domain.model.PrReview
 import stillframe42.aicodereviewer.github.domain.model.PrReviewEvent
@@ -22,7 +22,7 @@ class DefaultGitHubWebhookService(
     private val reviewCommentFormatterPort: ReviewCommentFormatterPort,
     private val processedEventPort: ProcessedEventPort,
     private val diffPositionResolver: DiffPositionResolver,
-) : GitHubWebhookUseCase {
+) : GitHubWebhookUseCase, Logging {
 
     override suspend fun handlePullRequestEvent(event: PullRequestEvent) {
         logger.info(
@@ -135,7 +135,4 @@ class DefaultGitHubWebhookService(
         )
     }
 
-    companion object {
-        private val logger = LoggerFactory.getLogger(DefaultGitHubWebhookService::class.java)
-    }
 }

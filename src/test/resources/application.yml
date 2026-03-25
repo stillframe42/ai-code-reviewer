@@ -1,6 +1,6 @@
 app:
   prompt:
-    review-system: classpath:prompts/review-system-v2.st
+    review-system: classpath:prompts/review-system-v7.st
     chat-system: classpath:prompts/chat-system.st
     chat-user: classpath:prompts/chat-user.st
 

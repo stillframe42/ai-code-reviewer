@@ -4,7 +4,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.springframework.stereotype.Component
 import stillframe42.aicodereviewer.github.domain.port.out.GitHubTokenPort
-import stillframe42.aicodereviewer.github.infrastructure.GitHubHttpClient
+import stillframe42.aicodereviewer.github.adapter.out.github.client.GitHubHttpClient
 import java.time.Instant
 import java.util.concurrent.ConcurrentHashMap
 

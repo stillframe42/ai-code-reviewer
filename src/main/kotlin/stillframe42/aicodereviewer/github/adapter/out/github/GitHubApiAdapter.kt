@@ -7,7 +7,7 @@ import stillframe42.aicodereviewer.github.domain.model.PrFile
 import stillframe42.aicodereviewer.github.domain.model.PrReview
 import stillframe42.aicodereviewer.github.domain.port.out.GitHubApiPort
 import stillframe42.aicodereviewer.github.domain.port.out.GitHubTokenPort
-import stillframe42.aicodereviewer.github.infrastructure.GitHubHttpClient
+import stillframe42.aicodereviewer.github.adapter.out.github.client.GitHubHttpClient
 
 // GitHub REST API 아웃바운드 어댑터
 @Component

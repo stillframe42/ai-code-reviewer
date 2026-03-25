@@ -3,8 +3,8 @@ package stillframe42.aicodereviewer.github.adapter.`in`.web
 import tools.jackson.databind.ObjectMapper
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
-import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Qualifier
+import stillframe42.aicodereviewer.common.Logging
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.PostMapping
@@ -24,7 +24,7 @@ class WebhookController(
     private val signatureVerifier: HmacSignatureVerifier,
     private val objectMapper: ObjectMapper,
     @param:Qualifier("applicationScope") private val applicationScope: CoroutineScope,
-) {
+) : Logging {
 
     @PostMapping("/webhook")
     fun handleWebhook(
@@ -72,7 +72,4 @@ class WebhookController(
         return ResponseEntity.accepted().build()
     }
 
-    companion object {
-        private val logger = LoggerFactory.getLogger(WebhookController::class.java)
-    }
 }

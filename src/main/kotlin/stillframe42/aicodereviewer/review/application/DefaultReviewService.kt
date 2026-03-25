@@ -5,8 +5,8 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
-import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
+import stillframe42.aicodereviewer.common.Logging
 import stillframe42.aicodereviewer.config.ReviewProperties
 import stillframe42.aicodereviewer.core.AiProvider
 import stillframe42.aicodereviewer.review.domain.model.CodeReview
@@ -21,7 +21,7 @@ class DefaultReviewService(
     private val aiReviewPort: AiReviewPort,
     private val diffPreprocessor: DiffPreprocessor,
     private val reviewProperties: ReviewProperties,
-) : ReviewUseCase {
+) : ReviewUseCase, Logging {
 
     override suspend fun reviewCode(
         code: String,
@@ -66,7 +66,4 @@ class DefaultReviewService(
         )
     }
 
-    companion object {
-        private val logger = LoggerFactory.getLogger(DefaultReviewService::class.java)
-    }
 }

@@ -1,7 +1,7 @@
 package stillframe42.aicodereviewer.review.domain.service
 
-import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
+import stillframe42.aicodereviewer.common.Logging
 import stillframe42.aicodereviewer.common.TokenEstimator
 import stillframe42.aicodereviewer.review.domain.model.DiffFilterOptions
 import stillframe42.aicodereviewer.review.domain.model.DiffPreprocessResult
@@ -10,9 +10,7 @@ import stillframe42.aicodereviewer.review.domain.model.FileReviewStrategy
 // diff 전처리 도메인 서비스
 // 불필요한 청크(바이너리, 테스트 파일 등)와 메타데이터 줄을 제거하여 AI에 전달할 토큰을 절감한다
 @Component
-class DiffPreprocessor {
-
-    private val log = LoggerFactory.getLogger(DiffPreprocessor::class.java)
+class DiffPreprocessor : Logging {
 
     fun preprocess(diff: String, options: DiffFilterOptions): DiffPreprocessResult {
         val tokensBefore = TokenEstimator.estimate(diff)
@@ -73,13 +71,13 @@ class DiffPreprocessor {
         val tokensAfter = TokenEstimator.estimate(fileDiffsClean.joinToString("\n"))
 
         // 7. INFO 로그 출력
-        log.info(
+        logger.info(
             "전처리 완료 — 토큰: {} → {} ({}% 절감), 제외 파일: {}개",
             tokensBefore, tokensAfter,
             if (tokensBefore > 0) (tokensBefore - tokensAfter) * 100 / tokensBefore else 0,
             filteredFiles.size,
         )
-        filteredFiles.forEach { log.info("  제외: {}", it) }
+        filteredFiles.forEach { logger.info("  제외: {}", it) }
 
         return DiffPreprocessResult(
             fileDiffs = fileDiffsClean,

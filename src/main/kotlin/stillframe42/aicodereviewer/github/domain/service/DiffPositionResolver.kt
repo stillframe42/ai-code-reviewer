@@ -1,7 +1,7 @@
 package stillframe42.aicodereviewer.github.domain.service
 
-import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
+import stillframe42.aicodereviewer.common.Logging
 import stillframe42.aicodereviewer.github.domain.model.PrReviewLineComment
 import stillframe42.aicodereviewer.review.domain.model.CodeIssue
 
@@ -9,9 +9,7 @@ import stillframe42.aicodereviewer.review.domain.model.CodeIssue
 // CodeIssue 목록을 PrReviewLineComment로 변환하는 도메인 서비스
 // GitHub PR Reviews API의 position은 파일별 첫 @@ 줄을 1로 시작하는 1-based 누적 카운터
 @Component
-class DiffPositionResolver {
-
-    private val log = LoggerFactory.getLogger(DiffPositionResolver::class.java)
+class DiffPositionResolver : Logging {
 
     // raw diff와 CodeIssue 목록을 받아 인라인 코멘트 목록과 매핑 실패 이슈 목록을 반환
     fun resolve(rawDiff: String, issues: List<CodeIssue>): DiffPositionResolution {
@@ -30,14 +28,14 @@ class DiffPositionResolver {
 
             if (resolvedFilename != null && position != null) {
                 lineComments.add(PrReviewLineComment(resolvedFilename, position, formatBody(issue)))
-                log.debug("이슈 위치 매핑 성공: file={}, line={} → position={}", resolvedFilename, line, position)
+                logger.debug("이슈 위치 매핑 성공: file={}, line={} → position={}", resolvedFilename, line, position)
             } else {
                 unmappedIssues.add(issue)
-                log.debug("이슈 위치 매핑 실패: filename={}, line={}", issue.filename, line)
+                logger.debug("이슈 위치 매핑 실패: filename={}, line={}", issue.filename, line)
             }
         }
 
-        log.info(
+        logger.info(
             "diff position 매핑 완료 — 인라인 코멘트: {}개, 본문 포함: {}개",
             lineComments.size, unmappedIssues.size,
         )
@@ -117,18 +115,17 @@ class DiffPositionResolver {
         filename: String?,
         line: Int,
     ): Pair<String?, Int?> {
-        if (filename != null) {
-            val position = positionIndex[filename]?.get(line)
-            return filename to position
-        }
-
-        // filename이 null — 유일한 파일을 추론 (멀티 파일에서 중복 시 매핑 포기)
-        val candidates = positionIndex.entries.filter { (_, lineMap) -> lineMap.containsKey(line) }
-        return if (candidates.size == 1) {
-            val (resolvedFile, lineMap) = candidates.first()
-            resolvedFile to lineMap[line]
+        return if (filename != null) {
+            filename to positionIndex[filename]?.get(line)
         } else {
-            null to null
+            // filename이 null — 유일한 파일을 추론 (멀티 파일에서 중복 시 매핑 포기)
+            val candidates = positionIndex.entries.filter { (_, lineMap) -> lineMap.containsKey(line) }
+            if (candidates.size == 1) {
+                val (resolvedFile, lineMap) = candidates.first()
+                resolvedFile to lineMap[line]
+            } else {
+                null to null
+            }
         }
     }
 

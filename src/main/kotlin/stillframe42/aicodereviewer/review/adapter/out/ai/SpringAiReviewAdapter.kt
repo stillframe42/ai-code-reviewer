@@ -7,8 +7,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
-import org.slf4j.LoggerFactory
 import org.springframework.ai.converter.BeanOutputConverter
+import stillframe42.aicodereviewer.common.Logging
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.core.io.Resource
 import org.springframework.stereotype.Component
@@ -28,7 +28,7 @@ class SpringAiReviewAdapter(
 
     @param:Value("classpath:prompts/review-user.st")
     private val userPromptResource: Resource,
-) : AiReviewPort {
+) : AiReviewPort, Logging {
 
     // LLM이 Kotlin/Shell 코드의 $ 앞에 \를 붙이는 경우가 있어 \$ → $ 전처리 허용
     // Kotlin data class 역직렬화를 위해 KotlinModule 등록 필수
@@ -62,12 +62,11 @@ class SpringAiReviewAdapter(
                 logger.warn("AI 리뷰 실패 (시도 {}/{}): {}", attempt, MAX_ATTEMPTS, e.message)
             }
         }
-        throw lastEx!!
+        throw lastEx ?: error("재시도 횟수(${MAX_ATTEMPTS}회) 초과 후 예외가 없음")
     }
 
     companion object {
         private const val TIMEOUT_MS = 60_000L  // 시도별 타임아웃 — 파일당 AI 응답에 충분한 여유 확보
         private const val MAX_ATTEMPTS = 2
-        private val logger = LoggerFactory.getLogger(SpringAiReviewAdapter::class.java)
     }
 }
