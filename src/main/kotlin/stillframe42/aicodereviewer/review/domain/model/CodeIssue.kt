@@ -4,6 +4,7 @@ package stillframe42.aicodereviewer.review.domain.model
 data class CodeIssue(
     val id: String,
     val category: IssueCategory,
+    val filename: String? = null,  // 이슈가 발생한 파일 경로 (예: src/main/kotlin/Foo.kt). 특정 불가 시 null
     val line: Int?,
     val severity: IssueSeverity,
     val description: String,
