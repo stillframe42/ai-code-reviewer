@@ -4,7 +4,6 @@ import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Component
 import stillframe42.aicodereviewer.github.domain.port.out.ReviewCommentFormatterPort
 import stillframe42.aicodereviewer.review.domain.model.CodeReview
-import stillframe42.aicodereviewer.review.domain.model.IssueSeverity
 import java.time.ZoneId
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
@@ -37,7 +36,7 @@ class MarkdownReviewCommentFormatter(
             review.issues.forEach { issue ->
                 val lineTag = issue.line?.let { " (L$it)" } ?: ""
                 val description = "${issue.description}$lineTag<br>💡 ${issue.suggestion}"
-                appendLine("| ${severityEmoji(issue.severity)} ${issue.severity} | ${issue.category} | $description |")
+                appendLine("| ${issue.severity.emoji} ${issue.severity} | ${issue.category} | $description |")
             }
         }
         appendLine()
@@ -57,10 +56,4 @@ class MarkdownReviewCommentFormatter(
         append("> 생성 시간: $timestamp | 모델: $modelName")
     }
 
-    private fun severityEmoji(severity: IssueSeverity): String = when (severity) {
-        IssueSeverity.CRITICAL -> "🔴"
-        IssueSeverity.MAJOR -> "🟠"
-        IssueSeverity.MINOR -> "🟡"
-        IssueSeverity.SUGGESTION -> "🔵"
-    }
 }
