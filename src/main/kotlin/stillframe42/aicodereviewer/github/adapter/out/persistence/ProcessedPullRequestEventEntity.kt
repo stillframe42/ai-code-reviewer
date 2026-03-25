@@ -35,6 +35,10 @@ class ProcessedPullRequestEventEntity(
     @Column(name = "head_sha", nullable = false, length = 40)
     val headSha: String,
 
+    // 등록된 GitHub PR 리뷰 ID — 새 커밋 push 시 dismiss 대상 조회에 사용된다
+    @Column(name = "review_id", nullable = false)
+    val reviewId: Long,
+
     @Column(name = "processed_at", nullable = false)
     val processedAt: Instant = Instant.now(),
 )

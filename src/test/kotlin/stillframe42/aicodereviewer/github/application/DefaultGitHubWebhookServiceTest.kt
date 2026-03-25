@@ -54,16 +54,18 @@ class DefaultGitHubWebhookServiceTest {
     }
 
     @Test
-    fun `SYNCHRONIZE 이벤트를 처리하면 예외가 발생하지 않는다`() = runBlocking {
+    fun `SYNCHRONIZE 이벤트를 처리하면 이전 리뷰를 dismiss하고 새 리뷰를 등록한다`() = runBlocking {
         val (installationId, repo, prNumber) = GitHubTestCredentials.assumeFullCredentials()
 
+        // 새 SHA로 이벤트 발생 시 이전 리뷰 dismiss → 새 리뷰 등록 흐름 검증
+        // (이전 처리 이력이 없으면 dismiss를 건너뛰고 바로 새 리뷰 등록)
         service.handlePullRequestEvent(
             PullRequestEvent(
                 action = PullRequestAction.SYNCHRONIZE,
                 installationId = installationId,
                 repositoryFullName = repo,
                 pullRequestNumber = prNumber,
-                headSha = "HEAD",
+                headSha = "SYNC-HEAD",
                 title = "통합 테스트 PR",
                 author = "test-user",
             ),

@@ -10,10 +10,17 @@ interface ProcessedEventPort {
         headSha: String,
     ): Boolean
 
-    // 이벤트 처리 완료를 기록한다
+    // 이벤트 처리 완료를 기록한다 — reviewId는 이후 dismiss 시 사용된다
     suspend fun markAsProcessed(
         repositoryFullName: String,
         pullRequestNumber: Int,
         headSha: String,
+        reviewId: Long,
     )
+
+    // 해당 PR의 직전 리뷰 ID를 반환한다 — 없으면 null
+    suspend fun findLatestReviewId(
+        repositoryFullName: String,
+        pullRequestNumber: Int,
+    ): Long?
 }

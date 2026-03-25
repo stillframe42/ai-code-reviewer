@@ -67,20 +67,48 @@ class GitHubHttpClientTest {
     }
 
     @Test
-    fun `유효한 PR에 코멘트를 등록하면 예외가 발생하지 않는다`() = runBlocking {
+    fun `유효한 PR에 리뷰를 등록하면 양수 review ID가 반환된다`() = runBlocking {
         val (installationId, repo, prNumber) = assumeGitHubCredentials()
 
         val jwt = jwtGenerator.generate()
         val tokenResponse = gitHubHttpClient.fetchInstallationToken(installationId, jwt)
 
-        // 예외 없이 완료되면 성공
-        gitHubHttpClient.postPrReview(
+        val reviewId = gitHubHttpClient.postPrReview(
             repositoryFullName = repo,
             pullRequestNumber = prNumber,
             request = stillframe42.aicodereviewer.github.adapter.out.github.dto.CreatePullRequestReviewRequest(
                 body = "[테스트] GitHubHttpClient PR Reviews API 통합 테스트",
                 event = "COMMENT",
             ),
+            token = tokenResponse.token,
+        )
+
+        assertThat(reviewId).isPositive()
+        Unit
+    }
+
+    @Test
+    fun `등록된 리뷰를 dismiss하면 예외가 발생하지 않는다`() = runBlocking {
+        val (installationId, repo, prNumber) = assumeGitHubCredentials()
+
+        val jwt = jwtGenerator.generate()
+        val tokenResponse = gitHubHttpClient.fetchInstallationToken(installationId, jwt)
+
+        // REQUEST_CHANGES 타입만 dismiss 가능 — COMMENT는 dismiss 불가
+        val reviewId = gitHubHttpClient.postPrReview(
+            repositoryFullName = repo,
+            pullRequestNumber = prNumber,
+            request = stillframe42.aicodereviewer.github.adapter.out.github.dto.CreatePullRequestReviewRequest(
+                body = "[테스트] dismiss 테스트용 리뷰",
+                event = "REQUEST_CHANGES",
+            ),
+            token = tokenResponse.token,
+        )
+
+        gitHubHttpClient.dismissPrReview(
+            repositoryFullName = repo,
+            pullRequestNumber = prNumber,
+            reviewId = reviewId,
             token = tokenResponse.token,
         )
         Unit

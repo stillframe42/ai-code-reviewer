@@ -9,6 +9,7 @@ import org.springframework.web.reactive.function.client.awaitBodilessEntity
 import stillframe42.aicodereviewer.github.adapter.out.github.dto.CreatePullRequestReviewRequest
 import stillframe42.aicodereviewer.github.adapter.out.github.dto.InstallationTokenResponse
 import stillframe42.aicodereviewer.github.adapter.out.github.dto.PrFileResponse
+import stillframe42.aicodereviewer.github.adapter.out.github.dto.PullRequestReviewResponse
 
 // GitHub REST API raw HTTP 호출을 캡슐화하는 클라이언트
 // 모든 WebClient 호출은 이 클래스 한 곳에서 관리한다
@@ -51,19 +52,41 @@ class GitHubHttpClient(
             .awaitBody()
     }
 
-    // POST /repos/{owner}/{repo}/pulls/{number}/reviews — PR Reviews API로 코드 리뷰 등록
+    // POST /repos/{owner}/{repo}/pulls/{number}/reviews — PR Reviews API로 코드 리뷰 등록, 생성된 review ID 반환
     suspend fun postPrReview(
         repositoryFullName: String,
         pullRequestNumber: Int,
         request: CreatePullRequestReviewRequest,
         token: String,
-    ) {
+    ): Long {
         val (owner, repo) = repositoryFullName.ownerAndRepo()
-        webClient.post()
+        return webClient.post()
             .uri("/repos/{owner}/{repo}/pulls/{number}/reviews", owner, repo, pullRequestNumber)
             .header("Authorization", "Bearer $token")
             .contentType(MediaType.APPLICATION_JSON)
             .bodyValue(request)
+            .retrieve()
+            .awaitBody<PullRequestReviewResponse>()
+            .id
+    }
+
+    // PUT /repos/{owner}/{repo}/pulls/{number}/reviews/{reviewId}/dismissals — 기존 리뷰 dismiss
+    // 새 커밋 push 시 이전 리뷰를 무효화하는 데 사용한다
+    suspend fun dismissPrReview(
+        repositoryFullName: String,
+        pullRequestNumber: Int,
+        reviewId: Long,
+        token: String,
+    ) {
+        val (owner, repo) = repositoryFullName.ownerAndRepo()
+        webClient.put()
+            .uri(
+                "/repos/{owner}/{repo}/pulls/{number}/reviews/{reviewId}/dismissals",
+                owner, repo, pullRequestNumber, reviewId,
+            )
+            .header("Authorization", "Bearer $token")
+            .contentType(MediaType.APPLICATION_JSON)
+            .bodyValue(mapOf("message" to "새 커밋이 push되어 이전 리뷰를 dismiss합니다."))
             .retrieve()
             .awaitBodilessEntity()
     }

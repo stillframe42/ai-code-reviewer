@@ -29,14 +29,26 @@ class ProcessedEventAdapter(
         repositoryFullName: String,
         pullRequestNumber: Int,
         headSha: String,
+        reviewId: Long,
     ): Unit = withContext(Dispatchers.IO) {
         repository.save(
             ProcessedPullRequestEventEntity(
                 repositoryFullName = repositoryFullName,
                 pullRequestNumber = pullRequestNumber,
                 headSha = headSha,
+                reviewId = reviewId,
                 processedAt = Instant.now(),
             ),
         )
+    }
+
+    override suspend fun findLatestReviewId(
+        repositoryFullName: String,
+        pullRequestNumber: Int,
+    ): Long? = withContext(Dispatchers.IO) {
+        repository.findTopByRepositoryFullNameAndPullRequestNumberOrderByProcessedAtDesc(
+            repositoryFullName = repositoryFullName,
+            pullRequestNumber = pullRequestNumber,
+        )?.reviewId
     }
 }

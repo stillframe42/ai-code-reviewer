@@ -19,11 +19,19 @@ interface GitHubApiPort {
         installationId: Long,
     ): List<PrFile>
 
-    // PR에 코드 리뷰를 등록한다 (Pull Request Reviews API)
+    // PR에 코드 리뷰를 등록하고 생성된 review ID를 반환한다 (Pull Request Reviews API)
     suspend fun postPrReview(
         repositoryFullName: String,
         pullRequestNumber: Int,
         review: PrReview,
+        installationId: Long,
+    ): Long
+
+    // 기존 리뷰를 dismiss한다 — 새 커밋 push 시 이전 리뷰 무효화에 사용
+    suspend fun dismissPrReview(
+        repositoryFullName: String,
+        pullRequestNumber: Int,
+        reviewId: Long,
         installationId: Long,
     )
 }

@@ -42,6 +42,7 @@ class ProcessedEventAdapterTest {
             repositoryFullName = "owner/repo",
             pullRequestNumber = 42,
             headSha = "abc123",
+            reviewId = 100L,
         )
 
         val result = adapter.isAlreadyProcessed(
@@ -59,6 +60,7 @@ class ProcessedEventAdapterTest {
             repositoryFullName = "owner/repo",
             pullRequestNumber = 42,
             headSha = "abc123",
+            reviewId = 100L,
         )
 
         val result = adapter.isAlreadyProcessed(
@@ -71,12 +73,40 @@ class ProcessedEventAdapterTest {
     }
 
     @Test
+    fun `markAsProcessed 후 findLatestReviewId는 저장된 reviewId를 반환한다`() = runBlocking {
+        adapter.markAsProcessed(
+            repositoryFullName = "owner/repo",
+            pullRequestNumber = 42,
+            headSha = "abc123",
+            reviewId = 999L,
+        )
+
+        val reviewId = adapter.findLatestReviewId(
+            repositoryFullName = "owner/repo",
+            pullRequestNumber = 42,
+        )
+
+        org.junit.jupiter.api.Assertions.assertEquals(999L, reviewId)
+    }
+
+    @Test
+    fun `처리 이력이 없으면 findLatestReviewId는 null을 반환한다`() = runBlocking {
+        val reviewId = adapter.findLatestReviewId(
+            repositoryFullName = "owner/repo",
+            pullRequestNumber = 42,
+        )
+
+        org.junit.jupiter.api.Assertions.assertNull(reviewId)
+    }
+
+    @Test
     fun `동일 조합을 두 번 markAsProcessed하면 DataIntegrityViolationException이 발생한다`() {
         repository.saveAndFlush(
             ProcessedPullRequestEventEntity(
                 repositoryFullName = "owner/repo",
                 pullRequestNumber = 42,
                 headSha = "abc123",
+                reviewId = 100L,
             ),
         )
 
@@ -86,6 +116,7 @@ class ProcessedEventAdapterTest {
                     repositoryFullName = "owner/repo",
                     pullRequestNumber = 42,
                     headSha = "abc123",
+                    reviewId = 101L,
                 ),
             )
         }

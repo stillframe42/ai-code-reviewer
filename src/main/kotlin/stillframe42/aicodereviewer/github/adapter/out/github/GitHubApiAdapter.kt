@@ -37,19 +37,30 @@ class GitHubApiAdapter(
             .map { it.toDomain() }
     }
 
-    // PR Reviews API로 코드 리뷰를 등록한다 — PrReview 도메인 모델을 DTO로 변환하여 전달
+    // PR Reviews API로 코드 리뷰를 등록하고 생성된 review ID를 반환한다
     override suspend fun postPrReview(
         repositoryFullName: String,
         pullRequestNumber: Int,
         review: PrReview,
         installationId: Long,
-    ) {
+    ): Long {
         val token = tokenPort.getInstallationToken(installationId)
         val request = CreatePullRequestReviewRequest(
             body = review.body,
             event = review.event.name,
             comments = review.lineComments.map { ReviewLineComment(path = it.path, position = it.position, body = it.body) },
         )
-        gitHubHttpClient.postPrReview(repositoryFullName, pullRequestNumber, request, token)
+        return gitHubHttpClient.postPrReview(repositoryFullName, pullRequestNumber, request, token)
+    }
+
+    // 기존 리뷰를 dismiss한다 — 새 커밋 push 시 이전 리뷰 무효화에 사용
+    override suspend fun dismissPrReview(
+        repositoryFullName: String,
+        pullRequestNumber: Int,
+        reviewId: Long,
+        installationId: Long,
+    ) {
+        val token = tokenPort.getInstallationToken(installationId)
+        gitHubHttpClient.dismissPrReview(repositoryFullName, pullRequestNumber, reviewId, token)
     }
 }
