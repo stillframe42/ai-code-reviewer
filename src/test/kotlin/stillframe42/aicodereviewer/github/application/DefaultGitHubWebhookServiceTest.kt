@@ -95,15 +95,15 @@ class DefaultGitHubWebhookServiceTest {
 
         assertThat(result).contains("종합 점수: 7/10")
         assertThat(result).contains("전반적으로 읽기 쉽게 작성된 코드입니다.")
-        assertThat(result).contains("이슈 목록 (1건)")
+        assertThat(result).contains("Issues Found (1)")
         assertThat(result).contains("CRITICAL")
         assertThat(result).contains("SECURITY")
         assertThat(result).contains("SQL Injection 취약점")
-        assertThat(result).contains("42번째 줄")
+        assertThat(result).contains("(L42)")
         assertThat(result).contains("PreparedStatement를 사용하세요")
-        assertThat(result).contains("잘한 점")
+        assertThat(result).contains("Positives")
         assertThat(result).contains("명확한 변수명 사용")
-        assertThat(result).contains("AI가 자동으로 생성했습니다")
+        assertThat(result).contains("생성 시간:")
     }
 
     @Test
@@ -117,7 +117,7 @@ class DefaultGitHubWebhookServiceTest {
 
         val result = formatter.format(review)
 
-        assertThat(result).contains("이슈 목록 (0건)")
+        assertThat(result).contains("Issues Found (0)")
         assertThat(result).contains("발견된 이슈가 없습니다.")
     }
 
@@ -141,7 +141,7 @@ class DefaultGitHubWebhookServiceTest {
 
         val result = formatter.format(review)
 
-        assertThat(result).doesNotContain("잘한 점")
+        assertThat(result).doesNotContain("Positives")
     }
 
     @Test
@@ -165,6 +165,6 @@ class DefaultGitHubWebhookServiceTest {
         val result = formatter.format(review)
 
         assertThat(result).contains("SRP 위반 의심")
-        assertThat(result).doesNotContain("번째 줄")
+        assertThat(result).doesNotContain("(L")
     }
 }
