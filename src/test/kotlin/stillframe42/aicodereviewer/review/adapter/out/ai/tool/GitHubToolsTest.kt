@@ -2,12 +2,11 @@ package stillframe42.aicodereviewer.review.adapter.out.ai.tool
 
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.assertThrows
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
+import stillframe42.aicodereviewer.github.support.GitHubTestCredentials
 
 // GitHubTools 통합 테스트
-// Phase 2: 빈 등록 및 기반 구조 검증
 @SpringBootTest
 class GitHubToolsTest {
 
@@ -19,17 +18,33 @@ class GitHubToolsTest {
         assertThat(gitHubTools).isNotNull
     }
 
-    // Phase 3 구현 후 실제 API 호출 테스트로 교체
     @Test
-    fun `getFileContent는 Phase 3 구현 전 NotImplementedError를 던진다`() {
-        assertThrows<NotImplementedError> {
-            gitHubTools.getFileContent(
-                owner = "test-owner",
-                repo = "test-repo",
-                path = "README.md",
-                ref = "main",
-                installationId = 0L,
-            )
-        }
+    fun `존재하는 파일을 조회하면 파일 내용을 반환한다`() {
+        val (installationId, repo, _) = GitHubTestCredentials.assumeValidAndGet()
+
+        val result = gitHubTools.getFileContent(
+            repositoryFullName = repo,
+            path = "README.md",
+            ref = "main",
+            installationId = installationId,
+        )
+
+        assertThat(result).isNotBlank()
+        assertThat(result).doesNotStartWith("파일을 찾을 수 없습니다")
+        assertThat(result).doesNotStartWith("GitHub API 오류")
+    }
+
+    @Test
+    fun `존재하지 않는 파일을 조회하면 오류 메시지 문자열을 반환한다`() {
+        val (installationId, repo, _) = GitHubTestCredentials.assumeValidAndGet()
+
+        val result = gitHubTools.getFileContent(
+            repositoryFullName = repo,
+            path = "this/file/does/not/exist.kt",
+            ref = "main",
+            installationId = installationId,
+        )
+
+        assertThat(result).startsWith("파일을 찾을 수 없습니다")
     }
 }

@@ -7,6 +7,7 @@ import org.springframework.web.reactive.function.client.WebClient
 import org.springframework.web.reactive.function.client.awaitBody
 import org.springframework.web.reactive.function.client.awaitBodilessEntity
 import stillframe42.aicodereviewer.github.adapter.out.github.dto.CreatePullRequestReviewRequest
+import stillframe42.aicodereviewer.github.adapter.out.github.dto.FileContentResponse
 import stillframe42.aicodereviewer.github.adapter.out.github.dto.InstallationTokenResponse
 import stillframe42.aicodereviewer.github.adapter.out.github.dto.PrFileResponse
 import stillframe42.aicodereviewer.github.adapter.out.github.dto.PullRequestReviewResponse
@@ -47,6 +48,23 @@ class GitHubHttpClient(
         val (owner, repo) = repositoryFullName.ownerAndRepo()
         return webClient.get()
             .uri("/repos/{owner}/{repo}/pulls/{number}/files", owner, repo, pullRequestNumber)
+            .header("Authorization", "Bearer $token")
+            .retrieve()
+            .awaitBody()
+    }
+
+    // GET /repos/{owner}/{repo}/contents/{path}?ref={ref} — 특정 ref의 파일 내용 조회
+    // content는 MIME Base64 인코딩 + 개행 포함으로 반환된다
+    // path에 슬래시가 포함되므로 uriBuilder 람다로 처리하여 %2F로 올바르게 인코딩한다
+    suspend fun fetchFileContent(
+        repositoryFullName: String,
+        path: String,
+        ref: String,
+        token: String,
+    ): FileContentResponse {
+        val (owner, repo) = repositoryFullName.ownerAndRepo()
+        return webClient.get()
+            .uri { it.path("/repos/{owner}/{repo}/contents/{path}").queryParam("ref", ref).build(owner, repo, path) }
             .header("Authorization", "Bearer $token")
             .retrieve()
             .awaitBody()
