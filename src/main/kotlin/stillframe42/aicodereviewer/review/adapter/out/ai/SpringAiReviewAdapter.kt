@@ -3,6 +3,7 @@ package stillframe42.aicodereviewer.review.adapter.out.ai
 import com.fasterxml.jackson.core.JsonParser
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.registerKotlinModule
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.withContext
@@ -83,6 +84,8 @@ class SpringAiReviewAdapter(
                 lastEx = e
                 logger.warn("AI 리뷰 실패 (시도 {}/{}): {}", attempt, MAX_ATTEMPTS, e.message)
             }
+            // 재시도 전 대기 — Rate Limit(429) 등 일시적 오류 회피
+            if (attempt < MAX_ATTEMPTS) delay(RETRY_DELAY_MS.milliseconds)
         }
         throw lastEx ?: error("재시도 횟수(${MAX_ATTEMPTS}회) 초과 후 예외가 없음")
     }
@@ -90,5 +93,6 @@ class SpringAiReviewAdapter(
     companion object {
         private const val TIMEOUT_MS = 60_000L  // 시도별 타임아웃 — 파일당 AI 응답에 충분한 여유 확보
         private const val MAX_ATTEMPTS = 2
+        private const val RETRY_DELAY_MS = 5_000L  // 재시도 전 대기 — Rate Limit(429) 등 일시적 오류 회피
     }
 }

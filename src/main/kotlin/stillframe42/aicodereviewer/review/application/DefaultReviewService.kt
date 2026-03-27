@@ -1,8 +1,7 @@
 package stillframe42.aicodereviewer.review.application
 
 import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
-import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.supervisorScope
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 import org.springframework.stereotype.Service
@@ -48,11 +47,19 @@ class DefaultReviewService(
             val concurrency = reviewProperties.diff.maxConcurrency
             logger.info("파일별 병렬 리뷰 시작: {}개 파일 (최대 동시 호출: {})", fileDiffs.size, concurrency)
             val semaphore = Semaphore(concurrency)
-            coroutineScope {
+            // supervisorScope: 개별 파일 리뷰 실패가 다른 파일 취소로 이어지지 않도록 격리
+            // 실패한 파일은 경고 로그 후 스킵 — 성공한 파일만 집계
+            supervisorScope {
                 fileDiffs.map { async { semaphore.withPermit { aiReviewPort.reviewCode(it, provider, mode) } } }
             }
-                .awaitAll()
-                .let(::aggregate)
+                .mapNotNull { deferred ->
+                    runCatching { deferred.await() }
+                        .onFailure { e -> logger.warn("파일 리뷰 실패 (스킵): {}", e.message) }
+                        .getOrNull()
+                }
+                .takeIf { it.isNotEmpty() }
+                ?.let(::aggregate)
+                ?: throw IllegalStateException("모든 파일(${fileDiffs.size}개) 리뷰가 실패했습니다")
         } else {
             // 파일 1개 이하 — 단일 호출
             aiReviewPort.reviewCode(preprocessResult.diff, provider, mode)
