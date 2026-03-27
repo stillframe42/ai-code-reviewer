@@ -17,6 +17,7 @@ import stillframe42.aicodereviewer.core.AiProvider
 import stillframe42.aicodereviewer.review.adapter.out.ai.dto.CodeReviewAiResponse
 import stillframe42.aicodereviewer.review.domain.model.CodeReview
 import stillframe42.aicodereviewer.review.domain.port.out.AiReviewPort
+import kotlin.time.Duration.Companion.milliseconds
 
 // Spring AI 기반 코드 리뷰 출력 어댑터 — AiReviewPort 구현체
 @Component
@@ -44,7 +45,7 @@ class SpringAiReviewAdapter(
         var lastEx: Exception? = null
         for (attempt in 1..MAX_ATTEMPTS) {
             try {
-                return withTimeout(TIMEOUT_MS) {
+                return withTimeout(TIMEOUT_MS.milliseconds) {
                     withContext(Dispatchers.IO) {
                         promptBuilder.build(systemPromptResource, userPromptResource, mapOf("code" to code), provider)
                             .call()
