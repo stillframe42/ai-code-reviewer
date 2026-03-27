@@ -42,28 +42,32 @@ class DefaultReviewService(
         logger.debug("=== 전처리된 diff (AI 전달 내용) ===\n{}", preprocessResult.diff)
 
         val fileDiffs = preprocessResult.fileDiffs.filter { it.isNotBlank() }
-        return if (fileDiffs.size > 1) {
-            // 파일 2개 이상 — Semaphore로 동시 호출 수를 제한하며 병렬 LLM 호출 후 결과 집계
-            val concurrency = reviewProperties.diff.maxConcurrency
-            logger.info("파일별 병렬 리뷰 시작: {}개 파일 (최대 동시 호출: {})", fileDiffs.size, concurrency)
-            val semaphore = Semaphore(concurrency)
-            // supervisorScope: 개별 파일 리뷰 실패가 다른 파일 취소로 이어지지 않도록 격리
-            // 실패한 파일은 경고 로그 후 스킵 — 성공한 파일만 집계
-            supervisorScope {
-                fileDiffs.map { async { semaphore.withPermit { aiReviewPort.reviewCode(it, provider, mode) } } }
-            }
-                .mapNotNull { deferred ->
-                    runCatching { deferred.await() }
-                        .onFailure { e -> logger.warn("파일 리뷰 실패 (스킵): {}", e.message) }
-                        .getOrNull()
-                }
-                .takeIf { it.isNotEmpty() }
-                ?.let(::aggregate)
-                ?: throw IllegalStateException("모든 파일(${fileDiffs.size}개) 리뷰가 실패했습니다")
-        } else {
-            // 파일 1개 이하 — 단일 호출
-            aiReviewPort.reviewCode(preprocessResult.diff, provider, mode)
+        return if (fileDiffs.size > 1) reviewParallel(fileDiffs, provider, mode)
+        else aiReviewPort.reviewCode(preprocessResult.diff, provider, mode)
+    }
+
+    // Semaphore로 동시 호출 수를 제한하며 병렬 LLM 호출 후 결과 집계
+    // supervisorScope: 개별 파일 리뷰 실패가 다른 파일 취소로 이어지지 않도록 격리
+    // 실패한 파일은 경고 로그 후 스킵 — 성공한 파일만 집계
+    private suspend fun reviewParallel(
+        fileDiffs: List<String>,
+        provider: AiProvider,
+        mode: ReviewMode,
+    ): CodeReview {
+        val concurrency = reviewProperties.diff.maxConcurrency
+        logger.info("파일별 병렬 리뷰 시작: {}개 파일 (최대 동시 호출: {})", fileDiffs.size, concurrency)
+        val semaphore = Semaphore(concurrency)
+        return supervisorScope {
+            fileDiffs.map { async { semaphore.withPermit { aiReviewPort.reviewCode(it, provider, mode) } } }
         }
+            .mapNotNull { deferred ->
+                runCatching { deferred.await() }
+                    .onFailure { e -> logger.warn("파일 리뷰 실패 (스킵): {}", e.message) }
+                    .getOrNull()
+            }
+            .takeIf { it.isNotEmpty() }
+            ?.let(::aggregate)
+            ?: throw IllegalStateException("모든 파일(${fileDiffs.size}개) 리뷰가 실패했습니다")
     }
 
     // 파일별 리뷰 결과를 하나의 CodeReview로 집계한다
