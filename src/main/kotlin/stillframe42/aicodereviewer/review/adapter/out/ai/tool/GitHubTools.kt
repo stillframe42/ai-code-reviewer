@@ -2,6 +2,7 @@ package stillframe42.aicodereviewer.review.adapter.out.ai.tool
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
+import org.springframework.ai.chat.model.ToolContext
 import org.springframework.ai.tool.annotation.Tool
 import org.springframework.ai.tool.annotation.ToolParam
 import org.springframework.stereotype.Component
@@ -21,14 +22,21 @@ class GitHubTools(
 
     // GitHub Contents API로 파일 내용을 조회하고 Base64 디코딩하여 반환한다
     // @Tool 메서드는 suspend 불가 — runBlocking(Dispatchers.IO)으로 코루틴 브릿지
+    // installationId는 ToolContext로 전달 — LLM 스키마에 노출되지 않으며 호출자가 주입한다
     // 오류 발생 시 예외를 던지지 않고 LLM이 읽을 수 있는 오류 메시지 문자열을 반환한다
     @Tool(description = "특정 파일의 전체 내용을 가져옵니다")
     fun getFileContent(
         @ToolParam(description = "레포지토리 전체 이름 (예: octocat/my-repo)") repositoryFullName: String,
         @ToolParam(description = "파일 경로 (예: src/main/kotlin/Foo.kt)") path: String,
         @ToolParam(description = "브랜치명 또는 커밋 SHA") ref: String,
-        @ToolParam(description = "GitHub App Installation ID") installationId: Long,
+        toolContext: ToolContext,
     ): String = runBlocking(Dispatchers.IO) {
+        val installationId = toolContext.context["installationId"] as? Long
+            ?: error("ToolContext에 installationId가 없습니다")
+        logger.info(
+            "getFileContent 호출: repository={}, path={}, ref={}, installationId={}",
+            repositoryFullName, path, ref, installationId,
+        )
         runCatching {
             val token = tokenPort.getInstallationToken(installationId)
             val response = gitHubHttpClient.fetchFileContent(repositoryFullName, path, ref, token)

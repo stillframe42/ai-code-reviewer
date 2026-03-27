@@ -5,6 +5,7 @@ import stillframe42.aicodereviewer.common.Logging
 import stillframe42.aicodereviewer.core.AiProvider
 import stillframe42.aicodereviewer.github.domain.model.PrReview
 import stillframe42.aicodereviewer.github.domain.model.PrReviewEvent
+import stillframe42.aicodereviewer.github.domain.model.PrReviewLineComment
 import stillframe42.aicodereviewer.github.domain.model.PullRequestEvent
 import stillframe42.aicodereviewer.github.domain.port.`in`.GitHubWebhookUseCase
 import stillframe42.aicodereviewer.github.domain.port.out.GitHubApiPort
@@ -12,6 +13,7 @@ import stillframe42.aicodereviewer.github.domain.port.out.ProcessedEventPort
 import stillframe42.aicodereviewer.github.domain.port.out.ReviewCommentFormatterPort
 import stillframe42.aicodereviewer.github.domain.service.DiffPositionResolver
 import stillframe42.aicodereviewer.review.domain.model.DiffFilterOptions
+import stillframe42.aicodereviewer.review.domain.model.ReviewMode
 import stillframe42.aicodereviewer.review.domain.port.`in`.ReviewUseCase
 
 // GitHub Webhook 유스케이스 구현 — PR 이벤트 수신 시 diff 조회 → AI 리뷰 → 코멘트 등록 흐름을 조율한다
@@ -23,6 +25,13 @@ class DefaultGitHubWebhookService(
     private val processedEventPort: ProcessedEventPort,
     private val diffPositionResolver: DiffPositionResolver,
 ) : GitHubWebhookUseCase, Logging {
+
+    // AI 리뷰 완료 후 PR에 등록할 준비가 된 결과물
+    private data class ReviewOutput(
+        val body: String,
+        val lineComments: List<PrReviewLineComment>,
+        val hasNoIssues: Boolean,
+    )
 
     override suspend fun handlePullRequestEvent(event: PullRequestEvent) {
         logger.info(
@@ -61,27 +70,8 @@ class DefaultGitHubWebhookService(
         }
 
         // 2단계: AI 코드 리뷰 실행 (전처리 활성화)
-        // 실패 시 null을 반환하고, 3단계에서 에러 코멘트를 등록한다
-        // Triple: (포맷된 본문, 인라인 코멘트 목록, 이슈 없음 여부)
-        val reviewResult = try {
-            val review = reviewUseCase.reviewCode(
-                code = prDiff,
-                provider = AiProvider.ANTHROPIC,
-                diffOptions = DiffFilterOptions(),
-            )
-            logger.info(
-                "AI 리뷰 생성 완료: repo={}, pr={}, score={}",
-                event.repositoryFullName, event.pullRequestNumber, review.overallScore,
-            )
-
-            // diff position 매핑 — 성공한 이슈는 인라인 코멘트, 실패한 이슈는 본문에 포함
-            val resolution = diffPositionResolver.resolve(prDiff, review.issues)
-            val bodyReview = review.copy(issues = resolution.unmappedIssues)
-            Triple(reviewCommentFormatterPort.format(bodyReview), resolution.lineComments, review.issues.isEmpty())
-        } catch (e: Exception) {
-            logger.error("리뷰 생성 실패: repo={}, pr={}", event.repositoryFullName, event.pullRequestNumber, e)
-            null
-        }
+        // 실패 시 null을 반환하고, 4단계에서 에러 코멘트를 등록한다
+        val reviewOutput = generateReviewOutput(event, prDiff)
 
         // 3단계: 이전 리뷰 dismiss — 실패해도 새 리뷰 등록은 계속 진행
         processedEventPort.findLatestReviewId(
@@ -109,12 +99,11 @@ class DefaultGitHubWebhookService(
         val newReviewId = gitHubApiPort.postPrReview(
             repositoryFullName = event.repositoryFullName,
             pullRequestNumber = event.pullRequestNumber,
-            review = if (reviewResult != null) {
-                val (body, lineComments, hasNoIssues) = reviewResult
+            review = if (reviewOutput != null) {
                 PrReview(
-                    body = body,
-                    event = if (hasNoIssues) PrReviewEvent.APPROVE else PrReviewEvent.REQUEST_CHANGES,
-                    lineComments = lineComments,
+                    body = reviewOutput.body,
+                    event = if (reviewOutput.hasNoIssues) PrReviewEvent.APPROVE else PrReviewEvent.REQUEST_CHANGES,
+                    lineComments = reviewOutput.lineComments,
                     commitId = event.headSha,
                 )
             } else {
@@ -124,7 +113,7 @@ class DefaultGitHubWebhookService(
         )
 
         // 리뷰 실패 시 markAsProcessed 호출 안 함 — 다음 이벤트에서 재처리 허용
-        if (reviewResult == null) return
+        if (reviewOutput == null) return
 
         // 5단계: 처리 완료 기록 (중복 방지) — review_id 포함하여 저장
         processedEventPort.markAsProcessed(
@@ -135,4 +124,29 @@ class DefaultGitHubWebhookService(
         )
     }
 
+    // AI 리뷰 실행 및 diff position 매핑 — 실패 시 null 반환하여 에러 코멘트 등록으로 이어진다
+    private suspend fun generateReviewOutput(event: PullRequestEvent, prDiff: String): ReviewOutput? =
+        runCatching {
+            val review = reviewUseCase.reviewCode(
+                code = prDiff,
+                provider = AiProvider.ANTHROPIC,
+                diffOptions = DiffFilterOptions(),
+                mode = ReviewMode.WithGitHubTools(event.installationId),
+            )
+            logger.info(
+                "AI 리뷰 생성 완료: repo={}, pr={}, score={}",
+                event.repositoryFullName, event.pullRequestNumber, review.overallScore,
+            )
+
+            // diff position 매핑 — 성공한 이슈는 인라인 코멘트, 실패한 이슈는 본문에 포함
+            val resolution = diffPositionResolver.resolve(prDiff, review.issues)
+            val bodyReview = review.copy(issues = resolution.unmappedIssues)
+            ReviewOutput(
+                body = reviewCommentFormatterPort.format(bodyReview),
+                lineComments = resolution.lineComments,
+                hasNoIssues = review.issues.isEmpty(),
+            )
+        }.onFailure { e ->
+            logger.error("리뷰 생성 실패: repo={}, pr={}", event.repositoryFullName, event.pullRequestNumber, e)
+        }.getOrNull()
 }

@@ -11,6 +11,7 @@ import stillframe42.aicodereviewer.config.ReviewProperties
 import stillframe42.aicodereviewer.core.AiProvider
 import stillframe42.aicodereviewer.review.domain.model.CodeReview
 import stillframe42.aicodereviewer.review.domain.model.DiffFilterOptions
+import stillframe42.aicodereviewer.review.domain.model.ReviewMode
 import stillframe42.aicodereviewer.review.domain.port.`in`.ReviewUseCase
 import stillframe42.aicodereviewer.review.domain.port.out.AiReviewPort
 import stillframe42.aicodereviewer.review.domain.service.DiffPreprocessor
@@ -27,9 +28,10 @@ class DefaultReviewService(
         code: String,
         provider: AiProvider,
         diffOptions: DiffFilterOptions?,
+        mode: ReviewMode,
     ): CodeReview {
         // diffOptions가 없으면 전처리 없이 바로 AI 호출
-        val options = diffOptions ?: return aiReviewPort.reviewCode(code, provider)
+        val options = diffOptions ?: return aiReviewPort.reviewCode(code, provider, mode)
 
         // 요청 옵션에 외부 설정값을 병합 (요청값 우선, 패턴은 합산)
         val merged = options.copy(
@@ -46,12 +48,14 @@ class DefaultReviewService(
             val concurrency = reviewProperties.diff.maxConcurrency
             logger.info("파일별 병렬 리뷰 시작: {}개 파일 (최대 동시 호출: {})", fileDiffs.size, concurrency)
             val semaphore = Semaphore(concurrency)
-            coroutineScope { fileDiffs.map { async { semaphore.withPermit { aiReviewPort.reviewCode(it, provider) } } } }
+            coroutineScope {
+                fileDiffs.map { async { semaphore.withPermit { aiReviewPort.reviewCode(it, provider, mode) } } }
+            }
                 .awaitAll()
                 .let(::aggregate)
         } else {
             // 파일 1개 이하 — 단일 호출
-            aiReviewPort.reviewCode(preprocessResult.diff, provider)
+            aiReviewPort.reviewCode(preprocessResult.diff, provider, mode)
         }
     }
 

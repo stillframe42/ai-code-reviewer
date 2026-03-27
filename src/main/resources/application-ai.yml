@@ -7,6 +7,9 @@ app:
       # 추가 제외 glob 패턴 목록 (빈 목록 = 추가 제외 없음)
       additional-exclude-patterns: []
       # max-tokens: 30000  # 주석 해제 시 토큰 한도 활성화 (null = 한도 없음)
+    tool:
+      # Tool Calling 최대 라운드트립 횟수 참고값 (Spring AI 2.0.0-M2 내장 제한 미지원 — 현재 60s 타임아웃이 안전망)
+      max-roundtrips: 3
   prompt:
     review-system: classpath:prompts/review-system-v7.st   # v7: v6 기반 + summary 2문장 제한, positives 최대 3개 제한
     chat-system: classpath:prompts/chat-system.st

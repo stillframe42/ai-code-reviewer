@@ -2,6 +2,7 @@ package stillframe42.aicodereviewer.review.adapter.out.ai.tool
 
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
+import org.springframework.ai.chat.model.ToolContext
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import stillframe42.aicodereviewer.github.support.GitHubTestCredentials
@@ -26,7 +27,7 @@ class GitHubToolsTest {
             repositoryFullName = repo,
             path = "README.md",
             ref = "main",
-            installationId = installationId,
+            toolContext = ToolContext(mapOf("installationId" to installationId)),
         )
 
         assertThat(result).isNotBlank()
@@ -42,7 +43,7 @@ class GitHubToolsTest {
             repositoryFullName = repo,
             path = "this/file/does/not/exist.kt",
             ref = "main",
-            installationId = installationId,
+            toolContext = ToolContext(mapOf("installationId" to installationId)),
         )
 
         assertThat(result).startsWith("파일을 찾을 수 없습니다")

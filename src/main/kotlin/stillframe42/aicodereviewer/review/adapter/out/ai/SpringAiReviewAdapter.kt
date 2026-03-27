@@ -15,7 +15,9 @@ import org.springframework.stereotype.Component
 import stillframe42.aicodereviewer.common.AiPromptBuilder
 import stillframe42.aicodereviewer.core.AiProvider
 import stillframe42.aicodereviewer.review.adapter.out.ai.dto.CodeReviewAiResponse
+import stillframe42.aicodereviewer.review.adapter.out.ai.tool.GitHubTools
 import stillframe42.aicodereviewer.review.domain.model.CodeReview
+import stillframe42.aicodereviewer.review.domain.model.ReviewMode
 import stillframe42.aicodereviewer.review.domain.port.out.AiReviewPort
 import kotlin.time.Duration.Companion.milliseconds
 
@@ -23,6 +25,7 @@ import kotlin.time.Duration.Companion.milliseconds
 @Component
 class SpringAiReviewAdapter(
     private val promptBuilder: AiPromptBuilder,
+    private val gitHubTools: GitHubTools,
 
     @param:Value("\${app.prompt.review-system}")
     private val systemPromptResource: Resource,
@@ -40,19 +43,37 @@ class SpringAiReviewAdapter(
     private val converter = BeanOutputConverter(CodeReviewAiResponse::class.java, lenientMapper)
 
     // .entity(converter)로 JSON Schema를 프롬프트에 append하고 lenient ObjectMapper로 역직렬화
+    override suspend fun reviewCode(code: String, provider: AiProvider, mode: ReviewMode): CodeReview =
+        executeWithRetry {
+            buildRequestSpec(code, provider, mode)
+                .call()
+                .entity(converter)
+                ?.toDomain()
+                ?: throw IllegalStateException("AI로부터 리뷰 결과를 받지 못했습니다")
+        }
+
+    // ReviewMode에 따라 Tool 등록 여부를 결정하여 ChatClient 요청 스펙을 구성한다
+    private fun buildRequestSpec(code: String, provider: AiProvider, mode: ReviewMode) =
+        promptBuilder.build(systemPromptResource, userPromptResource, mapOf("code" to code), provider)
+            .let { baseSpec ->
+                when (mode) {
+                    is ReviewMode.Simple -> baseSpec
+                    is ReviewMode.WithGitHubTools -> {
+                        logger.info("Tool Calling 활성화: installationId={}", mode.installationId)
+                        baseSpec
+                            .tools(gitHubTools)
+                            .toolContext(mapOf("installationId" to mode.installationId))
+                    }
+                }
+            }
+
     // withTimeout: 시도별로 적용 — 1차 타임아웃이 2차 시도 시간을 잠식하지 않도록 분리
-    override suspend fun reviewCode(code: String, provider: AiProvider): CodeReview {
+    private suspend fun <T> executeWithRetry(block: suspend () -> T): T {
         var lastEx: Exception? = null
         for (attempt in 1..MAX_ATTEMPTS) {
             try {
                 return withTimeout(TIMEOUT_MS.milliseconds) {
-                    withContext(Dispatchers.IO) {
-                        promptBuilder.build(systemPromptResource, userPromptResource, mapOf("code" to code), provider)
-                            .call()
-                            .entity(converter)
-                            ?.toDomain()
-                            ?: throw IllegalStateException("AI로부터 리뷰 결과를 받지 못했습니다")
-                    }
+                    withContext(Dispatchers.IO) { block() }
                 }
             } catch (e: TimeoutCancellationException) {
                 // 시도별 타임아웃 — 외부 코루틴 취소와 구분하기 위해 별도 처리
