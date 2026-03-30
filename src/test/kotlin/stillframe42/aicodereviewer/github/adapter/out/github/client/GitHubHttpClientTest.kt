@@ -113,4 +113,25 @@ class GitHubHttpClientTest {
         )
         Unit
     }
+
+    @Test
+    fun `디렉토리 경로를 조회하면 항목 목록을 반환한다`() = runBlocking {
+        val (installationId, repo, _) = assumeGitHubCredentials()
+
+        val jwt = jwtGenerator.generate()
+        val tokenResponse = gitHubHttpClient.fetchInstallationToken(installationId, jwt)
+
+        val entries = gitHubHttpClient.fetchDirectoryContents(
+            repositoryFullName = repo,
+            path = "",  // 루트 디렉토리
+            ref = "main",
+            token = tokenResponse.token,
+        )
+
+        assertThat(entries).isNotEmpty()
+        assertThat(entries).allMatch { it.name.isNotBlank() }
+        assertThat(entries).allMatch { it.path.isNotBlank() }
+        assertThat(entries).allMatch { it.type in listOf("file", "dir", "symlink") }
+        Unit
+    }
 }
