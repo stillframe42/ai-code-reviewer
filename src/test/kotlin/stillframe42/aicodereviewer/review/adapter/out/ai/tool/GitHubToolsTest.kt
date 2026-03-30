@@ -81,7 +81,7 @@ class GitHubToolsTest {
         )
 
         val lines = result.lines().filter { it.startsWith("- ") }
-        assertThat(lines).noneMatch { it.contains("README.md") }
+        assertThat(lines).noneMatch { it == "- README.md" }
     }
 
     @Test
@@ -158,6 +158,8 @@ class GitHubToolsTest {
 
         assertThat(result).contains("[1]")
         assertThat(result).contains("작성자:")
+        assertThat(result).doesNotStartWith("커밋 이력이 없습니다")
+        assertThat(result).doesNotStartWith("파일을 찾을 수 없습니다")
     }
 
     @Test
