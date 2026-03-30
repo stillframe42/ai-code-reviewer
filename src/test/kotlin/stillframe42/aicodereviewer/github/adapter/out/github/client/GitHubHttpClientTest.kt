@@ -126,6 +126,7 @@ class GitHubHttpClientTest {
             path = "",  // 루트 디렉토리
             ref = "main",
             token = tokenResponse.token,
+            installationId = installationId,
         )
 
         assertThat(entries).isNotEmpty()

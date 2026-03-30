@@ -64,11 +64,13 @@ class GitHubHttpClient(
         path: String,
         ref: String,
         token: String,
+        installationId: Long,
     ): FileContentResponse {
         val (owner, repo) = repositoryFullName.ownerAndRepo()
         return webClient.get()
             .uri { it.path("/repos/{owner}/{repo}/contents/{path}").queryParam("ref", ref).build(owner, repo, path) }
             .header("Authorization", "Bearer $token")
+            .attribute("installationId", installationId)
             .retrieve()
             .awaitBody()
     }
@@ -120,11 +122,13 @@ class GitHubHttpClient(
         path: String,
         ref: String,
         token: String,
+        installationId: Long,
     ): List<DirectoryEntryResponse> {
         val (owner, repo) = repositoryFullName.ownerAndRepo()
         return webClient.get()
             .uri { it.path("/repos/{owner}/{repo}/contents/{path}").queryParam("ref", ref).build(owner, repo, path) }
             .header("Authorization", "Bearer $token")
+            .attribute("installationId", installationId)
             .retrieve()
             .awaitBody()
     }
@@ -134,11 +138,13 @@ class GitHubHttpClient(
         repositoryFullName: String,
         prNumber: Int,
         token: String,
+        installationId: Long,
     ): PrDescriptionResponse {
         val (owner, repo) = repositoryFullName.ownerAndRepo()
         return webClient.get()
             .uri("/repos/{owner}/{repo}/pulls/{number}", owner, repo, prNumber)
             .header("Authorization", "Bearer $token")
+            .attribute("installationId", installationId)
             .retrieve()
             .awaitBody()
     }
@@ -148,11 +154,13 @@ class GitHubHttpClient(
         repositoryFullName: String,
         filePath: String,
         token: String,
+        installationId: Long,
     ): List<CommitSummaryResponse> {
         val (owner, repo) = repositoryFullName.ownerAndRepo()
         return webClient.get()
             .uri { it.path("/repos/{owner}/{repo}/commits").queryParam("path", filePath).queryParam("per_page", 5).build(owner, repo) }
             .header("Authorization", "Bearer $token")
+            .attribute("installationId", installationId)
             .retrieve()
             .awaitBody()
     }
