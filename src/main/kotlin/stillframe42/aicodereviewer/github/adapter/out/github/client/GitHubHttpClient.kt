@@ -129,7 +129,7 @@ class GitHubHttpClient(
             .awaitBody()
     }
 
-    // GET /repos/{owner}/{repo}/pulls/{prNumber} — PR 제목과 본문 조회
+    // GET /repos/{owner}/{repo}/pulls/{number} — PR 제목과 본문 조회
     suspend fun fetchPrDescription(
         repositoryFullName: String,
         prNumber: Int,
