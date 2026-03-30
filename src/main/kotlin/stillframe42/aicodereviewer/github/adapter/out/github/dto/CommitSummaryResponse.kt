@@ -9,5 +9,8 @@ data class CommitSummaryResponse(
         val message: String,
         val author: CommitAuthor,
     )
-    data class CommitAuthor(val name: String, val date: String)
+    data class CommitAuthor(
+        val name: String,
+        val date: String,
+    )
 }
