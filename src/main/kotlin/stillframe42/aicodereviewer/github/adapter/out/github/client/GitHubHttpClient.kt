@@ -7,6 +7,7 @@ import org.springframework.web.reactive.function.client.WebClient
 import org.springframework.web.reactive.function.client.awaitBody
 import org.springframework.web.reactive.function.client.awaitBodilessEntity
 import stillframe42.aicodereviewer.github.adapter.out.github.dto.CreatePullRequestReviewRequest
+import stillframe42.aicodereviewer.github.adapter.out.github.dto.DirectoryEntryResponse
 import stillframe42.aicodereviewer.github.adapter.out.github.dto.FileContentResponse
 import stillframe42.aicodereviewer.github.adapter.out.github.dto.InstallationTokenResponse
 import stillframe42.aicodereviewer.github.adapter.out.github.dto.PrFileResponse
@@ -107,6 +108,23 @@ class GitHubHttpClient(
             .bodyValue(mapOf("message" to "새 커밋이 push되어 이전 리뷰를 dismiss합니다."))
             .retrieve()
             .awaitBodilessEntity()
+    }
+
+    // GET /repos/{owner}/{repo}/contents/{path}?ref={ref} — 디렉토리 내 항목 목록 조회
+    // path가 디렉토리를 가리킬 때 배열 응답을 반환한다
+    // path가 빈 문자열이면 루트 디렉토리를 조회한다
+    suspend fun fetchDirectoryContents(
+        repositoryFullName: String,
+        path: String,
+        ref: String,
+        token: String,
+    ): List<DirectoryEntryResponse> {
+        val (owner, repo) = repositoryFullName.ownerAndRepo()
+        return webClient.get()
+            .uri { it.path("/repos/{owner}/{repo}/contents/{path}").queryParam("ref", ref).build(owner, repo, path) }
+            .header("Authorization", "Bearer $token")
+            .retrieve()
+            .awaitBody()
     }
 }
 
