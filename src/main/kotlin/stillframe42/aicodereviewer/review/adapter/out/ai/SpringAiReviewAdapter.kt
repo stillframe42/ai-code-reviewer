@@ -26,7 +26,7 @@ import kotlin.time.Duration.Companion.milliseconds
 @Component
 class SpringAiReviewAdapter(
     private val promptBuilder: AiPromptBuilder,
-    private val gitHubFileTools: GitHubTools,
+    private val gitHubTools: GitHubTools,
 
     @param:Value("\${app.prompt.review-system}")
     private val systemPromptResource: Resource,
@@ -62,7 +62,7 @@ class SpringAiReviewAdapter(
                     is ReviewMode.WithGitHubTools -> {
                         logger.info("Tool Calling 활성화: installationId={}", mode.installationId)
                         baseSpec
-                            .tools(gitHubFileTools)
+                            .tools(gitHubTools)
                             .toolContext(mapOf("installationId" to mode.installationId))
                     }
                 }
