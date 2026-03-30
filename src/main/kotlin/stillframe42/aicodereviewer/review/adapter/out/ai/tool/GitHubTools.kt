@@ -14,12 +14,12 @@ import stillframe42.aicodereviewer.github.adapter.out.github.dto.DirectoryEntryR
 import stillframe42.aicodereviewer.github.domain.port.out.GitHubTokenPort
 import java.util.Base64
 
-// Spring AI Tool Calling용 GitHub 파일 관련 도구 모음
-// LLM이 코드 리뷰 중 파일 내용 및 관련 파일 목록을 조회할 수 있도록 @Tool 메서드를 제공한다
+// Spring AI Tool Calling용 GitHub 도구 모음
+// LLM이 코드 리뷰 중 파일 내용, 관련 파일 목록, PR 설명, 커밋 히스토리를 조회할 수 있도록 @Tool 메서드를 제공한다
 // @Tool 메서드는 suspend 불가 — runBlocking(Dispatchers.IO)으로 코루틴 브릿지
 // 오류 발생 시 예외를 던지지 않고 LLM이 읽을 수 있는 오류 메시지 문자열을 반환한다
 @Component
-class GitHubFileTools(
+class GitHubTools(
     private val gitHubHttpClient: GitHubHttpClient,
     private val tokenPort: GitHubTokenPort,
 ) : Logging {
@@ -85,6 +85,66 @@ class GitHubFileTools(
                 else -> {
                     logger.warn("getRelatedFile 실패: repository={}, filePath={}", repositoryFullName, filePath, e)
                     "관련 파일을 가져오는 중 오류가 발생했습니다: ${e.message}"
+                }
+            }
+        }
+    }
+
+    @Tool(description = "PR의 제목과 설명을 가져옵니다")
+    fun getPRDescription(
+        @ToolParam(description = "레포지토리 전체 이름 (예: octocat/my-repo)") repositoryFullName: String,
+        @ToolParam(description = "PR 번호") prNumber: Int,
+        toolContext: ToolContext,
+    ): String = runBlocking(Dispatchers.IO) {
+        val installationId = toolContext.installationId()
+        logger.info("getPRDescription 호출: repository={}, prNumber={}", repositoryFullName, prNumber)
+        runCatching {
+            val token = tokenPort.getInstallationToken(installationId)
+            val response = gitHubHttpClient.fetchPrDescription(repositoryFullName, prNumber, token)
+            val body = response.body?.takeIf { it.isNotBlank() } ?: "(설명 없음)"
+            "제목: ${response.title}\n설명: $body"
+        }.getOrElse { e ->
+            when (e) {
+                is WebClientResponseException.NotFound ->
+                    "PR을 찾을 수 없습니다: #$prNumber"
+                is WebClientResponseException ->
+                    "GitHub API 오류 (${e.statusCode}): ${e.message}"
+                else -> {
+                    logger.warn("getPRDescription 실패: repository={}, prNumber={}", repositoryFullName, prNumber, e)
+                    "PR 설명을 가져오는 중 오류가 발생했습니다: ${e.message}"
+                }
+            }
+        }
+    }
+
+    @Tool(description = "해당 파일의 최근 커밋 이력 최대 5건을 가져옵니다")
+    fun getFileHistory(
+        @ToolParam(description = "레포지토리 전체 이름 (예: octocat/my-repo)") repositoryFullName: String,
+        @ToolParam(description = "파일 경로 (예: src/main/kotlin/Foo.kt)") filePath: String,
+        toolContext: ToolContext,
+    ): String = runBlocking(Dispatchers.IO) {
+        val installationId = toolContext.installationId()
+        logger.info("getFileHistory 호출: repository={}, filePath={}", repositoryFullName, filePath)
+        runCatching {
+            val token = tokenPort.getInstallationToken(installationId)
+            val commits = gitHubHttpClient.fetchFileCommitHistory(repositoryFullName, filePath, token)
+            if (commits.isEmpty()) return@runCatching "커밋 이력이 없습니다: $filePath"
+            commits.mapIndexed { index, commit ->
+                val shortSha = commit.sha.take(7)
+                val message = commit.commit.message.lines().first()
+                val author = commit.commit.author.name
+                val date = commit.commit.author.date.take(10)
+                "[${index + 1}] $shortSha — $message\n    작성자: $author | $date"
+            }.joinToString("\n")
+        }.getOrElse { e ->
+            when (e) {
+                is WebClientResponseException.NotFound ->
+                    "파일을 찾을 수 없습니다: $filePath"
+                is WebClientResponseException ->
+                    "GitHub API 오류 (${e.statusCode}): ${e.message}"
+                else -> {
+                    logger.warn("getFileHistory 실패: repository={}, filePath={}", repositoryFullName, filePath, e)
+                    "커밋 이력을 가져오는 중 오류가 발생했습니다: ${e.message}"
                 }
             }
         }

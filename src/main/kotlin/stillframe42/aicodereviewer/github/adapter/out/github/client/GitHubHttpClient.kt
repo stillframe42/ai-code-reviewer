@@ -6,10 +6,12 @@ import org.springframework.stereotype.Component
 import org.springframework.web.reactive.function.client.WebClient
 import org.springframework.web.reactive.function.client.awaitBody
 import org.springframework.web.reactive.function.client.awaitBodilessEntity
+import stillframe42.aicodereviewer.github.adapter.out.github.dto.CommitSummaryResponse
 import stillframe42.aicodereviewer.github.adapter.out.github.dto.CreatePullRequestReviewRequest
 import stillframe42.aicodereviewer.github.adapter.out.github.dto.DirectoryEntryResponse
 import stillframe42.aicodereviewer.github.adapter.out.github.dto.FileContentResponse
 import stillframe42.aicodereviewer.github.adapter.out.github.dto.InstallationTokenResponse
+import stillframe42.aicodereviewer.github.adapter.out.github.dto.PrDescriptionResponse
 import stillframe42.aicodereviewer.github.adapter.out.github.dto.PrFileResponse
 import stillframe42.aicodereviewer.github.adapter.out.github.dto.PullRequestReviewResponse
 
@@ -122,6 +124,34 @@ class GitHubHttpClient(
         val (owner, repo) = repositoryFullName.ownerAndRepo()
         return webClient.get()
             .uri { it.path("/repos/{owner}/{repo}/contents/{path}").queryParam("ref", ref).build(owner, repo, path) }
+            .header("Authorization", "Bearer $token")
+            .retrieve()
+            .awaitBody()
+    }
+
+    // GET /repos/{owner}/{repo}/pulls/{number} — PR 제목과 본문 조회
+    suspend fun fetchPrDescription(
+        repositoryFullName: String,
+        prNumber: Int,
+        token: String,
+    ): PrDescriptionResponse {
+        val (owner, repo) = repositoryFullName.ownerAndRepo()
+        return webClient.get()
+            .uri("/repos/{owner}/{repo}/pulls/{number}", owner, repo, prNumber)
+            .header("Authorization", "Bearer $token")
+            .retrieve()
+            .awaitBody()
+    }
+
+    // GET /repos/{owner}/{repo}/commits?path={filePath}&per_page=5 — 파일 최근 커밋 이력 조회
+    suspend fun fetchFileCommitHistory(
+        repositoryFullName: String,
+        filePath: String,
+        token: String,
+    ): List<CommitSummaryResponse> {
+        val (owner, repo) = repositoryFullName.ownerAndRepo()
+        return webClient.get()
+            .uri { it.path("/repos/{owner}/{repo}/commits").queryParam("path", filePath).queryParam("per_page", 5).build(owner, repo) }
             .header("Authorization", "Bearer $token")
             .retrieve()
             .awaitBody()
