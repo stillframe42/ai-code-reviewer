@@ -101,7 +101,7 @@ class GitHubFileTools(
         }.getOrElse { e ->
             when (e) {
                 is WebClientResponseException.NotFound ->
-                    "디렉토리를 찾을 수 없습니다: $filePath"
+                    "디렉토리를 찾을 수 없습니다: ${filePath.substringBeforeLast("/", missingDelimiterValue = "(루트)")}"
                 is WebClientResponseException ->
                     "GitHub API 오류 (${e.statusCode}): ${e.message}"
                 else -> {
