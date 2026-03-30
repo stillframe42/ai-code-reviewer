@@ -3,24 +3,24 @@ package stillframe42.aicodereviewer.review.adapter.out.ai
 import com.fasterxml.jackson.core.JsonParser
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.registerKotlinModule
-import kotlinx.coroutines.delay
+import kotlin.time.Duration.Companion.milliseconds
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 import org.springframework.ai.converter.BeanOutputConverter
-import stillframe42.aicodereviewer.common.Logging
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.core.io.Resource
 import org.springframework.stereotype.Component
 import stillframe42.aicodereviewer.common.AiPromptBuilder
+import stillframe42.aicodereviewer.common.Logging
 import stillframe42.aicodereviewer.core.AiProvider
 import stillframe42.aicodereviewer.review.adapter.out.ai.dto.CodeReviewAiResponse
 import stillframe42.aicodereviewer.review.adapter.out.ai.tool.GitHubTools
 import stillframe42.aicodereviewer.review.domain.model.CodeReview
 import stillframe42.aicodereviewer.review.domain.model.ReviewMode
 import stillframe42.aicodereviewer.review.domain.port.out.AiReviewPort
-import kotlin.time.Duration.Companion.milliseconds
 
 // Spring AI 기반 코드 리뷰 출력 어댑터 — AiReviewPort 구현체
 @Component

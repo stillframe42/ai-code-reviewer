@@ -80,5 +80,4 @@ class DefaultReviewService(
             positives = reviews.flatMap { it.positives }.distinct().take(3),
         )
     }
-
 }
