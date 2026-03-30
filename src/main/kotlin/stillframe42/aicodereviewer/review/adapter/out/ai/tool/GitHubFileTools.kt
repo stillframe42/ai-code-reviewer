@@ -10,6 +10,7 @@ import org.springframework.stereotype.Component
 import org.springframework.web.reactive.function.client.WebClientResponseException
 import stillframe42.aicodereviewer.common.Logging
 import stillframe42.aicodereviewer.github.adapter.out.github.client.GitHubHttpClient
+import stillframe42.aicodereviewer.github.adapter.out.github.dto.DirectoryEntryResponse
 import stillframe42.aicodereviewer.github.domain.port.out.GitHubTokenPort
 import java.util.Base64
 
@@ -31,16 +32,12 @@ class GitHubFileTools(
         @ToolParam(description = "브랜치명 또는 커밋 SHA") ref: String,
         toolContext: ToolContext,
     ): String = runBlocking(Dispatchers.IO) {
-        val installationId = toolContext.context["installationId"] as? Long
-            ?: error("ToolContext에 installationId가 없습니다")
-        logger.info(
-            "getFileContent 호출: repository={}, path={}, ref={}, installationId={}",
-            repositoryFullName, path, ref, installationId,
-        )
+        val installationId = toolContext.installationId()
+        logger.info("getFileContent 호출: repository={}, path={}, ref={}", repositoryFullName, path, ref)
         runCatching {
             val token = tokenPort.getInstallationToken(installationId)
-            val response = gitHubHttpClient.fetchFileContent(repositoryFullName, path, ref, token)
-            Base64.getMimeDecoder().decode(response.content).toString(Charsets.UTF_8)
+            gitHubHttpClient.fetchFileContent(repositoryFullName, path, ref, token)
+                .let { Base64.getMimeDecoder().decode(it.content).toString(Charsets.UTF_8) }
         }.getOrElse { e ->
             when (e) {
                 is WebClientResponseException.NotFound ->
@@ -66,12 +63,8 @@ class GitHubFileTools(
         @ToolParam(description = "브랜치명 또는 커밋 SHA") ref: String,
         toolContext: ToolContext,
     ): String = runBlocking(Dispatchers.IO) {
-        val installationId = toolContext.context["installationId"] as? Long
-            ?: error("ToolContext에 installationId가 없습니다")
-        logger.info(
-            "getRelatedFile 호출: repository={}, filePath={}, ref={}, installationId={}",
-            repositoryFullName, filePath, ref, installationId,
-        )
+        val installationId = toolContext.installationId()
+        logger.info("getRelatedFile 호출: repository={}, filePath={}, ref={}", repositoryFullName, filePath, ref)
         runCatching {
             val token = tokenPort.getInstallationToken(installationId)
             val sameDir = filePath.substringBeforeLast("/", missingDelimiterValue = "")
@@ -82,22 +75,7 @@ class GitHubFileTools(
                 async { gitHubHttpClient.fetchDirectoryContents(repositoryFullName, parentDir, ref, token) }
             } else null
 
-            buildString {
-                val sameFiles = sameDirJob.await().filter { it.type == "file" && it.path != filePath }
-                val dirLabel = sameDir.ifEmpty { "(루트)" }
-                appendLine("[같은 디렉토리: $dirLabel]")
-                if (sameFiles.isEmpty()) appendLine("(파일 없음)")
-                else sameFiles.forEach { appendLine("- ${it.path}") }
-
-                if (parentDirJob != null) {
-                    appendLine()
-                    val parentFiles = parentDirJob.await().filter { it.type == "file" && it.path != filePath }
-                    val parentLabel = parentDir.ifEmpty { "(루트)" }
-                    appendLine("[상위 디렉토리: $parentLabel]")
-                    if (parentFiles.isEmpty()) appendLine("(파일 없음)")
-                    else parentFiles.forEach { appendLine("- ${it.path}") }
-                }
-            }.trimEnd()
+            formatRelatedFiles(filePath, sameDir, sameDirJob.await(), parentDir, parentDirJob?.await())
         }.getOrElse { e ->
             when (e) {
                 is WebClientResponseException.NotFound ->
@@ -111,4 +89,33 @@ class GitHubFileTools(
             }
         }
     }
+
+    private fun formatRelatedFiles(
+        filePath: String,
+        sameDir: String,
+        sameDirEntries: List<DirectoryEntryResponse>,
+        parentDir: String,
+        parentDirEntries: List<DirectoryEntryResponse>?,
+    ): String = buildString {
+        appendDirectorySection("[같은 디렉토리: ${sameDir.ifEmpty { "(루트)" }}]", sameDirEntries, filePath)
+        if (parentDirEntries != null) {
+            appendLine()
+            appendDirectorySection("[상위 디렉토리: ${parentDir.ifEmpty { "(루트)" }}]", parentDirEntries, filePath)
+        }
+    }.trimEnd()
+
+    private fun StringBuilder.appendDirectorySection(
+        label: String,
+        entries: List<DirectoryEntryResponse>,
+        excludePath: String,
+    ) {
+        appendLine(label)
+        val files = entries.filter { it.type == "file" && it.path != excludePath }
+        if (files.isEmpty()) appendLine("(파일 없음)")
+        else files.forEach { appendLine("- ${it.path}") }
+    }
+
+    // ToolContext에서 installationId를 추출한다 — 누락 시 호출자 버그이므로 예외를 던진다
+    private fun ToolContext.installationId(): Long =
+        context["installationId"] as? Long ?: error("ToolContext에 installationId가 없습니다")
 }
