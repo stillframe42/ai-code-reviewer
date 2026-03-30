@@ -117,7 +117,7 @@ class GitHubTools(
         }
     }
 
-    @Tool(description = "해당 파일의 최근 변경 이력을 가져옵니다")
+    @Tool(description = "해당 파일의 최근 커밋 이력 최대 5건을 가져옵니다")
     fun getFileHistory(
         @ToolParam(description = "레포지토리 전체 이름 (예: octocat/my-repo)") repositoryFullName: String,
         @ToolParam(description = "파일 경로 (예: src/main/kotlin/Foo.kt)") filePath: String,
