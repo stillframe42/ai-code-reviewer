@@ -16,7 +16,7 @@ import org.springframework.stereotype.Component
 import stillframe42.aicodereviewer.common.AiPromptBuilder
 import stillframe42.aicodereviewer.core.AiProvider
 import stillframe42.aicodereviewer.review.adapter.out.ai.dto.CodeReviewAiResponse
-import stillframe42.aicodereviewer.review.adapter.out.ai.tool.GitHubTools
+import stillframe42.aicodereviewer.review.adapter.out.ai.tool.GitHubFileTools
 import stillframe42.aicodereviewer.review.domain.model.CodeReview
 import stillframe42.aicodereviewer.review.domain.model.ReviewMode
 import stillframe42.aicodereviewer.review.domain.port.out.AiReviewPort
@@ -26,7 +26,7 @@ import kotlin.time.Duration.Companion.milliseconds
 @Component
 class SpringAiReviewAdapter(
     private val promptBuilder: AiPromptBuilder,
-    private val gitHubTools: GitHubTools,
+    private val gitHubFileTools: GitHubFileTools,
 
     @param:Value("\${app.prompt.review-system}")
     private val systemPromptResource: Resource,
@@ -62,7 +62,7 @@ class SpringAiReviewAdapter(
                     is ReviewMode.WithGitHubTools -> {
                         logger.info("Tool Calling 활성화: installationId={}", mode.installationId)
                         baseSpec
-                            .tools(gitHubTools)
+                            .tools(gitHubFileTools)
                             .toolContext(mapOf("installationId" to mode.installationId))
                     }
                 }
