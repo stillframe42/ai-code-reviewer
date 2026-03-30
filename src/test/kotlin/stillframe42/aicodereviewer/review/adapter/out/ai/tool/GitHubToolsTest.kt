@@ -5,7 +5,9 @@ import org.junit.jupiter.api.Test
 import org.springframework.ai.chat.model.ToolContext
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
+import stillframe42.aicodereviewer.github.adapter.out.github.ratelimit.GitHubRateLimitState
 import stillframe42.aicodereviewer.github.support.GitHubTestCredentials
+import java.time.Instant
 
 // GitHubTools 통합 테스트
 // 실제 GitHub API 호출 — 환경변수 미설정 시 assumeTrue로 자동 스킵
@@ -14,6 +16,9 @@ class GitHubToolsTest {
 
     @Autowired
     private lateinit var gitHubTools: GitHubTools
+
+    @Autowired
+    private lateinit var rateLimitState: GitHubRateLimitState
 
     @Test
     fun `GitHubTools 빈이 Spring 컨텍스트에 등록된다`() {
@@ -174,5 +179,24 @@ class GitHubToolsTest {
         )
 
         assertThat(result).startsWith("커밋 이력이 없습니다")
+    }
+
+    // ── Rate Limit 차단 ──────────────────────────────
+
+    @Test
+    fun `Rate Limit 잔여 횟수가 9 이하이면 getFileContent 호출 시 안내 메시지를 반환한다`() {
+        // Long.MAX_VALUE: 실제 테스트에서 사용하는 installationId와 충돌하지 않는 더미 값
+        val installationId = Long.MAX_VALUE
+        rateLimitState.update(installationId, 5, Instant.now().plusSeconds(600))
+
+        val result = gitHubTools.getFileContent(
+            repositoryFullName = "owner/repo",
+            path = "README.md",
+            ref = "main",
+            toolContext = ToolContext(mapOf("installationId" to installationId)),
+        )
+
+        assertThat(result).contains("Rate Limit 임박")
+        assertThat(result).contains("5건 남음")
     }
 }
