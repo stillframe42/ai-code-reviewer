@@ -77,24 +77,19 @@ class DefaultGitHubWebhookService(
         }
 
         // 1.5단계: 리뷰 요청 저장 (PENDING) — 저장 실패가 리뷰 흐름을 중단시키지 않도록 격리
-        val reviewRequestId = runCatching {
+        val reviewRequestId = runOrWarn("리뷰 요청 저장 실패 (리뷰는 계속 진행)") {
             reviewPersistencePort.saveReviewRequest(
                 repoFullName = event.repositoryFullName,
                 prNumber = event.pullRequestNumber,
                 headSha = event.headSha,
             )
-        }.onFailure { e ->
-            if (e is CancellationException) throw e
-            logger.warn("리뷰 요청 저장 실패 (리뷰는 계속 진행): {}", e.message)
-        }.getOrNull()
+        }
 
         // 1.6단계: PROCESSING 상태 업데이트
         reviewRequestId?.let { id ->
-            runCatching { reviewPersistencePort.updateReviewStatus(id, ReviewRequestStatus.PROCESSING) }
-                .onFailure { e ->
-                    if (e is CancellationException) throw e
-                    logger.warn("리뷰 상태 업데이트 실패: {}", e.message)
-                }
+            runOrWarn("리뷰 상태 업데이트 실패") {
+                reviewPersistencePort.updateReviewStatus(id, ReviewRequestStatus.PROCESSING)
+            }
         }
 
         // 2단계: AI 코드 리뷰 실행 (전처리 활성화)
@@ -106,24 +101,15 @@ class DefaultGitHubWebhookService(
         reviewRequestId?.let { id ->
             val now = Instant.now()
             if (reviewOutput != null) {
-                runCatching {
+                runOrWarn("리뷰 결과 저장 실패") {
                     reviewPersistencePort.saveReviewResult(id, reviewOutput.review, null)
-                }.onFailure { e ->
-                    if (e is CancellationException) throw e
-                    logger.warn("리뷰 결과 저장 실패: {}", e.message)
                 }
-                runCatching {
+                runOrWarn("리뷰 상태 DONE 업데이트 실패") {
                     reviewPersistencePort.updateReviewStatus(id, ReviewRequestStatus.DONE, now)
-                }.onFailure { e ->
-                    if (e is CancellationException) throw e
-                    logger.warn("리뷰 상태 DONE 업데이트 실패: {}", e.message)
                 }
             } else {
-                runCatching {
+                runOrWarn("리뷰 상태 FAILED 업데이트 실패") {
                     reviewPersistencePort.updateReviewStatus(id, ReviewRequestStatus.FAILED, now)
-                }.onFailure { e ->
-                    if (e is CancellationException) throw e
-                    logger.warn("리뷰 상태 FAILED 업데이트 실패: {}", e.message)
                 }
             }
         }
@@ -133,18 +119,15 @@ class DefaultGitHubWebhookService(
             repositoryFullName = event.repositoryFullName,
             pullRequestNumber = event.pullRequestNumber,
         )?.let { previousReviewId ->
-            runCatching {
+            runOrWarn(
+                "이전 리뷰 dismiss 실패 (새 리뷰 등록은 계속 진행): " +
+                    "repo=${event.repositoryFullName}, pr=${event.pullRequestNumber}, reviewId=$previousReviewId",
+            ) {
                 gitHubApiPort.dismissPrReview(
                     repositoryFullName = event.repositoryFullName,
                     pullRequestNumber = event.pullRequestNumber,
                     reviewId = previousReviewId,
                     installationId = event.installationId,
-                )
-            }.onFailure { e ->
-                if (e is CancellationException) throw e
-                logger.warn(
-                    "이전 리뷰 dismiss 실패 (새 리뷰 등록은 계속 진행): repo={}, pr={}, reviewId={}",
-                    event.repositoryFullName, event.pullRequestNumber, previousReviewId, e,
                 )
             }
         }
@@ -182,7 +165,7 @@ class DefaultGitHubWebhookService(
 
     // AI 리뷰 실행 및 diff position 매핑 — 실패 시 null 반환하여 에러 코멘트 등록으로 이어진다
     private suspend fun generateReviewOutput(event: PullRequestEvent, prDiff: String): ReviewOutput? =
-        runCatching {
+        try {
             val review = reviewUseCase.reviewCode(
                 code = prDiff,
                 provider = AiProvider.ANTHROPIC,
@@ -203,8 +186,16 @@ class DefaultGitHubWebhookService(
                 hasNoIssues = review.issues.isEmpty(),
                 review = review,
             )
-        }.onFailure { e ->
-            if (e is CancellationException) throw e
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
             logger.error("리뷰 생성 실패: repo={}, pr={}", event.repositoryFullName, event.pullRequestNumber, e)
-        }.getOrNull()
+            null
+        }
+
+    // CancellationException은 재전파, 그 외 예외는 경고 로그 후 null 반환
+    private suspend fun <T> runOrWarn(warnMessage: String, block: suspend () -> T): T? =
+        try { block() }
+        catch (e: CancellationException) { throw e }
+        catch (e: Exception) { logger.warn(warnMessage, e); null }
 }
