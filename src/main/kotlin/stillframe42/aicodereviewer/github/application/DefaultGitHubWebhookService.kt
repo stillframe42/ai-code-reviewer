@@ -19,6 +19,7 @@ import stillframe42.aicodereviewer.review.domain.model.ReviewRequestStatus
 import stillframe42.aicodereviewer.review.domain.port.`in`.ReviewUseCase
 import stillframe42.aicodereviewer.review.domain.port.out.ReviewPersistencePort
 import java.time.Instant
+import kotlinx.coroutines.CancellationException
 
 // GitHub Webhook 유스케이스 구현 — PR 이벤트 수신 시 diff 조회 → AI 리뷰 → 코멘트 등록 흐름을 조율한다
 @Service
@@ -83,13 +84,17 @@ class DefaultGitHubWebhookService(
                 headSha = event.headSha,
             )
         }.onFailure { e ->
+            if (e is CancellationException) throw e
             logger.warn("리뷰 요청 저장 실패 (리뷰는 계속 진행): {}", e.message)
         }.getOrNull()
 
         // 1.6단계: PROCESSING 상태 업데이트
         reviewRequestId?.let { id ->
             runCatching { reviewPersistencePort.updateReviewStatus(id, ReviewRequestStatus.PROCESSING) }
-                .onFailure { e -> logger.warn("리뷰 상태 업데이트 실패: {}", e.message) }
+                .onFailure { e ->
+                    if (e is CancellationException) throw e
+                    logger.warn("리뷰 상태 업데이트 실패: {}", e.message)
+                }
         }
 
         // 2단계: AI 코드 리뷰 실행 (전처리 활성화)
@@ -97,16 +102,30 @@ class DefaultGitHubWebhookService(
         val reviewOutput = generateReviewOutput(event, prDiff)
 
         // 2.5단계: 리뷰 결과 저장 — 성공: DONE + 결과, 실패: FAILED
+        // saveReviewResult 실패 시에도 상태 업데이트(DONE)가 반드시 실행되도록 블록을 분리한다
         reviewRequestId?.let { id ->
-            runCatching {
-                val now = Instant.now()
-                if (reviewOutput != null) {
+            val now = Instant.now()
+            if (reviewOutput != null) {
+                runCatching {
                     reviewPersistencePort.saveReviewResult(id, reviewOutput.review, null)
-                    reviewPersistencePort.updateReviewStatus(id, ReviewRequestStatus.DONE, now)
-                } else {
-                    reviewPersistencePort.updateReviewStatus(id, ReviewRequestStatus.FAILED, now)
+                }.onFailure { e ->
+                    if (e is CancellationException) throw e
+                    logger.warn("리뷰 결과 저장 실패: {}", e.message)
                 }
-            }.onFailure { e -> logger.warn("리뷰 결과 저장 실패: {}", e.message) }
+                runCatching {
+                    reviewPersistencePort.updateReviewStatus(id, ReviewRequestStatus.DONE, now)
+                }.onFailure { e ->
+                    if (e is CancellationException) throw e
+                    logger.warn("리뷰 상태 DONE 업데이트 실패: {}", e.message)
+                }
+            } else {
+                runCatching {
+                    reviewPersistencePort.updateReviewStatus(id, ReviewRequestStatus.FAILED, now)
+                }.onFailure { e ->
+                    if (e is CancellationException) throw e
+                    logger.warn("리뷰 상태 FAILED 업데이트 실패: {}", e.message)
+                }
+            }
         }
 
         // 3단계: 이전 리뷰 dismiss — 실패해도 새 리뷰 등록은 계속 진행
@@ -122,6 +141,7 @@ class DefaultGitHubWebhookService(
                     installationId = event.installationId,
                 )
             }.onFailure { e ->
+                if (e is CancellationException) throw e
                 logger.warn(
                     "이전 리뷰 dismiss 실패 (새 리뷰 등록은 계속 진행): repo={}, pr={}, reviewId={}",
                     event.repositoryFullName, event.pullRequestNumber, previousReviewId, e,
@@ -184,6 +204,7 @@ class DefaultGitHubWebhookService(
                 review = review,
             )
         }.onFailure { e ->
+            if (e is CancellationException) throw e
             logger.error("리뷰 생성 실패: repo={}, pr={}", event.repositoryFullName, event.pullRequestNumber, e)
         }.getOrNull()
 }
