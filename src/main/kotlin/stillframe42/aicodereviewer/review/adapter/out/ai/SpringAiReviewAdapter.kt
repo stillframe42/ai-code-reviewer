@@ -4,7 +4,8 @@ import com.fasterxml.jackson.core.JsonParser
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import java.util.concurrent.atomic.AtomicInteger
-import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.delay
@@ -83,34 +84,34 @@ class SpringAiReviewAdapter(
     // Simple: 60s (AI 추론만)
     // WithGitHubTools: 180s (Tool 호출 5회×10s + AI 추론 여유)
     private suspend fun <T> executeWithRetry(mode: ReviewMode, block: suspend () -> T): T {
-        val timeoutMs = when (mode) {
-            is ReviewMode.Simple -> SIMPLE_TIMEOUT_MS
-            is ReviewMode.WithGitHubTools -> TOOL_TIMEOUT_MS
+        val timeout = when (mode) {
+            is ReviewMode.Simple -> SIMPLE_TIMEOUT
+            is ReviewMode.WithGitHubTools -> TOOL_TIMEOUT
         }
         var lastEx: Exception? = null
         for (attempt in 1..MAX_ATTEMPTS) {
             try {
-                return withTimeout(timeoutMs.milliseconds) {
+                return withTimeout(timeout) {
                     withContext(Dispatchers.IO) { block() }
                 }
             } catch (e: TimeoutCancellationException) {
                 // 시도별 타임아웃 — 외부 코루틴 취소와 구분하기 위해 별도 처리
                 lastEx = e
-                logger.warn("AI 리뷰 타임아웃 (시도 {}/{}): {}ms 초과", attempt, MAX_ATTEMPTS, timeoutMs)
+                logger.warn("AI 리뷰 타임아웃 (시도 {}/{}): {} 초과", attempt, MAX_ATTEMPTS, timeout)
             } catch (e: Exception) {
                 lastEx = e
                 logger.warn("AI 리뷰 실패 (시도 {}/{}): {}", attempt, MAX_ATTEMPTS, e.message)
             }
             // 재시도 전 대기 — Rate Limit(429) 등 일시적 오류 회피
-            if (attempt < MAX_ATTEMPTS) delay(RETRY_DELAY_MS.milliseconds)
+            if (attempt < MAX_ATTEMPTS) delay(RETRY_DELAY)
         }
         throw lastEx ?: error("재시도 횟수(${MAX_ATTEMPTS}회) 초과 후 예외가 없음")
     }
 
     companion object {
-        private const val SIMPLE_TIMEOUT_MS = 60_000L   // Simple 모드: AI 추론만
-        private const val TOOL_TIMEOUT_MS = 180_000L    // Tool Calling 모드: Tool 5회×10s + AI 추론 여유
+        private val SIMPLE_TIMEOUT: Duration = 60.seconds   // Simple 모드: AI 추론만
+        private val TOOL_TIMEOUT: Duration = 180.seconds    // Tool Calling 모드: Tool 5회×10s + AI 추론 여유
         private const val MAX_ATTEMPTS = 2
-        private const val RETRY_DELAY_MS = 5_000L       // 재시도 전 대기 — Rate Limit(429) 등 일시적 오류 회피
+        private val RETRY_DELAY: Duration = 5.seconds       // 재시도 전 대기 — Rate Limit(429) 등 일시적 오류 회피
     }
 }

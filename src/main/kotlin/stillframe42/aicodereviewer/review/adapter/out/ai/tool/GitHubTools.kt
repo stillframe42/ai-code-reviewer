@@ -5,6 +5,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
+import kotlin.time.Duration.Companion.seconds
 import org.springframework.ai.chat.model.ToolContext
 import org.springframework.ai.tool.annotation.Tool
 import org.springframework.ai.tool.annotation.ToolParam
@@ -16,6 +17,7 @@ import stillframe42.aicodereviewer.github.adapter.out.github.dto.DirectoryEntryR
 import stillframe42.aicodereviewer.github.adapter.out.github.ratelimit.GitHubRateLimitChecker
 import stillframe42.aicodereviewer.github.domain.port.out.GitHubTokenPort
 import java.util.Base64
+import java.util.concurrent.atomic.AtomicInteger
 
 @Component
 class GitHubTools(
@@ -158,7 +160,7 @@ class GitHubTools(
                 logger.info("{} 호출 ({}번째): {}", toolName, count, argsLog)
                 runCatching {
                     val token = tokenPort.getInstallationToken(installationId)
-                    withTimeout(TOOL_CALL_TIMEOUT_MS) {
+                    withTimeout(TOOL_CALL_TIMEOUT) {
                         block(token, installationId)
                     }
                 }.getOrElse { e ->
@@ -179,12 +181,12 @@ class GitHubTools(
     private fun ToolContext.installationId(): Long =
         context["installationId"] as? Long ?: error("ToolContext에 installationId가 없습니다")
 
-    private fun ToolContext.toolCallCounter(): java.util.concurrent.atomic.AtomicInteger? =
-        context["toolCallCounter"] as? java.util.concurrent.atomic.AtomicInteger
+    private fun ToolContext.toolCallCounter(): AtomicInteger? =
+        context["toolCallCounter"] as? AtomicInteger
 
     companion object {
         private const val MAX_TOOL_CALLS = 5           // 최대 Tool 호출 횟수 — 테스트 후 조정 예정
         private const val WARN_TOOL_CALLS = 3          // 경고 로그 임계값
-        private const val TOOL_CALL_TIMEOUT_MS = 10_000L  // Tool 호출 당 타임아웃 (GitHub API hang 방지)
+        private val TOOL_CALL_TIMEOUT = 10.seconds     // Tool 호출 당 타임아웃 (GitHub API hang 방지)
     }
 }
