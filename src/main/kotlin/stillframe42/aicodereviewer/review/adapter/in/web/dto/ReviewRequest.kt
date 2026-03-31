@@ -13,4 +13,10 @@ data class ReviewRequest(
 
     // diff 전처리 옵션 (null이면 전처리 없이 raw code 전달)
     val diffOptions: DiffFilterOptions? = null,
+
+    // Tool Calling 모드 (생략 또는 null → WITHOUT_TOOLS 기본값 적용)
+    val reviewMode: ReviewModeRequest? = ReviewModeRequest.WITHOUT_TOOLS,
+
+    // WITH_TOOLS 모드에서 GitHub App Installation ID (필수)
+    val installationId: Long? = null,
 )

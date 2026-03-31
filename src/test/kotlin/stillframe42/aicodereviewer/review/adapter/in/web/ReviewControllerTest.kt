@@ -83,4 +83,14 @@ class ReviewControllerTest {
             .jsonPath("$.overall_score").exists()
             .jsonPath("$.summary").exists()
     }
+
+    @Test
+    fun `reviewMode=WITH_TOOLS이지만 installationId 누락 시 400 반환`() {
+        // 자격증명 불필요 — 요청 유효성 검사이므로 항상 실행
+        client.post().uri("/api/review")
+            .contentType(MediaType.APPLICATION_JSON)
+            .body("""{"code": "fun foo() = 42", "reviewMode": "WITH_TOOLS"}""")
+            .exchange()
+            .expectStatus().isBadRequest
+    }
 }

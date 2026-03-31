@@ -21,6 +21,7 @@ spring:
   jackson:
     mapper:
       accept-case-insensitive-enums: true
+
   config:
     import:
       - classpath:application-db.yml          # DB 관련 설정

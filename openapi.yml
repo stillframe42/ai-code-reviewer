@@ -257,6 +257,23 @@ components:
           $ref: '#/components/schemas/AiProvider'
         diffOptions:
           $ref: '#/components/schemas/DiffFilterOptions'
+        reviewMode:
+          $ref: '#/components/schemas/ReviewModeRequest'
+        installationId:
+          type: integer
+          format: int64
+          nullable: true
+          description: "WITH_TOOLS 모드에서 GitHub App Installation ID (필수)"
+          example: 12345678
+
+    ReviewModeRequest:
+      type: string
+      enum:
+        - WITHOUT_TOOLS
+        - WITH_TOOLS
+      default: WITHOUT_TOOLS
+      description: "Tool Calling 활성화 여부. WITHOUT_TOOLS(기본): diff만으로 리뷰. WITH_TOOLS: GitHub API Tool 자동 호출 포함 리뷰."
+      example: WITHOUT_TOOLS
 
     DiffFilterOptions:
       type: object
