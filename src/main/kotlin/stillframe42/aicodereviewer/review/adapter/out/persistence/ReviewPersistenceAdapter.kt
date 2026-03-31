@@ -1,11 +1,10 @@
 package stillframe42.aicodereviewer.review.adapter.out.persistence
 
-import com.fasterxml.jackson.databind.ObjectMapper
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.stereotype.Component
-import org.springframework.transaction.annotation.Transactional
+import tools.jackson.databind.ObjectMapper
+import org.springframework.transaction.support.TransactionTemplate
 import stillframe42.aicodereviewer.review.adapter.out.persistence.entity.ReviewIssueCategoryEntity
 import stillframe42.aicodereviewer.review.adapter.out.persistence.entity.ReviewRequestEntity
 import stillframe42.aicodereviewer.review.adapter.out.persistence.entity.ReviewResultEntity
@@ -21,8 +20,8 @@ class ReviewPersistenceAdapter(
     private val reviewRequestRepository: ReviewRequestRepository,
     private val reviewResultRepository: ReviewResultRepository,
     private val reviewIssueCategoryRepository: ReviewIssueCategoryRepository,
-    @param:Qualifier("jackson2ObjectMapper")
     private val objectMapper: ObjectMapper,
+    private val transactionTemplate: TransactionTemplate,
 ) : ReviewPersistencePort {
 
     override suspend fun saveReviewRequest(
@@ -61,41 +60,34 @@ class ReviewPersistenceAdapter(
         )
     }
 
-    // withContext(Dispatchers.IO)에서 @Transactional이 전파되지 않으므로
-    // 블로킹 헬퍼 메서드에 @Transactional을 적용하고 코루틴 컨텍스트에서 호출한다
+    // @Transactional은 private 메서드에 적용 불가(Spring AOP 프록시 한계)
+    // TransactionTemplate으로 명시적 트랜잭션 경계를 설정한다
     override suspend fun saveReviewResult(
         reviewRequestId: Long,
         review: CodeReview,
         modelName: String?,
     ): Unit = withContext(Dispatchers.IO) {
-        saveReviewResultSync(reviewRequestId, review, modelName)
-    }
-
-    @Transactional
-    private fun saveReviewResultSync(
-        reviewRequestId: Long,
-        review: CodeReview,
-        modelName: String?,
-    ) {
         val issuesJson = objectMapper.writeValueAsString(review.issues)
-        val saved = reviewResultRepository.save(
-            ReviewResultEntity(
-                reviewRequestId = reviewRequestId,
-                summary = review.summary,
-                issuesJson = issuesJson,
-                modelName = modelName,
-                toolCallCount = review.toolCallCount,
-            ),
-        )
-        // 이슈 수만큼 카테고리 행 저장 — GROUP BY 통계 집계용
-        val categories = review.issues.map { issue ->
-            ReviewIssueCategoryEntity(
-                reviewResultId = saved.id,
-                category = issue.category,
+        transactionTemplate.executeWithoutResult {
+            val saved = reviewResultRepository.save(
+                ReviewResultEntity(
+                    reviewRequestId = reviewRequestId,
+                    summary = review.summary,
+                    issuesJson = issuesJson,
+                    modelName = modelName,
+                    toolCallCount = review.toolCallCount,
+                ),
             )
-        }
-        if (categories.isNotEmpty()) {
-            reviewIssueCategoryRepository.saveAll(categories)
+            // 이슈 수만큼 카테고리 행 저장 — chunk 단위 통계 집계용
+            val categories = review.issues.map { issue ->
+                ReviewIssueCategoryEntity(
+                    reviewResultId = saved.id,
+                    category = issue.category,
+                )
+            }
+            if (categories.isNotEmpty()) {
+                reviewIssueCategoryRepository.saveAll(categories)
+            }
         }
     }
 

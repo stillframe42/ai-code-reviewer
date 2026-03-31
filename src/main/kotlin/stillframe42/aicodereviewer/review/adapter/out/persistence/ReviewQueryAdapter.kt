@@ -2,6 +2,7 @@ package stillframe42.aicodereviewer.review.adapter.out.persistence
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import org.springframework.data.domain.PageRequest
 import org.springframework.stereotype.Component
 import stillframe42.aicodereviewer.review.domain.model.IssueCategory
 import stillframe42.aicodereviewer.review.domain.port.out.ReviewQueryPort
@@ -45,13 +46,24 @@ class ReviewQueryAdapter(
     }
 
     override suspend fun countByCategory(): Map<IssueCategory, Long> = withContext(Dispatchers.IO) {
-        val counts = reviewIssueCategoryRepository.countByCategory()
-        // IssueCategory 4개 모두 포함 — 없는 카테고리는 0
-        val countMap = counts.associate { it.getCategory() to it.getCount() }
-        IssueCategory.entries.associateWith { countMap[it] ?: 0L }
+        // chunk 단위로 읽어 애플리케이션에서 집계 — GROUP BY 풀스캔 대신 I/O 분산
+        generateSequence(reviewIssueCategoryRepository.findAllBy(PageRequest.of(0, 1000))) { prev ->
+            if (prev.hasNext()) reviewIssueCategoryRepository.findAllBy(prev.nextPageable()) else null
+        }
+            .flatMap { it }
+            .groupingBy { it.category }
+            .fold(0L) { acc, _ -> acc + 1L }
+            .let { counts -> IssueCategory.entries.associateWith { counts[it] ?: 0L } }
     }
 
     override suspend fun averageToolCallCount(): Double = withContext(Dispatchers.IO) {
-        reviewResultRepository.averageToolCallCount()
+        // chunk 단위로 읽어 애플리케이션에서 평균 계산 — AVG 집계 쿼리 대신 I/O 분산
+        generateSequence(reviewResultRepository.findAllBy(PageRequest.of(0, 1000))) { prev ->
+            if (prev.hasNext()) reviewResultRepository.findAllBy(prev.nextPageable()) else null
+        }
+            .flatMap { it }
+            .map { it.toolCallCount.toLong() }
+            .fold(0L to 0L) { (sum, count), v -> (sum + v) to (count + 1L) }
+            .let { (sum, count) -> if (count == 0L) 0.0 else sum.toDouble() / count }
     }
 }
