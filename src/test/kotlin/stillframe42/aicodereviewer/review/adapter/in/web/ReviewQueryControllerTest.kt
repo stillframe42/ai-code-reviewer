@@ -3,7 +3,6 @@ package stillframe42.aicodereviewer.review.adapter.`in`.web
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
@@ -18,6 +17,8 @@ import stillframe42.aicodereviewer.review.domain.model.CodeIssue
 import stillframe42.aicodereviewer.review.domain.model.CodeReview
 import stillframe42.aicodereviewer.review.domain.model.IssueCategory
 import stillframe42.aicodereviewer.review.domain.model.IssueSeverity
+import stillframe42.aicodereviewer.review.adapter.`in`.web.dto.ReviewStatsResponse
+import stillframe42.aicodereviewer.review.adapter.`in`.web.dto.ReviewSummaryResponse
 import stillframe42.aicodereviewer.review.domain.model.ReviewRequestStatus
 
 // ReviewQueryController 통합 테스트 — RANDOM_PORT 실제 서버에 RestTestClient로 검증합니다.
@@ -82,19 +83,18 @@ class ReviewQueryControllerTest {
         persistenceAdapter.updateReviewStatus(requestId, ReviewRequestStatus.DONE)
 
         // GET 요청 및 검증
-        val response = client.get().uri("/api/reviews/owner/repo/42")
+        val body = client.get().uri("/api/reviews/owner/repo/42")
             .exchange()
             .expectStatus().isOk
-            .expectBody()
-            .returnResult()
+            .expectBody(ReviewSummaryResponse::class.java)
+            .returnResult().responseBody!!
 
-        val body = response.responseBody!!.toString(Charsets.UTF_8)
-        assert(body.contains("\"repoFullName\":\"owner/repo\""))
-        assert(body.contains("\"prNumber\":42"))
-        assert(body.contains("\"summary\":\"양호한 코드입니다.\""))
-        assert(body.contains("\"issueCount\":1"))
-        assert(body.contains("\"toolCallCount\":2"))
-        assert(body.contains("\"status\":\"DONE\""))
+        assertEquals("owner/repo", body.repoFullName)
+        assertEquals(42, body.prNumber)
+        assertEquals("양호한 코드입니다.", body.summary)
+        assertEquals(1, body.issueCount)
+        assertEquals(2, body.toolCallCount)
+        assertEquals(ReviewRequestStatus.DONE, body.status)
     }
 
     @Test
@@ -157,24 +157,16 @@ class ReviewQueryControllerTest {
         persistenceAdapter.updateReviewStatus(requestId2, ReviewRequestStatus.DONE)
 
         // GET /api/reviews/stats 요청 및 검증
-        val result = client.get().uri("/api/reviews/stats")
+        val body = client.get().uri("/api/reviews/stats")
             .exchange()
             .expectStatus().isOk
-            .expectBody()
-            .returnResult()
+            .expectBody(ReviewStatsResponse::class.java)
+            .returnResult().responseBody!!
 
-        val body = result.responseBody!!.toString(Charsets.UTF_8)
-        assert(body.contains("\"totalReviews\":2"))
-
-        // categoryDistribution 파싱 검증
-        assert(body.contains("\"SECURITY\":2"))
-        assert(body.contains("\"PERFORMANCE\":1"))
-
-        // READABILITY는 0이거나 존재하지 않아야 함 (0인 경우 응답에 포함될 수도 있음)
-        // averageToolCallCount ≈ 2.0 검증
-        val avgMatch = Regex("\"averageToolCallCount\":(\\d+\\.?\\d*)").find(body)
-        assertNotNull(avgMatch, "averageToolCallCount 필드가 응답에 존재해야 합니다")
-        val avg = avgMatch!!.groupValues[1].toDouble()
-        assertEquals(2.0, avg, 0.01)
+        assertEquals(2L, body.totalReviews)
+        assertEquals(2L, body.categoryDistribution[IssueCategory.SECURITY])
+        assertEquals(1L, body.categoryDistribution[IssueCategory.PERFORMANCE])
+        assertEquals(0L, body.categoryDistribution[IssueCategory.READABILITY])
+        assertEquals(2.0, body.averageToolCallCount, 0.01)
     }
 }
