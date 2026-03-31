@@ -47,9 +47,8 @@ class ReviewQueryAdapter(
     override suspend fun countByCategory(): Map<IssueCategory, Long> = withContext(Dispatchers.IO) {
         val counts = reviewIssueCategoryRepository.countByCategory()
         // IssueCategory 4개 모두 포함 — 없는 카테고리는 0
-        IssueCategory.entries.associateWith { cat ->
-            counts.find { it.getCategory() == cat }?.getCount() ?: 0L
-        }
+        val countMap = counts.associate { it.getCategory() to it.getCount() }
+        IssueCategory.entries.associateWith { countMap[it] ?: 0L }
     }
 
     override suspend fun averageToolCallCount(): Double = withContext(Dispatchers.IO) {
