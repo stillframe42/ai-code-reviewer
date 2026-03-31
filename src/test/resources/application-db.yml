@@ -8,6 +8,5 @@ spring:
   jpa:
     hibernate:
       ddl-auto: create-drop
-    database-platform: org.hibernate.dialect.H2Dialect
   flyway:
     enabled: false              # 테스트에서는 Flyway 비활성화, JPA create-drop 사용
