@@ -31,6 +31,10 @@ class ReviewResultEntity(
     @Column(name = "model_name", length = 100)
     val modelName: String? = null,
 
+    // AI 리뷰 중 실행된 Tool 호출 횟수 — 통계 집계용
+    @Column(name = "tool_call_count", nullable = false)
+    val toolCallCount: Int = 0,
+
     @Column(name = "created_at", nullable = false)
     val createdAt: Instant = Instant.now(),
 )
