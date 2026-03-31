@@ -11,6 +11,8 @@ tags:
     description: AI 코드 리뷰 엔드포인트
   - name: webhook
     description: GitHub Webhook 수신 엔드포인트
+  - name: reviews
+    description: 리뷰 조회 엔드포인트
 
 paths:
   /api/chat:
@@ -169,6 +171,79 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
               example:
                 error: "AI로부터 리뷰 결과를 받지 못했습니다"
+
+  /api/reviews/{owner}/{repo}/{prNumber}:
+    get:
+      operationId: getReviewByPr
+      summary: PR 리뷰 조회
+      description: 특정 PR의 최신 AI 코드 리뷰 결과를 조회합니다.
+      tags:
+        - reviews
+      parameters:
+        - in: path
+          name: owner
+          required: true
+          schema:
+            type: string
+          description: 레포지토리 소유자
+          example: "octocat"
+        - in: path
+          name: repo
+          required: true
+          schema:
+            type: string
+          description: 레포지토리 이름
+          example: "Hello-World"
+        - in: path
+          name: prNumber
+          required: true
+          schema:
+            type: integer
+          description: PR 번호
+          example: 42
+      responses:
+        '200':
+          description: 리뷰 결과 조회 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReviewSummaryResponse'
+              example:
+                repoFullName: "octocat/Hello-World"
+                prNumber: 42
+                headSha: "abc123def456"
+                status: DONE
+                createdAt: "2026-03-31T10:00:00Z"
+                completedAt: "2026-03-31T10:00:30Z"
+                summary: "전반적으로 양호한 코드입니다."
+                issueCount: 2
+                toolCallCount: 3
+                modelName: "claude-sonnet-4-6"
+        '404':
+          description: 해당 PR의 리뷰 결과 없음
+
+  /api/reviews/stats:
+    get:
+      operationId: getReviewStats
+      summary: 리뷰 통계 조회
+      description: 전체 리뷰 건수, 카테고리별 이슈 분포, 평균 Tool 호출 횟수를 반환합니다.
+      tags:
+        - reviews
+      responses:
+        '200':
+          description: 통계 조회 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReviewStatsResponse'
+              example:
+                totalReviews: 42
+                categoryDistribution:
+                  SECURITY: 15
+                  PERFORMANCE: 8
+                  READABILITY: 12
+                  ARCHITECTURE: 5
+                averageToolCallCount: 2.8
 
   /api/github/webhook:
     post:
@@ -485,6 +560,101 @@ components:
                   type: string
                   description: 최신 커밋 SHA
                   example: "abc123def456"
+
+    ReviewRequestStatus:
+      type: string
+      enum:
+        - PENDING
+        - PROCESSING
+        - DONE
+        - FAILED
+      description: |
+        리뷰 요청 처리 상태:
+        - `PENDING`: 요청 접수, 처리 대기
+        - `PROCESSING`: AI 리뷰 실행 중
+        - `DONE`: 리뷰 완료
+        - `FAILED`: 리뷰 실패
+
+    ReviewSummaryResponse:
+      type: object
+      required:
+        - repoFullName
+        - prNumber
+        - headSha
+        - status
+        - createdAt
+        - issueCount
+        - toolCallCount
+      properties:
+        repoFullName:
+          type: string
+          description: "레포지토리 전체 이름 (owner/repo 형식)"
+          example: "octocat/Hello-World"
+        prNumber:
+          type: integer
+          description: PR 번호
+          example: 42
+        headSha:
+          type: string
+          description: 리뷰 시점의 커밋 SHA
+          example: "abc123def456"
+        status:
+          $ref: '#/components/schemas/ReviewRequestStatus'
+        createdAt:
+          type: string
+          format: date-time
+          description: 리뷰 요청 생성 시각
+        completedAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: 리뷰 완료/실패 시각
+        summary:
+          type: string
+          nullable: true
+          description: AI 리뷰 총평
+        issueCount:
+          type: integer
+          description: 발견된 이슈 수
+          example: 3
+        toolCallCount:
+          type: integer
+          description: AI 리뷰 중 실행된 Tool 호출 횟수
+          example: 2
+        modelName:
+          type: string
+          nullable: true
+          description: 리뷰에 사용된 AI 모델명
+          example: "claude-sonnet-4-6"
+
+    ReviewStatsResponse:
+      type: object
+      required:
+        - totalReviews
+        - categoryDistribution
+        - averageToolCallCount
+      properties:
+        totalReviews:
+          type: integer
+          format: int64
+          description: 전체 리뷰 요청 수
+          example: 42
+        categoryDistribution:
+          type: object
+          additionalProperties:
+            type: integer
+            format: int64
+          description: 카테고리별 이슈 수 (PERFORMANCE, SECURITY, READABILITY, ARCHITECTURE)
+          example:
+            SECURITY: 15
+            PERFORMANCE: 8
+            READABILITY: 12
+            ARCHITECTURE: 5
+        averageToolCallCount:
+          type: number
+          format: double
+          description: 리뷰당 평균 Tool 호출 횟수
+          example: 2.8
 
     # ── 에러 응답 ────────────────────────────────────────────────────────────
 
