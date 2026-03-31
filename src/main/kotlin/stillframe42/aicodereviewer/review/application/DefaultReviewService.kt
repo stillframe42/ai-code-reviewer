@@ -78,6 +78,7 @@ class DefaultReviewService(
             summary = reviews.joinToString("\n") { it.summary },
             issues = reviews.flatMap { it.issues },
             positives = reviews.flatMap { it.positives }.distinct().take(3),
+            toolCallCount = reviews.sumOf { it.toolCallCount },
         )
     }
 }

@@ -44,4 +44,50 @@ class SpringAiReviewAdapterToolCallingTest {
             assertThat(result.overallScore).isBetween(0, 10)
         }
     }
+
+    @Test
+    fun `WithGitHubTools 모드로 리뷰 시 toolCallCount가 0 이상으로 설정된다`() {
+        runBlocking {
+            val (installationId, _, _) = GitHubTestCredentials.assumeFullCredentials()
+
+            val diff = """
+                diff --git a/README.md b/README.md
+                index 1234567..89abcde 100644
+                --- a/README.md
+                +++ b/README.md
+                @@ -1,3 +1,4 @@
+                 # AI Code Reviewer
+                +
+                +GitHub Pull Request를 자동으로 리뷰하는 Spring AI 기반 서비스입니다.
+            """.trimIndent()
+
+            val result = springAiReviewAdapter.reviewCode(
+                code = diff,
+                provider = AiProvider.ANTHROPIC,
+                mode = ReviewMode.WithGitHubTools(installationId = installationId),
+            )
+
+            assertThat(result.toolCallCount).isGreaterThanOrEqualTo(0)
+        }
+    }
+
+    @Test
+    fun `Simple 모드로 리뷰 시 toolCallCount는 0이다`() {
+        runBlocking {
+            val anthropicKey = System.getenv("ANTHROPIC_API_KEY")
+                ?: System.getProperty("anthropic.api-key")
+            org.junit.jupiter.api.Assumptions.assumeTrue(
+                anthropicKey != null && anthropicKey.isNotBlank() && anthropicKey != "test-dummy-key",
+                "실제 ANTHROPIC_API_KEY가 필요합니다",
+            )
+
+            val result = springAiReviewAdapter.reviewCode(
+                code = "fun add(a: Int, b: Int) = a + b",
+                provider = AiProvider.ANTHROPIC,
+                mode = ReviewMode.Simple,
+            )
+
+            assertThat(result.toolCallCount).isEqualTo(0)
+        }
+    }
 }

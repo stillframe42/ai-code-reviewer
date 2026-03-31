@@ -7,5 +7,6 @@ data class CodeReview(
     @field:JsonProperty("overall_score") val overallScore: Int,
     val summary: String,
     val issues: List<CodeIssue>,
-    val positives: List<String>
+    val positives: List<String>,
+    @field:JsonProperty("tool_call_count") val toolCallCount: Int = 0,
 )

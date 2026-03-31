@@ -1,6 +1,7 @@
 package stillframe42.aicodereviewer.review.adapter.out.ai.tool
 
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.ai.chat.model.ToolContext
 import org.springframework.beans.factory.annotation.Autowired
@@ -19,6 +20,13 @@ class GitHubToolsTest {
 
     @Autowired
     private lateinit var rateLimitState: GitHubRateLimitState
+
+    @BeforeEach
+    fun resetRateLimitState() {
+        // Rate Limit 테스트용으로 등록된 더미 installationId의 상태를 초기화한다
+        // 카운터 테스트가 Long.MAX_VALUE를 재사용하므로 Rate Limit 간섭을 방지한다
+        rateLimitState.update(Long.MAX_VALUE, Int.MAX_VALUE, Instant.now().plusSeconds(600))
+    }
 
     @Test
     fun `GitHubTools 빈이 Spring 컨텍스트에 등록된다`() {
@@ -198,5 +206,36 @@ class GitHubToolsTest {
 
         assertThat(result).contains("Rate Limit 임박")
         assertThat(result).contains("5건 남음")
+    }
+
+    // ── Tool 호출 횟수 제한 ──────────────────────────────
+
+    @Test
+    fun `Tool 호출 카운터가 최대 횟수를 초과하면 에러 문자열을 반환한다`() {
+        val counter = java.util.concurrent.atomic.AtomicInteger(5)  // 이미 5회 소진
+        val result = gitHubTools.getFileContent(
+            repositoryFullName = "owner/repo",
+            path = "README.md",
+            ref = "main",
+            toolContext = ToolContext(mapOf(
+                "installationId" to Long.MAX_VALUE,  // 실제 API 호출 없이 카운터만 검사
+                "toolCallCounter" to counter,
+            )),
+        )
+        assertThat(result).contains("Tool 호출 한도")
+        assertThat(result).contains("5회")
+    }
+
+    @Test
+    fun `Tool 호출 카운터가 없으면 횟수 제한 없이 정상 실행 흐름을 밟는다`() {
+        val rateLimitDummyId = Long.MAX_VALUE - 1  // rateLimitState에 등록되지 않은 ID
+        val result = gitHubTools.getFileContent(
+            repositoryFullName = "owner/repo",
+            path = "README.md",
+            ref = "main",
+            toolContext = ToolContext(mapOf("installationId" to rateLimitDummyId)),
+        )
+        // counter가 없으면 카운터 제한 에러는 발생하지 않는다
+        assertThat(result).doesNotContain("Tool 호출 한도")
     }
 }
