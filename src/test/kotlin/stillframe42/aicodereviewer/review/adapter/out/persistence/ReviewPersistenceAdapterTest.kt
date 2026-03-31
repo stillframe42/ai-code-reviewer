@@ -1,6 +1,6 @@
 package stillframe42.aicodereviewer.review.adapter.out.persistence
 
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
@@ -40,7 +40,7 @@ class ReviewPersistenceAdapterTest {
     }
 
     @Test
-    fun `saveReviewRequest는 PENDING 상태로 저장하고 ID를 반환한다`() = runBlocking {
+    fun `saveReviewRequest는 PENDING 상태로 저장하고 ID를 반환한다`() = runTest {
         val id = adapter.saveReviewRequest(
             repoFullName = "owner/repo",
             prNumber = 10,
@@ -55,7 +55,7 @@ class ReviewPersistenceAdapterTest {
     }
 
     @Test
-    fun `updateReviewStatus는 상태와 completedAt을 변경한다`() = runBlocking {
+    fun `updateReviewStatus는 상태와 completedAt을 변경한다`() = runTest {
         val id = adapter.saveReviewRequest("owner/repo", 11, "def456")
         adapter.updateReviewStatus(id, ReviewRequestStatus.DONE, Instant.now())
 
@@ -65,7 +65,7 @@ class ReviewPersistenceAdapterTest {
     }
 
     @Test
-    fun `saveReviewResult는 ReviewResultEntity와 카테고리 행을 저장한다`() = runBlocking {
+    fun `saveReviewResult는 ReviewResultEntity와 카테고리 행을 저장한다`() = runTest {
         val requestId = adapter.saveReviewRequest("owner/repo", 12, "ghi789")
         val review = CodeReview(
             overallScore = 7,
@@ -106,5 +106,34 @@ class ReviewPersistenceAdapterTest {
         assertEquals(2, categories.size)
         assertEquals(1, categories.count { it.category == IssueCategory.SECURITY })
         assertEquals(1, categories.count { it.category == IssueCategory.PERFORMANCE })
+    }
+
+    @Test
+    fun `saveToolCallLog은 예외 없이 완료된다`() = runTest {
+        // Tool 호출 로그 저장은 현재 no-op 구현이므로 예외 없이 완료되어야 한다
+        adapter.saveToolCallLog(
+            reviewRequestId = 999L,
+            toolName = "getFileDiff",
+            argumentsJson = """{"path": "src/Main.kt"}""",
+            responseSize = 512,
+            elapsedMs = 100,
+            success = true,
+        )
+        // 예외가 발생하지 않으면 테스트 통과
+    }
+
+    @Test
+    fun `updateReviewStatus에서 completedAt이 null이면 기존 값을 유지한다`() = runTest {
+        val id = adapter.saveReviewRequest("owner/repo", 20, "sha999")
+        val originalCompletedAt = Instant.now()
+        // 먼저 completedAt을 설정한다
+        adapter.updateReviewStatus(id, ReviewRequestStatus.DONE, originalCompletedAt)
+
+        // completedAt=null로 상태만 변경 시 기존 completedAt이 유지되어야 한다
+        adapter.updateReviewStatus(id, ReviewRequestStatus.PENDING, null)
+
+        val entity = reviewRequestRepository.findById(id).orElseThrow()
+        assertEquals(ReviewRequestStatus.PENDING, entity.status)
+        assertNotNull(entity.completedAt)
     }
 }

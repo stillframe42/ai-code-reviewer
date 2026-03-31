@@ -3,7 +3,9 @@ package stillframe42.aicodereviewer.review.adapter.out.persistence
 import com.fasterxml.jackson.databind.ObjectMapper
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.stereotype.Component
+import org.springframework.transaction.annotation.Transactional
 import stillframe42.aicodereviewer.review.adapter.out.persistence.entity.ReviewIssueCategoryEntity
 import stillframe42.aicodereviewer.review.adapter.out.persistence.entity.ReviewRequestEntity
 import stillframe42.aicodereviewer.review.adapter.out.persistence.entity.ReviewResultEntity
@@ -19,6 +21,7 @@ class ReviewPersistenceAdapter(
     private val reviewRequestRepository: ReviewRequestRepository,
     private val reviewResultRepository: ReviewResultRepository,
     private val reviewIssueCategoryRepository: ReviewIssueCategoryRepository,
+    @param:Qualifier("jackson2ObjectMapper")
     private val objectMapper: ObjectMapper,
 ) : ReviewPersistencePort {
 
@@ -58,11 +61,22 @@ class ReviewPersistenceAdapter(
         )
     }
 
+    // withContext(Dispatchers.IO)에서 @Transactional이 전파되지 않으므로
+    // 블로킹 헬퍼 메서드에 @Transactional을 적용하고 코루틴 컨텍스트에서 호출한다
     override suspend fun saveReviewResult(
         reviewRequestId: Long,
         review: CodeReview,
         modelName: String?,
     ): Unit = withContext(Dispatchers.IO) {
+        saveReviewResultSync(reviewRequestId, review, modelName)
+    }
+
+    @Transactional
+    private fun saveReviewResultSync(
+        reviewRequestId: Long,
+        review: CodeReview,
+        modelName: String?,
+    ) {
         val issuesJson = objectMapper.writeValueAsString(review.issues)
         val saved = reviewResultRepository.save(
             ReviewResultEntity(
