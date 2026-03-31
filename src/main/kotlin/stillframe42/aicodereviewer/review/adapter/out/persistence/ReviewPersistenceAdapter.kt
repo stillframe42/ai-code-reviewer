@@ -1,6 +1,6 @@
 package stillframe42.aicodereviewer.review.adapter.out.persistence
 
-import tools.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.databind.ObjectMapper
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.springframework.stereotype.Component

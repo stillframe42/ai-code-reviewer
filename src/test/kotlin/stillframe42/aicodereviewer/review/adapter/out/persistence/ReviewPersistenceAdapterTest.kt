@@ -13,6 +13,7 @@ import stillframe42.aicodereviewer.review.domain.model.CodeReview
 import stillframe42.aicodereviewer.review.domain.model.IssueCategory
 import stillframe42.aicodereviewer.review.domain.model.IssueSeverity
 import stillframe42.aicodereviewer.review.domain.model.ReviewRequestStatus
+import java.time.Instant
 
 // ReviewPersistenceAdapter 통합 테스트 — H2 인메모리 DB 사용
 @SpringBootTest
@@ -56,7 +57,7 @@ class ReviewPersistenceAdapterTest {
     @Test
     fun `updateReviewStatus는 상태와 completedAt을 변경한다`() = runBlocking {
         val id = adapter.saveReviewRequest("owner/repo", 11, "def456")
-        adapter.updateReviewStatus(id, ReviewRequestStatus.DONE, java.time.Instant.now())
+        adapter.updateReviewStatus(id, ReviewRequestStatus.DONE, Instant.now())
 
         val entity = reviewRequestRepository.findById(id).orElseThrow()
         assertEquals(ReviewRequestStatus.DONE, entity.status)
