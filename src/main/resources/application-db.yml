@@ -6,5 +6,8 @@ spring:
     driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: validate
     database-platform: org.hibernate.dialect.PostgreSQLDialect
+  flyway:
+    baseline-on-migrate: true   # 기존 DB(Flyway 이력 없음)를 자동으로 baseline 처리
+    baseline-version: 1         # 기존 DB는 V1로 stamping → V2부터 실행
