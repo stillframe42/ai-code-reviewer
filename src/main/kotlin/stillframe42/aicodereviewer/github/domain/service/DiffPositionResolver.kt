@@ -115,18 +115,12 @@ class DiffPositionResolver : Logging {
         filename: String?,
         line: Int,
     ): Pair<String?, Int?> {
-        return if (filename != null) {
-            filename to positionIndex[filename]?.get(line)
-        } else {
-            // filename이 null — 유일한 파일을 추론 (멀티 파일에서 중복 시 매핑 포기)
-            val candidates = positionIndex.entries.filter { (_, lineMap) -> lineMap.containsKey(line) }
-            if (candidates.size == 1) {
-                val (resolvedFile, lineMap) = candidates.first()
-                resolvedFile to lineMap[line]
-            } else {
-                null to null
-            }
-        }
+        if (filename != null) return filename to positionIndex[filename]?.get(line)
+        // filename이 null — 유일한 파일을 추론 (멀티 파일에서 중복 시 매핑 포기)
+        val candidates = positionIndex.entries.filter { (_, lineMap) -> lineMap.containsKey(line) }
+        if (candidates.size != 1) return null to null
+        val (resolvedFile, lineMap) = candidates.first()
+        return resolvedFile to lineMap[line]
     }
 
     // 인라인 코멘트 본문 포맷

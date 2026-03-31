@@ -1,27 +1,27 @@
 openapi: 3.1.0
 info:
   title: AI Code Reviewer API
-  description: GitHub PR 자동 코드 리뷰를 위한 AI 기반 REST API
-  version: 0.0.1
-
-servers:
-  - url: http://localhost:8080
-    description: 로컬 개발 서버
+  description: Spring AI 기반 AI 코드 리뷰 자동화 시스템 API
+  version: 1.0.0
 
 tags:
   - name: chat
-    description: AI 채팅 API
+    description: AI 채팅 엔드포인트
   - name: review
-    description: AI 코드 리뷰 API
+    description: AI 코드 리뷰 엔드포인트
+  - name: webhook
+    description: GitHub Webhook 수신 엔드포인트
+  - name: reviews
+    description: 리뷰 조회 엔드포인트
 
 paths:
   /api/chat:
     post:
+      operationId: chat
+      summary: 단일 채팅 응답
+      description: AI 프로바이더에게 메시지를 전달하고 단일 응답을 반환합니다.
       tags:
         - chat
-      summary: AI에게 메시지 전송
-      description: 지정된 AI 프로바이더에게 메시지를 전송하고 응답을 반환합니다. provider 생략 시 기본값은 ANTHROPIC입니다.
-      operationId: chat
       requestBody:
         required: true
         content:
@@ -29,8 +29,8 @@ paths:
             schema:
               $ref: '#/components/schemas/ChatRequest'
             example:
-              message: "이 코드를 리뷰해줘"
-              provider: "ANTHROPIC"
+              message: "다음 코드의 문제점을 알려주세요: fun add(a: Int, b: Int) = a + b"
+              provider: ANTHROPIC
       responses:
         '200':
           description: AI 응답 성공
@@ -39,24 +39,16 @@ paths:
               schema:
                 $ref: '#/components/schemas/ChatResponse'
               example:
-                answer: "코드를 분석한 결과..."
+                answer: "해당 함수는 단순하지만 오버플로우 처리가 없습니다."
         '400':
-          description: 잘못된 요청 (유효성 검증 실패 또는 요청 본문 파싱 오류)
+          description: 요청 유효성 검증 실패
           content:
             application/json:
               schema:
-                oneOf:
-                  - $ref: '#/components/schemas/ValidationErrorResponse'
-                  - $ref: '#/components/schemas/ErrorResponse'
-              examples:
-                validationError:
-                  summary: 필드 유효성 검증 실패
-                  value:
-                    message: "메시지를 입력해주세요"
-                parseError:
-                  summary: 요청 본문 파싱 오류
-                  value:
-                    error: "요청 본문을 읽을 수 없습니다. 필드 누락 또는 타입 오류를 확인해주세요"
+                $ref: '#/components/schemas/ValidationErrorResponse'
+              example:
+                errors:
+                  message: "메시지를 입력해주세요"
         '500':
           description: 서버 내부 오류
           content:
@@ -64,15 +56,15 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
               example:
-                error: "서버 오류가 발생했습니다"
+                error: "AI로부터 응답을 받지 못했습니다"
 
   /api/chat/stream:
     post:
+      operationId: streamChat
+      summary: SSE 스트리밍 채팅
+      description: AI 프로바이더에게 메시지를 전달하고 응답 토큰을 Server-Sent Events 형식으로 스트리밍합니다.
       tags:
         - chat
-      summary: AI에게 메시지 전송 (SSE 스트리밍)
-      description: 지정된 AI 프로바이더에게 메시지를 전송하고 토큰 단위로 SSE 스트리밍 응답을 반환합니다. provider 생략 시 기본값은 ANTHROPIC입니다.
-      operationId: chatStream
       requestBody:
         required: true
         content:
@@ -80,33 +72,29 @@ paths:
             schema:
               $ref: '#/components/schemas/ChatRequest'
             example:
-              message: "이 코드를 리뷰해줘"
-              provider: "ANTHROPIC"
+              message: "코루틴과 쓰레드의 차이를 설명해주세요"
+              provider: ANTHROPIC
       responses:
         '200':
-          description: SSE 스트리밍 성공 (토큰 단위 응답)
+          description: SSE 스트림 시작 성공
           content:
             text/event-stream:
               schema:
                 type: string
-              example: "data: 코드를\n\ndata: 분석한\n\ndata: 결과...\n\n"
+                description: 토큰 단위로 전송되는 SSE 데이터 스트림
+              example: |
+                data: 코루틴은
+                data:  경량
+                data:  스레드입니다.
         '400':
-          description: 잘못된 요청 (유효성 검증 실패 또는 요청 본문 파싱 오류)
+          description: 요청 유효성 검증 실패
           content:
             application/json:
               schema:
-                oneOf:
-                  - $ref: '#/components/schemas/ValidationErrorResponse'
-                  - $ref: '#/components/schemas/ErrorResponse'
-              examples:
-                validationError:
-                  summary: 필드 유효성 검증 실패
-                  value:
-                    message: "메시지를 입력해주세요"
-                parseError:
-                  summary: 요청 본문 파싱 오류
-                  value:
-                    error: "요청 본문을 읽을 수 없습니다. 필드 누락 또는 타입 오류를 확인해주세요"
+                $ref: '#/components/schemas/ValidationErrorResponse'
+              example:
+                errors:
+                  message: "메시지를 입력해주세요"
         '500':
           description: 서버 내부 오류
           content:
@@ -114,68 +102,67 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
               example:
-                error: "서버 오류가 발생했습니다"
+                error: "스트리밍 중 오류가 발생했습니다"
 
   /api/review:
     post:
+      operationId: reviewCode
+      summary: AI 코드 리뷰
+      description: |
+        코드(또는 Git diff)를 AI에 전달하여 구조화된 코드 리뷰 결과를 반환합니다.
+        `diffOptions`를 지정하면 테스트 파일·잠금 파일 필터링, context 줄 수 조절 등 diff 전처리가 적용됩니다.
       tags:
         - review
-      summary: 코드 구조화 리뷰 요청
-      description: 코드를 분석하여 점수, 요약, 이슈 목록, 긍정 평가를 포함한 구조화된 JSON 리뷰 결과를 반환합니다. provider 생략 시 기본값은 ANTHROPIC입니다.
-      operationId: reviewCode
       requestBody:
         required: true
         content:
           application/json:
             schema:
               $ref: '#/components/schemas/ReviewRequest'
-            examples:
-              simpleCode:
-                summary: 일반 코드 리뷰
-                value:
-                  code: "fun add(a: Int, b: Int) = a + b"
-                  provider: "ANTHROPIC"
-              prDiff:
-                summary: PR diff 전처리 적용
-                value:
-                  code: "diff --git a/Foo.kt b/Foo.kt\n--- a/Foo.kt\n+++ b/Foo.kt\n@@ -1 +1 @@\n-old\n+new"
-                  provider: "ANTHROPIC"
-                  diffOptions:
-                    filterTestFiles: true
-                    filterLockFiles: true
-                    additionalExcludePatterns: ["generated/**"]
-                    contextLines: 0
+            example:
+              code: |
+                fun divide(a: Int, b: Int): Int {
+                    return a / b
+                }
+              provider: ANTHROPIC
+              diffOptions:
+                filterTestFiles: true
+                filterLockFiles: true
+                additionalExcludePatterns:
+                  - "**/generated/**"
+                contextLines: 3
+                maxTokens: 8000
+                strategyOverrides:
+                  "docs/**": "Skip"
+                  "infra/**": "QueryReview"
       responses:
         '200':
-          description: 구조화된 코드 리뷰 성공
+          description: 코드 리뷰 결과 반환
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/CodeReviewResult'
+                $ref: '#/components/schemas/CodeReview'
               example:
-                overall_score: 8
-                summary: "간단하고 명확한 덧셈 함수입니다. 특별한 문제는 없습니다."
-                issues: []
+                overall_score: 5
+                summary: "기본 동작은 올바르나 0으로 나누기 예외 처리가 누락되어 있습니다."
+                issues:
+                  - id: "issue-1"
+                    category: SECURITY
+                    line: 2
+                    severity: MAJOR
+                    description: "b가 0일 때 ArithmeticException이 발생합니다."
+                    suggestion: "b == 0 검사를 추가하거나 require(b != 0)을 사용하세요."
                 positives:
-                  - "단일 표현식 함수로 간결하게 작성되었습니다"
-                  - "파라미터 타입이 명시적으로 선언되었습니다"
+                  - "함수 시그니처가 명확합니다."
         '400':
-          description: 잘못된 요청 (유효성 검증 실패 또는 요청 본문 파싱 오류)
+          description: 요청 유효성 검증 실패
           content:
             application/json:
               schema:
-                oneOf:
-                  - $ref: '#/components/schemas/ValidationErrorResponse'
-                  - $ref: '#/components/schemas/ErrorResponse'
-              examples:
-                validationError:
-                  summary: 필드 유효성 검증 실패
-                  value:
-                    code: "코드를 입력해주세요"
-                parseError:
-                  summary: 요청 본문 파싱 오류
-                  value:
-                    error: "요청 본문을 읽을 수 없습니다. 필드 누락 또는 타입 오류를 확인해주세요"
+                $ref: '#/components/schemas/ValidationErrorResponse'
+              example:
+                errors:
+                  code: "코드를 입력해주세요"
         '500':
           description: 서버 내부 오류
           content:
@@ -183,16 +170,140 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
               example:
-                error: "서버 오류가 발생했습니다"
+                error: "AI로부터 리뷰 결과를 받지 못했습니다"
+
+  /api/reviews/{owner}/{repo}/{prNumber}:
+    get:
+      operationId: getReviewByPr
+      summary: PR 리뷰 조회
+      description: 특정 PR의 최신 AI 코드 리뷰 결과를 조회합니다.
+      tags:
+        - reviews
+      parameters:
+        - in: path
+          name: owner
+          required: true
+          schema:
+            type: string
+          description: 레포지토리 소유자
+          example: "octocat"
+        - in: path
+          name: repo
+          required: true
+          schema:
+            type: string
+          description: 레포지토리 이름
+          example: "Hello-World"
+        - in: path
+          name: prNumber
+          required: true
+          schema:
+            type: integer
+          description: PR 번호
+          example: 42
+      responses:
+        '200':
+          description: 리뷰 결과 조회 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReviewSummaryResponse'
+              example:
+                repoFullName: "octocat/Hello-World"
+                prNumber: 42
+                headSha: "abc123def456"
+                status: DONE
+                createdAt: "2026-03-31T10:00:00Z"
+                completedAt: "2026-03-31T10:00:30Z"
+                summary: "전반적으로 양호한 코드입니다."
+                issueCount: 2
+                toolCallCount: 3
+                modelName: "claude-sonnet-4-6"
+        '404':
+          description: 해당 PR의 리뷰 결과 없음
+
+  /api/reviews/stats:
+    get:
+      operationId: getReviewStats
+      summary: 리뷰 통계 조회
+      description: 전체 리뷰 건수, 카테고리별 이슈 분포, 평균 Tool 호출 횟수를 반환합니다.
+      tags:
+        - reviews
+      responses:
+        '200':
+          description: 통계 조회 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReviewStatsResponse'
+              example:
+                totalReviews: 42
+                categoryDistribution:
+                  SECURITY: 15
+                  PERFORMANCE: 8
+                  READABILITY: 12
+                  ARCHITECTURE: 5
+                averageToolCallCount: 2.8
+
+  /api/github/webhook:
+    post:
+      operationId: handleGitHubWebhook
+      summary: GitHub Webhook 수신
+      description: |
+        GitHub App Webhook 이벤트를 수신합니다.
+        X-Hub-Signature-256 헤더로 HMAC-SHA256 서명을 검증하며,
+        pull_request 이벤트(opened, synchronize, reopened)에 대해 AI 코드 리뷰를 비동기로 실행합니다.
+        처리는 fire-and-forget 방식이므로 즉시 202를 반환합니다.
+      tags:
+        - webhook
+      parameters:
+        - in: header
+          name: X-Hub-Signature-256
+          required: true
+          schema:
+            type: string
+          description: "HMAC-SHA256 서명 (형식: sha256=<hex>)"
+          example: "sha256=abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890"
+        - in: header
+          name: X-GitHub-Event
+          required: true
+          schema:
+            type: string
+          description: "GitHub 이벤트 타입 (예: pull_request, ping)"
+          example: "pull_request"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GitHubWebhookPayload'
+            example:
+              action: "opened"
+              installation:
+                id: 12345678
+              repository:
+                full_name: "owner/repo"
+              pull_request:
+                number: 42
+                head:
+                  sha: "abc123def456"
+      responses:
+        '202':
+          description: Webhook 수신 완료, AI 코드 리뷰 비동기 처리 시작 (pull_request 이벤트)
+        '200':
+          description: Webhook 수신 완료, 처리 없이 무시 (지원하지 않는 이벤트 타입 또는 action)
+        '401':
+          description: HMAC-SHA256 서명 검증 실패
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "Webhook 서명 검증에 실패했습니다"
 
 components:
   schemas:
-    AiProvider:
-      type: string
-      enum: [ANTHROPIC, OPENAI]
-      default: ANTHROPIC
-      description: "AI 응답 프로바이더. 생략 시 기본값은 ANTHROPIC"
-      example: "ANTHROPIC"
+    # ── 요청 스키마 ──────────────────────────────────────────────────────────
 
     ChatRequest:
       type: object
@@ -202,38 +313,10 @@ components:
         message:
           type: string
           minLength: 1
-          description: AI에게 전송할 메시지 (공백 불가)
-          example: "이 코드를 리뷰해줘"
+          description: AI에게 전달할 메시지
+          example: "다음 코드의 문제점을 알려주세요"
         provider:
           $ref: '#/components/schemas/AiProvider'
-
-    ChatResponse:
-      type: object
-      required:
-        - answer
-      properties:
-        answer:
-          type: string
-          description: AI의 응답 메시지
-          example: "코드를 분석한 결과..."
-
-    ValidationErrorResponse:
-      type: object
-      description: 필드별 유효성 검증 오류 응답 (필드명을 키로, 오류 메시지를 값으로 가지는 Map)
-      additionalProperties:
-        type: string
-      example:
-        message: "메시지를 입력해주세요"
-
-    ErrorResponse:
-      type: object
-      required:
-        - error
-      properties:
-        error:
-          type: string
-          description: 오류 메시지
-          example: "서버 오류가 발생했습니다"
 
     ReviewRequest:
       type: object
@@ -243,52 +326,110 @@ components:
         code:
           type: string
           minLength: 1
-          description: 리뷰할 코드 또는 PR diff 문자열 (공백 불가)
+          description: 리뷰할 코드 또는 Git diff 문자열
           example: "fun add(a: Int, b: Int) = a + b"
         provider:
           $ref: '#/components/schemas/AiProvider'
         diffOptions:
           $ref: '#/components/schemas/DiffFilterOptions'
+        reviewMode:
+          $ref: '#/components/schemas/ReviewModeRequest'
+        installationId:
+          type: integer
+          format: int64
+          nullable: true
+          description: "WITH_TOOLS 모드에서 GitHub App Installation ID (필수)"
+          example: 12345678
+
+    ReviewModeRequest:
+      type: string
+      enum:
+        - WITHOUT_TOOLS
+        - WITH_TOOLS
+      default: WITHOUT_TOOLS
+      description: "Tool Calling 활성화 여부. WITHOUT_TOOLS(기본): diff만으로 리뷰. WITH_TOOLS: GitHub API Tool 자동 호출 포함 리뷰."
+      example: WITHOUT_TOOLS
 
     DiffFilterOptions:
       type: object
-      description: PR diff 전처리 옵션. 제공 시 AI 전달 전 불필요한 청크·줄을 제거하여 토큰을 절감한다. 생략 시 전처리 없이 raw code 전달.
+      description: PR diff 전처리 옵션 — AI에 전달하기 전 불필요한 파일·줄을 제거하는 동작을 제어합니다.
       properties:
         filterTestFiles:
           type: boolean
           default: true
-          description: "테스트 파일(*Test.kt, *Spec.kt 등) 제외 여부"
-          example: true
+          description: 테스트 파일(*Test.kt, *Spec.kt 등) 제외 여부
         filterLockFiles:
           type: boolean
           default: true
-          description: "잠금 파일(*.lock, package-lock.json 등) 제외 여부"
-          example: true
+          description: 잠금 파일(*.lock, package-lock.json 등) 제외 여부
         additionalExcludePatterns:
           type: array
           items:
             type: string
           default: []
-          description: "추가 제외 glob 패턴 목록 (예: generated/**, **/*.pb.go)"
-          example: ["generated/**", "**/*.pb.go"]
+          description: 사용자 정의 추가 제외 glob 패턴 목록
+          example: ["**/generated/**", "**/*.pb.go"]
         contextLines:
           type: integer
-          minimum: 0
           default: 3
-          description: "변경 전후 유지할 context 줄 수. 0이면 +/- 줄만 전송 (최대 절감), 3이면 기본 unified diff 수준"
-          example: 0
+          minimum: 0
+          description: 변경 전후 유지할 context 줄 수 (0 = +/- 줄만)
+        maxTokens:
+          type: integer
+          nullable: true
+          default: null
+          minimum: 1
+          description: 최대 허용 토큰 수 — 초과 시 변경량이 적은 파일 청크부터 제거 (null = 한도 없음)
+          example: 8000
+        strategyOverrides:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/FileReviewStrategy'
+          default: {}
+          description: |
+            파일별 리뷰 전략 오버라이드 — FileExtensionClassifier의 자동 분류보다 우선 적용됩니다.
+            키: glob 패턴 (예: "src/main/kotlin/**"), 값: FileReviewStrategy
+          example:
+            "docs/**": "Skip"
+            "src/main/kotlin/**": "FullReview"
 
-    IssueSeverity:
-      type: string
-      enum: [CRITICAL, MAJOR, MINOR, SUGGESTION]
-      description: "이슈 심각도. CRITICAL(운영 장애/보안 취약점), MAJOR(잠재적 버그/성능 저하), MINOR(컨벤션/가독성), SUGGESTION(선택적 개선)"
-      example: "MAJOR"
+    # ── 응답 스키마 ──────────────────────────────────────────────────────────
 
-    IssueCategory:
-      type: string
-      enum: [PERFORMANCE, SECURITY, READABILITY, ARCHITECTURE]
-      description: "이슈 카테고리. PERFORMANCE(성능), SECURITY(보안), READABILITY(가독성), ARCHITECTURE(아키텍처)"
-      example: "PERFORMANCE"
+    ChatResponse:
+      type: object
+      required:
+        - answer
+      properties:
+        answer:
+          type: string
+          description: AI 응답 텍스트
+
+    CodeReview:
+      type: object
+      required:
+        - overall_score
+        - summary
+        - issues
+        - positives
+      properties:
+        overall_score:
+          type: integer
+          minimum: 1
+          maximum: 10
+          description: 코드 전체 품질 점수 (1 = 최하, 10 = 최상)
+        summary:
+          type: string
+          description: 코드 리뷰 총평
+        issues:
+          type: array
+          items:
+            $ref: '#/components/schemas/CodeIssue'
+          description: 발견된 이슈 목록
+        positives:
+          type: array
+          items:
+            type: string
+          description: 잘 작성된 부분 목록
 
     CodeIssue:
       type: object
@@ -301,53 +442,243 @@ components:
       properties:
         id:
           type: string
-          description: 이슈 식별자 ('ISSUE-1', 'ISSUE-2' 형식)
-          example: "ISSUE-1"
+          description: 이슈 고유 식별자
+          example: "issue-1"
         category:
           $ref: '#/components/schemas/IssueCategory'
         line:
           type: integer
           nullable: true
-          description: 이슈가 발생한 라인 번호. 특정할 수 없으면 null
-          example: 3
+          description: 이슈가 발생한 줄 번호 (특정 줄을 지목할 수 없는 경우 null)
         severity:
           $ref: '#/components/schemas/IssueSeverity'
         description:
           type: string
-          description: 이슈에 대한 한국어 설명
-          example: "변수명이 너무 짧아 의도를 파악하기 어렵습니다"
+          description: 이슈 설명
         suggestion:
           type: string
-          description: 구체적인 개선 방법 또는 수정 코드 예시
-          example: "a, b 대신 firstNumber, secondNumber와 같이 명확한 이름을 사용하세요"
+          description: 개선 제안
 
-    CodeReviewResult:
+    FileReviewStrategy:
+      type: string
+      enum:
+        - FullReview
+        - QueryReview
+        - Skip
+      description: |
+        파일별 AI 리뷰 처리 전략:
+        - `FullReview`: 일반 코드 품질 리뷰 (기본값 — .kt, .java, .ts 등)
+        - `QueryReview`: 변경 의도·설정값 위주 리뷰 (.yml, .sql, .json, Dockerfile 등)
+        - `Skip`: 리뷰 대상에서 완전히 제외 (이미지, 바이너리, 빌드 산출물 등)
+
+    # ── 공통 열거형 ──────────────────────────────────────────────────────────
+
+    AiProvider:
+      type: string
+      enum:
+        - ANTHROPIC
+        - OPENAI
+      default: ANTHROPIC
+      description: 사용할 AI 프로바이더
+
+    IssueSeverity:
+      type: string
+      enum:
+        - CRITICAL
+        - MAJOR
+        - MINOR
+        - SUGGESTION
+      description: |
+        이슈 심각도:
+        - `CRITICAL`: 운영 장애 / 보안 취약점 — 즉시 수정 필수
+        - `MAJOR`: 잠재적 버그 / 성능 저하 — 머지 전 수정 권고
+        - `MINOR`: 컨벤션 / 가독성 — 수정 권장
+        - `SUGGESTION`: 선택적 개선 / 리팩토링 아이디어
+
+    IssueCategory:
+      type: string
+      enum:
+        - PERFORMANCE
+        - SECURITY
+        - READABILITY
+        - ARCHITECTURE
+      description: |
+        이슈 카테고리:
+        - `PERFORMANCE`: N+1 쿼리, 비효율적 시간복잡도, 캐싱 누락
+        - `SECURITY`: SQL Injection, 인증/인가 누락, 민감정보 노출
+        - `READABILITY`: 불명확한 네이밍, 함수 길이 초과, 매직넘버
+        - `ARCHITECTURE`: SRP 위반, 레이어 의존성 역전, 과도한 결합
+
+    GitHubWebhookPayload:
+      type: object
+      description: GitHub pull_request Webhook 페이로드
+      required:
+        - action
+        - installation
+        - repository
+        - pull_request
+      properties:
+        action:
+          type: string
+          description: "PR 이벤트 액션 타입 (opened, synchronize, reopened 등)"
+          example: "opened"
+        installation:
+          type: object
+          required:
+            - id
+          properties:
+            id:
+              type: integer
+              format: int64
+              description: GitHub App 설치 ID
+              example: 12345678
+        repository:
+          type: object
+          required:
+            - full_name
+          properties:
+            full_name:
+              type: string
+              description: "레포지토리 전체 이름 (owner/repo 형식)"
+              example: "octocat/Hello-World"
+        pull_request:
+          type: object
+          required:
+            - number
+            - head
+          properties:
+            number:
+              type: integer
+              description: PR 번호
+              example: 42
+            head:
+              type: object
+              required:
+                - sha
+              properties:
+                sha:
+                  type: string
+                  description: 최신 커밋 SHA
+                  example: "abc123def456"
+
+    ReviewRequestStatus:
+      type: string
+      enum:
+        - PENDING
+        - PROCESSING
+        - DONE
+        - FAILED
+      description: |
+        리뷰 요청 처리 상태:
+        - `PENDING`: 요청 접수, 처리 대기
+        - `PROCESSING`: AI 리뷰 실행 중
+        - `DONE`: 리뷰 완료
+        - `FAILED`: 리뷰 실패
+
+    ReviewSummaryResponse:
       type: object
       required:
-        - overall_score
-        - summary
-        - issues
-        - positives
+        - repoFullName
+        - prNumber
+        - headSha
+        - status
+        - createdAt
+        - issueCount
+        - toolCallCount
       properties:
-        overall_score:
+        repoFullName:
+          type: string
+          description: "레포지토리 전체 이름 (owner/repo 형식)"
+          example: "octocat/Hello-World"
+        prNumber:
           type: integer
-          minimum: 1
-          maximum: 10
-          description: 전반적인 코드 품질 점수 (1~10, 10이 최고)
-          example: 8
+          description: PR 번호
+          example: 42
+        headSha:
+          type: string
+          description: 리뷰 시점의 커밋 SHA
+          example: "abc123def456"
+        status:
+          $ref: '#/components/schemas/ReviewRequestStatus'
+        createdAt:
+          type: string
+          format: date-time
+          description: 리뷰 요청 생성 시각
+        completedAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: 리뷰 완료/실패 시각
         summary:
           type: string
-          description: 코드 전반에 대한 한국어 총평 요약
-          example: "간단하고 명확한 덧셈 함수입니다. 특별한 문제는 없습니다."
-        issues:
-          type: array
-          items:
-            $ref: '#/components/schemas/CodeIssue'
-          description: 발견된 이슈 목록. 이슈가 없으면 빈 배열
-        positives:
-          type: array
-          items:
-            type: string
-          description: 코드의 잘된 점 목록 (한국어). 없으면 빈 배열
+          nullable: true
+          description: AI 리뷰 총평
+        issueCount:
+          type: integer
+          description: 발견된 이슈 수
+          example: 3
+        toolCallCount:
+          type: integer
+          description: AI 리뷰 중 실행된 Tool 호출 횟수
+          example: 2
+        modelName:
+          type: string
+          nullable: true
+          description: 리뷰에 사용된 AI 모델명
+          example: "claude-sonnet-4-6"
+
+    ReviewStatsResponse:
+      type: object
+      required:
+        - totalReviews
+        - categoryDistribution
+        - averageToolCallCount
+      properties:
+        totalReviews:
+          type: integer
+          format: int64
+          description: 전체 리뷰 요청 수
+          example: 42
+        categoryDistribution:
+          type: object
+          additionalProperties:
+            type: integer
+            format: int64
+          description: 카테고리별 이슈 수 (PERFORMANCE, SECURITY, READABILITY, ARCHITECTURE)
           example:
-            - "단일 표현식 함수로 간결하게 작성되었습니다"
+            SECURITY: 15
+            PERFORMANCE: 8
+            READABILITY: 12
+            ARCHITECTURE: 5
+        averageToolCallCount:
+          type: number
+          format: double
+          description: 리뷰당 평균 Tool 호출 횟수
+          example: 2.8
+
+    # ── 에러 응답 ────────────────────────────────────────────────────────────
+
+    ErrorResponse:
+      type: object
+      description: 단일 메시지 오류 응답
+      required:
+        - error
+      properties:
+        error:
+          type: string
+          description: 오류 메시지
+
+    ValidationErrorResponse:
+      type: object
+      description: 필드별 유효성 검증 오류 응답
+      required:
+        - errors
+      properties:
+        errors:
+          type: object
+          additionalProperties:
+            type: string
+          description: 필드명 → 오류 메시지 맵
+          example:
+            message: "메시지를 입력해주세요"
+            code: "코드를 입력해주세요"

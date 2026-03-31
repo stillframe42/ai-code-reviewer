@@ -44,11 +44,9 @@ class WebhookController(
             return ResponseEntity.ok().build()
         }
 
-        // 3단계: JSON 파싱 및 도메인 변환
+        // 3단계: JSON 파싱 및 도메인 변환 — 지원하지 않는 action이면 무시
         val dto = objectMapper.readValue(body, WebhookPayloadDto::class.java)
-        val event = dto.toDomain()
-
-        if (event == null) {
+        val event = dto.toDomain() ?: run {
             logger.debug("지원하지 않는 PR action 무시: {}", dto.action)
             return ResponseEntity.ok().build()
         }

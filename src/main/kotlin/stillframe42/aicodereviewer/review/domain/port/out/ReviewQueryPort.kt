@@ -18,6 +18,13 @@ data class ReviewSummaryResult(
     val modelName: String?,
 )
 
+// 리뷰 통계 조회 결과 — UseCase 반환용 도메인 데이터
+data class ReviewStatsResult(
+    val totalReviews: Long,
+    val categoryDistribution: Map<IssueCategory, Long>,
+    val averageToolCallCount: Double,
+)
+
 // 리뷰 조회 아웃바운드 포트 — 읽기 전용
 interface ReviewQueryPort {
 
