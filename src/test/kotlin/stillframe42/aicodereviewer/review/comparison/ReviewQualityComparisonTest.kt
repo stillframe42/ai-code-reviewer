@@ -1,6 +1,6 @@
 package stillframe42.aicodereviewer.review.comparison
 
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import com.fasterxml.jackson.databind.ObjectMapper
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
@@ -33,8 +33,8 @@ class ReviewQualityComparisonTest {
     @Autowired
     private lateinit var gitHubApiPort: GitHubApiPort
 
-    // Spring 컨텍스트에 com.fasterxml ObjectMapper 빈이 없으므로 직접 생성
-    private val objectMapper = jacksonObjectMapper()
+    @Autowired
+    private lateinit var objectMapper: ObjectMapper
 
     private lateinit var client: RestTestClient
     private lateinit var credentials: GitHubTestCredentials.Credentials
