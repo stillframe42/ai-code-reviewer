@@ -15,6 +15,11 @@ github:
     private-key-path: src/test/resources/test-keys/rsa-test-key.pem
 
 spring:
+  ai:
+    retry:
+      # 통합 테스트에서 AI 오류 시나리오 소요 시간을 줄이기 위해 Spring AI 자체 재시도 비활성화
+      # SpringAiReviewAdapter의 재시도(MAX_ATTEMPTS=2)만 사용
+      max-attempts: 1
   datasource:
     # driver-class-name은 H2 설정(application-db.yml)을 PostgreSQL로 오버라이드
     # URL/username/password는 AbstractIntegrationTest @DynamicPropertySource가 런타임에 덮어씀

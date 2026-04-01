@@ -1,5 +1,6 @@
 package stillframe42.aicodereviewer.integration
 
+import com.github.tomakehurst.wiremock.client.WireMock.containing
 import com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor
 import com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo
 import org.awaitility.kotlin.await
@@ -112,6 +113,35 @@ class WebhookFlowIntegrationTest : AbstractIntegrationTest() {
         // 중복 체크 후 즉시 종료 — 충분한 대기 후에도 GitHub 리뷰 등록 요청이 없어야 한다
         Thread.sleep(500)
         wireMock.verify(0, postRequestedFor(urlPathEqualTo("/repos/owner/repo/pulls/42/reviews")))
+    }
+
+    @Test
+    fun `AI API 오류 시 에러 안내 리뷰가 GitHub에 등록된다`() {
+        // Given: GitHub API는 정상, AI API는 오류 반환
+        WireMockStubs.stubInstallationToken(wireMock, 12345678L)
+        WireMockStubs.stubPrDiff(wireMock, "owner/repo", 42, AnthropicResponseFixtures.SIMPLE_DIFF)
+        WireMockStubs.stubPrFiles(wireMock, "owner/repo", 42)
+        WireMockStubs.stubAnthropicError(wireMock)            // AI 500 오류
+        WireMockStubs.stubPostPrReview(wireMock, "owner/repo", 42, reviewId = 9002L)
+
+        // When: Webhook 전송
+        client.post().uri("/api/github/webhook")
+            .contentType(MediaType.APPLICATION_JSON)
+            .header("X-Hub-Signature-256", sign(pullRequestPayload))
+            .header("X-GitHub-Event", "pull_request")
+            .body(pullRequestPayload)
+            .exchange()
+            .expectStatus().isEqualTo(202)
+
+        // Then: AI 재시도(2회 × 5s) 포함 최대 20초 대기
+        // 에러 안내 본문으로 리뷰가 등록되어야 한다
+        await.atMost(20, SECONDS).untilAsserted {
+            wireMock.verify(
+                1,
+                postRequestedFor(urlPathEqualTo("/repos/owner/repo/pulls/42/reviews"))
+                    .withRequestBody(containing("오류가 발생했습니다"))
+            )
+        }
     }
 
     @Test
