@@ -1,11 +1,13 @@
 package stillframe42.aicodereviewer.review.adapter.out.ai
 
 import com.fasterxml.jackson.core.JsonParser
+import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.delay
@@ -42,6 +44,8 @@ class SpringAiReviewAdapter(
     private val lenientMapper = ObjectMapper().apply {
         registerKotlinModule()
         configure(JsonParser.Feature.ALLOW_BACKSLASH_ESCAPING_ANY_CHARACTER, true)
+        // AI가 알 수 없는 필드(title, suggestions 등)를 포함하는 경우 무시
+        configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
     }
     private val converter = BeanOutputConverter(CodeReviewAiResponse::class.java, lenientMapper)
 
@@ -49,13 +53,34 @@ class SpringAiReviewAdapter(
     override suspend fun reviewCode(code: String, provider: AiProvider, mode: ReviewMode): CodeReview {
         val toolCallCounter = AtomicInteger(0)
         return executeWithRetry(mode) {
-            buildRequestSpec(code, provider, mode, toolCallCounter)
+            val rawText = buildRequestSpec(code, provider, mode, toolCallCounter)
                 .call()
-                .entity(converter)
+                .content()
+                ?: throw IllegalStateException("AI로부터 빈 응답을 받았습니다")
+            // AI가 preamble 텍스트나 마크다운 코드 펜스를 포함하는 경우 대비
+            val jsonText = extractJson(rawText)
+            converter.convert(jsonText)
                 ?.toDomain()
                 ?.copy(toolCallCount = toolCallCounter.get())
                 ?: throw IllegalStateException("AI로부터 리뷰 결과를 받지 못했습니다")
         }
+    }
+
+    // AI 응답에서 JSON을 추출한다. 순수 JSON / 마크다운 코드 펜스 / preamble+JSON 세 가지 형식 처리.
+    private fun extractJson(text: String): String {
+        val trimmed = text.trim()
+        if (trimmed.startsWith("{")) return trimmed
+
+        // ```json ... ``` 또는 ``` ... ``` 코드 펜스에서 추출
+        val fenceMatch = Regex("```(?:json)?\\s*\\n?(\\{[\\s\\S]*?\\})\\s*\\n?```").find(trimmed)
+        if (fenceMatch != null) return fenceMatch.groupValues[1].trim()
+
+        // preamble 텍스트 이후 { ... } 추출
+        val startIdx = trimmed.indexOf('{')
+        val endIdx = trimmed.lastIndexOf('}')
+        if (startIdx != -1 && endIdx > startIdx) return trimmed.substring(startIdx, endIdx + 1)
+
+        return text
     }
 
     // ReviewMode에 따라 Tool 등록 + 카운터 전달 여부를 결정하여 ChatClient 요청 스펙을 구성한다
@@ -99,6 +124,8 @@ class SpringAiReviewAdapter(
                 lastEx = e
                 logger.warn("AI 리뷰 타임아웃 (시도 {}/{}): {} 초과", attempt, MAX_ATTEMPTS, timeout)
             } catch (e: Exception) {
+                // CancellationException은 코루틴 취소 신호이므로 재전파
+                if (e is CancellationException) throw e
                 lastEx = e
                 logger.warn("AI 리뷰 실패 (시도 {}/{}): {}", attempt, MAX_ATTEMPTS, e.message)
             }
