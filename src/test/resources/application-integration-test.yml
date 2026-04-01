@@ -1,0 +1,20 @@
+# 통합 테스트 전용 설정
+# spring.datasource.*, github.api.base-url, spring.ai.*.base-url은
+# AbstractIntegrationTest의 @DynamicPropertySource가 런타임에 덮어씀
+
+anthropic:
+  api-key: test-dummy-key
+
+openai:
+  api-key: test-dummy-key
+
+github:
+  app:
+    app-id: 1
+    webhook-secret: test-webhook-secret
+    private-key-path: test-keys/rsa-test-key.pem
+
+spring:
+  flyway:
+    # 신규 Testcontainers DB이므로 baseline 불필요
+    baseline-on-migrate: false
