@@ -58,8 +58,16 @@ dependencies {
     // Test
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
-    // 테스트용 인메모리 DB (로컬 개발은 PostgreSQL 사용)
-    testRuntimeOnly("com.h2database:h2")
+
+    // Test — Testcontainers (버전은 Spring Boot BOM 관리)
+    testImplementation("org.testcontainers:testcontainers-postgresql")
+    testImplementation("org.testcontainers:testcontainers-junit-jupiter")
+
+    // Test — WireMock (JDK 21 호환 standalone)
+    testImplementation("org.wiremock:wiremock-standalone:3.10.0")
+
+    // Test — Awaitility Kotlin DSL
+    testImplementation("org.awaitility:awaitility-kotlin:4.2.2")
 }
 
 dependencyManagement {
