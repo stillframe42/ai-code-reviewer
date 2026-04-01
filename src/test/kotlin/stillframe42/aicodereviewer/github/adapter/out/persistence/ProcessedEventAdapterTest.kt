@@ -7,12 +7,11 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.dao.DataIntegrityViolationException
+import stillframe42.aicodereviewer.integration.AbstractIntegrationTest
 
-// ProcessedEventAdapter 통합 테스트 — H2 인메모리 DB로 중복 처리 방지 시나리오를 검증한다
-@SpringBootTest
-class ProcessedEventAdapterTest {
+// ProcessedEventAdapter 통합 테스트 — PostgreSQL Testcontainers로 중복 처리 방지 시나리오를 검증한다
+class ProcessedEventAdapterTest : AbstractIntegrationTest() {
 
     @Autowired
     private lateinit var adapter: ProcessedEventAdapter

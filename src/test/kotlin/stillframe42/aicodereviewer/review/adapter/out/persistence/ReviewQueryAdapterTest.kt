@@ -7,7 +7,7 @@ import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.boot.test.context.SpringBootTest
+import stillframe42.aicodereviewer.integration.AbstractIntegrationTest
 import stillframe42.aicodereviewer.review.adapter.out.persistence.entity.ReviewIssueCategoryEntity
 import stillframe42.aicodereviewer.review.adapter.out.persistence.entity.ReviewRequestEntity
 import stillframe42.aicodereviewer.review.adapter.out.persistence.entity.ReviewResultEntity
@@ -15,9 +15,8 @@ import stillframe42.aicodereviewer.review.domain.model.IssueCategory
 import stillframe42.aicodereviewer.review.domain.model.ReviewRequestStatus
 import java.time.Instant
 
-// ReviewQueryAdapter 통합 테스트 — H2 인메모리 DB 사용
-@SpringBootTest
-class ReviewQueryAdapterTest {
+// ReviewQueryAdapter 통합 테스트 — PostgreSQL Testcontainers 사용
+class ReviewQueryAdapterTest : AbstractIntegrationTest() {
 
     @Autowired
     private lateinit var adapter: ReviewQueryAdapter

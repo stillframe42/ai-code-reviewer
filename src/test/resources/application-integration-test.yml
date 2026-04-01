@@ -15,6 +15,17 @@ github:
     private-key-path: test-keys/rsa-test-key.pem
 
 spring:
+  datasource:
+    # driver-class-name은 H2 설정(application-db.yml)을 PostgreSQL로 오버라이드
+    # URL/username/password는 AbstractIntegrationTest @DynamicPropertySource가 런타임에 덮어씀
+    driver-class-name: org.postgresql.Driver
+    url: jdbc:postgresql://localhost:5432/placeholder  # @DynamicPropertySource가 덮어씀
+    username: placeholder                              # @DynamicPropertySource가 덮어씀
+    password: placeholder                             # @DynamicPropertySource가 덮어씀
+  jpa:
+    hibernate:
+      ddl-auto: none
   flyway:
     # 신규 Testcontainers DB이므로 baseline 불필요
     baseline-on-migrate: false
+    enabled: true
