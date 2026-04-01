@@ -1,33 +1,17 @@
 package stillframe42.aicodereviewer.github.adapter.`in`.web
 
-import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.boot.test.context.SpringBootTest
-import org.springframework.boot.test.web.server.LocalServerPort
 import org.springframework.http.MediaType
-import org.springframework.test.web.servlet.client.RestTestClient
 import stillframe42.aicodereviewer.config.GitHubProperties
+import stillframe42.aicodereviewer.integration.AbstractIntegrationTest
 
 // WebhookController 통합 테스트 — RANDOM_PORT 실제 서버에 RestTestClient로 검증합니다.
 // fire-and-forget 방식이므로 202 이후의 백그라운드 처리는 검증하지 않습니다.
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-class WebhookControllerTest {
-
-    @LocalServerPort
-    private var port: Int = 0
+class WebhookControllerTest : AbstractIntegrationTest() {
 
     @Autowired
     private lateinit var properties: GitHubProperties
-
-    private lateinit var client: RestTestClient
-
-    @BeforeEach
-    fun setUp() {
-        client = RestTestClient.bindToServer()
-            .baseUrl("http://localhost:$port")
-            .build()
-    }
 
     // 설정에서 주입받은 secret으로 서명을 계산해 설정값 변경에도 테스트가 깨지지 않도록 한다
     private fun sign(payload: String): String =

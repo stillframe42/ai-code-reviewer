@@ -4,14 +4,13 @@ import io.jsonwebtoken.Jwts
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.boot.test.context.SpringBootTest
+import stillframe42.aicodereviewer.integration.AbstractIntegrationTest
 import java.security.KeyPairGenerator
 import java.time.Instant
 import java.util.Date
 
 // JwtSigner 단위 테스트 — PEM 파일 없이 인메모리 RSA 키로 JWT 서명 로직을 검증한다
-@SpringBootTest
-class JwtSignerTest {
+class JwtSignerTest : AbstractIntegrationTest() {
 
     @Autowired
     private lateinit var jwtSigner: JwtSigner

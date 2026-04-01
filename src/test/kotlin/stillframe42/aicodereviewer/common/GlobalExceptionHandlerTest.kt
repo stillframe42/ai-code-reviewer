@@ -1,26 +1,10 @@
 package stillframe42.aicodereviewer.common
 
-import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.springframework.boot.test.context.SpringBootTest
-import org.springframework.boot.test.web.server.LocalServerPort
-import org.springframework.test.web.servlet.client.RestTestClient
+import stillframe42.aicodereviewer.integration.AbstractIntegrationTest
 
 // GlobalExceptionHandler 통합 테스트 — 존재하지 않는 경로에 대한 응답 코드를 검증합니다.
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-class GlobalExceptionHandlerTest {
-
-    @LocalServerPort
-    private var port: Int = 0
-
-    private lateinit var client: RestTestClient
-
-    @BeforeEach
-    fun setUp() {
-        client = RestTestClient.bindToServer()
-            .baseUrl("http://localhost:$port")
-            .build()
-    }
+class GlobalExceptionHandlerTest : AbstractIntegrationTest() {
 
     @Test
     fun `존재하지 않는 경로로 요청하면 500이 아닌 404 Not Found 반환`() {

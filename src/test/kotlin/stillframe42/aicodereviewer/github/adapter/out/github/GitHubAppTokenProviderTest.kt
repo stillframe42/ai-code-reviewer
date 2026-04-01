@@ -2,22 +2,27 @@ package stillframe42.aicodereviewer.github.adapter.out.github
 
 import kotlinx.coroutines.runBlocking
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.boot.test.context.SpringBootTest
 import stillframe42.aicodereviewer.github.adapter.out.github.GitHubAppTokenProvider.CachedToken
 import stillframe42.aicodereviewer.github.domain.port.out.GitHubTokenPort
-import stillframe42.aicodereviewer.github.support.GitHubTestCredentials
+import stillframe42.aicodereviewer.integration.AbstractIntegrationTest
+import stillframe42.aicodereviewer.integration.support.WireMockStubs
 import java.time.Instant
 
 // GitHubAppTokenProvider 테스트
 // 그룹 A: 캐싱 로직 단위 테스트 (GitHub API 불필요)
-// 그룹 B: @SpringBootTest 통합 테스트 (실제 GitHub App 자격증명 필요, 없으면 자동 스킵)
-@SpringBootTest
-class GitHubAppTokenProviderTest {
+// 그룹 B: 통합 테스트 (WireMock으로 GitHub App Token API 모킹)
+class GitHubAppTokenProviderTest : AbstractIntegrationTest() {
 
     @Autowired
     private lateinit var tokenProvider: GitHubTokenPort
+
+    @BeforeEach
+    fun setUpStubs() {
+        WireMockStubs.stubInstallationToken(wireMock, WireMockStubs.TEST_INSTALLATION_ID)
+    }
 
     // ─── 그룹 A: 캐싱 로직 단위 테스트 ────────────────────────────────────────
 
@@ -48,26 +53,22 @@ class GitHubAppTokenProviderTest {
         assertThat(token.isExpiredOrExpiringSoon()).isTrue()
     }
 
-    // ─── 그룹 B: 통합 테스트 (실제 GitHub App 자격증명 필요) ───────────────────
+    // ─── 그룹 B: 통합 테스트 (WireMock으로 GitHub Token API 모킹) ─────────────
 
     @Test
     fun `유효한 Installation ID로 Access Token을 발급받는다`() = runBlocking {
-        val installationId = GitHubTestCredentials.assumeTokenCredentials()
-
-        val token = tokenProvider.getInstallationToken(installationId)
+        val token = tokenProvider.getInstallationToken(WireMockStubs.TEST_INSTALLATION_ID)
 
         assertThat(token).isNotBlank()
-        // GitHub Installation Access Token은 "ghs_" 접두사를 가진다
+        // WireMock stub이 "ghs_test_token"을 반환한다
         assertThat(token).startsWith("ghs_")
         Unit
     }
 
     @Test
     fun `동일한 Installation ID로 두 번 요청하면 캐시된 동일 토큰을 반환한다`() = runBlocking {
-        val installationId = GitHubTestCredentials.assumeTokenCredentials()
-
-        val token1 = tokenProvider.getInstallationToken(installationId)
-        val token2 = tokenProvider.getInstallationToken(installationId)
+        val token1 = tokenProvider.getInstallationToken(WireMockStubs.TEST_INSTALLATION_ID)
+        val token2 = tokenProvider.getInstallationToken(WireMockStubs.TEST_INSTALLATION_ID)
 
         // 두 번째 호출은 캐시에서 반환되므로 동일한 토큰이어야 한다
         assertThat(token1).isEqualTo(token2)

@@ -2,33 +2,37 @@ package stillframe42.aicodereviewer.github.adapter.out.github
 
 import kotlinx.coroutines.runBlocking
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.boot.test.context.SpringBootTest
+import stillframe42.aicodereviewer.github.domain.model.PrReview
+import stillframe42.aicodereviewer.github.domain.model.PrReviewEvent
 import stillframe42.aicodereviewer.github.domain.port.out.GitHubApiPort
-import stillframe42.aicodereviewer.github.support.GitHubTestCredentials
+import stillframe42.aicodereviewer.integration.AbstractIntegrationTest
+import stillframe42.aicodereviewer.integration.support.AnthropicResponseFixtures
+import stillframe42.aicodereviewer.integration.support.WireMockStubs
 
-// GitHubApiAdapter 통합 테스트
-// 실제 GitHub App 자격증명 및 테스트 PR 정보가 필요한 환경에서만 실행된다 (없으면 자동 스킵)
-// 필요 환경변수:
-//   GITHUB_APP_ID          — GitHub App ID
-//   GITHUB_INSTALLATION_ID — GitHub App Installation ID
-//   GITHUB_TEST_REPO       — "owner/repo" 형식 테스트 레포
-//   GITHUB_TEST_PR_NUMBER  — diff/comment 테스트용 PR 번호
-@SpringBootTest
-class GitHubApiAdapterTest {
+// GitHubApiAdapter 통합 테스트 — WireMock으로 GitHub API를 모킹합니다.
+class GitHubApiAdapterTest : AbstractIntegrationTest() {
 
     @Autowired
     private lateinit var gitHubApiPort: GitHubApiPort
 
+    @BeforeEach
+    fun setUpStubs() {
+        WireMockStubs.stubInstallationToken(wireMock, WireMockStubs.TEST_INSTALLATION_ID)
+        WireMockStubs.stubPrDiff(wireMock, WireMockStubs.TEST_REPO, WireMockStubs.TEST_PR_NUMBER, AnthropicResponseFixtures.SIMPLE_DIFF)
+        WireMockStubs.stubPrFiles(wireMock, WireMockStubs.TEST_REPO, WireMockStubs.TEST_PR_NUMBER)
+        WireMockStubs.stubPostPrReview(wireMock, WireMockStubs.TEST_REPO, WireMockStubs.TEST_PR_NUMBER, reviewId = 9001L)
+        WireMockStubs.stubDismissPrReview(wireMock, WireMockStubs.TEST_REPO, WireMockStubs.TEST_PR_NUMBER, reviewId = 9001L)
+    }
+
     @Test
     fun `유효한 PR 번호로 diff를 조회하면 내용이 비어있지 않다`() = runBlocking {
-        val (installationId, repo, prNumber) = GitHubTestCredentials.assumeValidAndGet()
-
         val prDiff = gitHubApiPort.getPrDiff(
-            repositoryFullName = repo,
-            pullRequestNumber = prNumber,
-            installationId = installationId,
+            repositoryFullName = WireMockStubs.TEST_REPO,
+            pullRequestNumber = WireMockStubs.TEST_PR_NUMBER,
+            installationId = WireMockStubs.TEST_INSTALLATION_ID,
         )
 
         assertThat(prDiff).isNotBlank()
@@ -39,12 +43,10 @@ class GitHubApiAdapterTest {
 
     @Test
     fun `PR 파일 목록을 조회하면 파일 정보가 반환된다`() = runBlocking {
-        val (installationId, repo, prNumber) = GitHubTestCredentials.assumeValidAndGet()
-
         val files = gitHubApiPort.getPrFiles(
-            repositoryFullName = repo,
-            pullRequestNumber = prNumber,
-            installationId = installationId,
+            repositoryFullName = WireMockStubs.TEST_REPO,
+            pullRequestNumber = WireMockStubs.TEST_PR_NUMBER,
+            installationId = WireMockStubs.TEST_INSTALLATION_ID,
         )
 
         assertThat(files).isNotEmpty()
@@ -57,15 +59,11 @@ class GitHubApiAdapterTest {
 
     @Test
     fun `유효한 PR에 리뷰를 등록하면 양수 review ID가 반환된다`() = runBlocking {
-        val (installationId, repo, prNumber) = GitHubTestCredentials.assumeValidAndGet()
-
         val reviewId = gitHubApiPort.postPrReview(
-            repositoryFullName = repo,
-            pullRequestNumber = prNumber,
-            review = stillframe42.aicodereviewer.github.domain.model.PrReview(
-                body = "[테스트] GitHubApiAdapter PR Reviews API 통합 테스트",
-            ),
-            installationId = installationId,
+            repositoryFullName = WireMockStubs.TEST_REPO,
+            pullRequestNumber = WireMockStubs.TEST_PR_NUMBER,
+            review = PrReview(body = "[테스트] GitHubApiAdapter PR Reviews API 통합 테스트"),
+            installationId = WireMockStubs.TEST_INSTALLATION_ID,
         )
 
         assertThat(reviewId).isPositive()
@@ -74,24 +72,22 @@ class GitHubApiAdapterTest {
 
     @Test
     fun `등록된 REQUEST_CHANGES 리뷰를 dismiss하면 예외가 발생하지 않는다`() = runBlocking {
-        val (installationId, repo, prNumber) = GitHubTestCredentials.assumeValidAndGet()
-
-        // REQUEST_CHANGES 타입만 dismiss 가능
+        // REQUEST_CHANGES 타입만 dismiss 가능 — stub은 @BeforeEach에서 reviewId=9001L로 등록됨
         val reviewId = gitHubApiPort.postPrReview(
-            repositoryFullName = repo,
-            pullRequestNumber = prNumber,
-            review = stillframe42.aicodereviewer.github.domain.model.PrReview(
+            repositoryFullName = WireMockStubs.TEST_REPO,
+            pullRequestNumber = WireMockStubs.TEST_PR_NUMBER,
+            review = PrReview(
                 body = "[테스트] dismiss 테스트용 리뷰",
-                event = stillframe42.aicodereviewer.github.domain.model.PrReviewEvent.REQUEST_CHANGES,
+                event = PrReviewEvent.REQUEST_CHANGES,
             ),
-            installationId = installationId,
+            installationId = WireMockStubs.TEST_INSTALLATION_ID,
         )
 
         gitHubApiPort.dismissPrReview(
-            repositoryFullName = repo,
-            pullRequestNumber = prNumber,
+            repositoryFullName = WireMockStubs.TEST_REPO,
+            pullRequestNumber = WireMockStubs.TEST_PR_NUMBER,
             reviewId = reviewId,
-            installationId = installationId,
+            installationId = WireMockStubs.TEST_INSTALLATION_ID,
         )
         Unit
     }

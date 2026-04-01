@@ -124,19 +124,36 @@ class WebhookFlowIntegrationTest : AbstractIntegrationTest() {
 
     @Test
     fun `AI API 오류 시 에러 안내 리뷰가 GitHub에 등록된다`() {
+        // PR #99 사용 — 다른 테스트(PR #42)에서 누출된 코루틴이 이 테스트의 stub을 오염시키지 않도록
+        // applicationScope는 싱글톤이므로 이전 테스트의 백그라운드 코루틴이 다음 테스트와 겹칠 수 있다.
+        // PR 번호를 분리하면 누출된 코루틴이 PR 42용 stub에 접근해도 이 테스트의 검증에 영향 없음.
+        val errorTestPayload = """
+            {
+              "action": "opened",
+              "installation": { "id": 12345678 },
+              "repository": { "full_name": "owner/repo" },
+              "pull_request": {
+                "number": 99,
+                "head": { "sha": "error999def456" },
+                "title": "feat: 오류 시나리오 테스트",
+                "user": { "login": "octocat" }
+              }
+            }
+        """.trimIndent()
+
         // Given: GitHub API는 정상, AI API는 오류 반환
         WireMockStubs.stubInstallationToken(wireMock, 12345678L)
-        WireMockStubs.stubPrDiff(wireMock, "owner/repo", 42, AnthropicResponseFixtures.SIMPLE_DIFF)
-        WireMockStubs.stubPrFiles(wireMock, "owner/repo", 42)
+        WireMockStubs.stubPrDiff(wireMock, "owner/repo", 99, AnthropicResponseFixtures.SIMPLE_DIFF)
+        WireMockStubs.stubPrFiles(wireMock, "owner/repo", 99)
         WireMockStubs.stubAnthropicError(wireMock)            // AI 500 오류
-        WireMockStubs.stubPostPrReview(wireMock, "owner/repo", 42, reviewId = 9002L)
+        WireMockStubs.stubPostPrReview(wireMock, "owner/repo", 99, reviewId = 9002L)
 
         // When: Webhook 전송
         client.post().uri("/api/github/webhook")
             .contentType(MediaType.APPLICATION_JSON)
-            .header("X-Hub-Signature-256", sign(pullRequestPayload))
+            .header("X-Hub-Signature-256", sign(errorTestPayload))
             .header("X-GitHub-Event", "pull_request")
-            .body(pullRequestPayload)
+            .body(errorTestPayload)
             .exchange()
             .expectStatus().isEqualTo(202)
 
@@ -145,7 +162,7 @@ class WebhookFlowIntegrationTest : AbstractIntegrationTest() {
         await.atMost(20, SECONDS).untilAsserted {
             wireMock.verify(
                 1,
-                postRequestedFor(urlPathEqualTo("/repos/owner/repo/pulls/42/reviews"))
+                postRequestedFor(urlPathEqualTo("/repos/owner/repo/pulls/99/reviews"))
                     .withRequestBody(containing("오류가 발생했습니다"))
             )
         }

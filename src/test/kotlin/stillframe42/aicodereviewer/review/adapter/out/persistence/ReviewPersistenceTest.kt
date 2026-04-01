@@ -5,15 +5,14 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.boot.test.context.SpringBootTest
+import stillframe42.aicodereviewer.integration.AbstractIntegrationTest
 import stillframe42.aicodereviewer.review.adapter.out.persistence.entity.ReviewRequestEntity
 import stillframe42.aicodereviewer.review.adapter.out.persistence.entity.ReviewResultEntity
 import stillframe42.aicodereviewer.review.adapter.out.persistence.entity.ToolCallLogEntity
 import stillframe42.aicodereviewer.review.domain.model.ReviewRequestStatus
 
-// ReviewRequest / ReviewResult / ToolCallLog Entity 저장·조회 통합 테스트 — H2 인메모리 DB 사용
-@SpringBootTest
-class ReviewPersistenceTest {
+// ReviewRequest / ReviewResult / ToolCallLog Entity 저장·조회 통합 테스트 — PostgreSQL Testcontainers 사용
+class ReviewPersistenceTest : AbstractIntegrationTest() {
 
     @Autowired
     private lateinit var reviewRequestRepository: ReviewRequestRepository

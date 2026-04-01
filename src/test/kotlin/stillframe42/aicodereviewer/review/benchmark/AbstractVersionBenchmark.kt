@@ -8,17 +8,40 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Value
+import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.core.io.Resource
+import org.springframework.test.context.ActiveProfiles
+import org.springframework.test.context.DynamicPropertyRegistry
+import org.springframework.test.context.DynamicPropertySource
 import stillframe42.aicodereviewer.common.TokenEstimator
 import stillframe42.aicodereviewer.core.AiProvider
+import stillframe42.aicodereviewer.integration.AbstractIntegrationTest
 import stillframe42.aicodereviewer.review.domain.model.IssueCategory
 import stillframe42.aicodereviewer.review.domain.model.IssueSeverity
 import stillframe42.aicodereviewer.review.domain.port.`in`.ReviewUseCase
 import kotlin.system.measureTimeMillis
 
 // 프롬프트 버전별 벤치마크 공통 로직 — 픽스처 로더 + 테스트 케이스 + 결과 출력
+// PostgreSQL Testcontainers 공유 — AbstractIntegrationTest의 싱글톤 컨테이너를 재사용한다
+@SpringBootTest
+@ActiveProfiles("integration-test")
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 abstract class AbstractVersionBenchmark {
+
+    companion object {
+        // AbstractIntegrationTest의 싱글톤 컨테이너를 참조하여 중복 기동 방지
+        @JvmStatic
+        @DynamicPropertySource
+        fun overrideDataSource(registry: DynamicPropertyRegistry) {
+            val pg = AbstractIntegrationTest.postgres
+            val wm = AbstractIntegrationTest.wireMock
+            registry.add("spring.datasource.url") { pg.jdbcUrl }
+            registry.add("spring.datasource.username") { pg.username }
+            registry.add("spring.datasource.password") { pg.password }
+            registry.add("spring.ai.anthropic.base-url") { "http://localhost:${wm.port()}" }
+            registry.add("spring.ai.openai.base-url") { "http://localhost:${wm.port()}" }
+        }
+    }
 
     // 각 버전 클래스에서 오버라이드
     abstract val version: String

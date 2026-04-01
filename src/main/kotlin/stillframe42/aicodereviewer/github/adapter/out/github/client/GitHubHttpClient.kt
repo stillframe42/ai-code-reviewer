@@ -58,7 +58,7 @@ class GitHubHttpClient(
 
     // GET /repos/{owner}/{repo}/contents/{path}?ref={ref} — 특정 ref의 파일 내용 조회
     // content는 MIME Base64 인코딩 + 개행 포함으로 반환된다
-    // path에 슬래시가 포함되므로 uriBuilder 람다로 처리하여 %2F로 올바르게 인코딩한다
+    // path에 슬래시가 포함되므로 템플릿 변수 대신 문자열 보간으로 URL을 구성한다 (슬래시 인코딩 방지)
     suspend fun fetchFileContent(
         repositoryFullName: String,
         path: String,
@@ -68,7 +68,7 @@ class GitHubHttpClient(
     ): FileContentResponse {
         val (owner, repo) = repositoryFullName.ownerAndRepo()
         return webClient.get()
-            .uri { it.path("/repos/{owner}/{repo}/contents/{path}").queryParam("ref", ref).build(owner, repo, path) }
+            .uri { it.path("/repos/$owner/$repo/contents/$path").queryParam("ref", ref).build() }
             .header("Authorization", "Bearer $token")
             .attribute("installationId", installationId)
             .retrieve()
@@ -117,6 +117,7 @@ class GitHubHttpClient(
     // GET /repos/{owner}/{repo}/contents/{path}?ref={ref} — 디렉토리 내 항목 목록 조회
     // path가 디렉토리를 가리킬 때 배열 응답을 반환한다
     // path가 빈 문자열이면 루트 디렉토리를 조회한다
+    // 슬래시 인코딩 방지를 위해 템플릿 변수 대신 문자열 보간으로 URL을 구성한다
     suspend fun fetchDirectoryContents(
         repositoryFullName: String,
         path: String,
@@ -126,7 +127,7 @@ class GitHubHttpClient(
     ): List<DirectoryEntryResponse> {
         val (owner, repo) = repositoryFullName.ownerAndRepo()
         return webClient.get()
-            .uri { it.path("/repos/{owner}/{repo}/contents/{path}").queryParam("ref", ref).build(owner, repo, path) }
+            .uri { it.path("/repos/$owner/$repo/contents/$path").queryParam("ref", ref).build() }
             .header("Authorization", "Bearer $token")
             .attribute("installationId", installationId)
             .retrieve()

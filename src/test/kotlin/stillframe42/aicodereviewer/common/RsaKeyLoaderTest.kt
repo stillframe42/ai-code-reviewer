@@ -3,11 +3,10 @@ package stillframe42.aicodereviewer.common
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.boot.test.context.SpringBootTest
+import stillframe42.aicodereviewer.integration.AbstractIntegrationTest
 
 // RsaKeyLoader 단위 테스트 — PEM 파일 없이 내부 변환 로직을 검증한다
-@SpringBootTest
-class RsaKeyLoaderTest {
+class RsaKeyLoaderTest : AbstractIntegrationTest() {
 
     @Autowired
     private lateinit var rsaKeyLoader: RsaKeyLoader

@@ -1,10 +1,9 @@
 package stillframe42.aicodereviewer
 
 import org.junit.jupiter.api.Test
-import org.springframework.boot.test.context.SpringBootTest
+import stillframe42.aicodereviewer.integration.AbstractIntegrationTest
 
-@SpringBootTest
-class AiCodeReviewerApplicationTests {
+class AiCodeReviewerApplicationTests : AbstractIntegrationTest() {
 
     @Test
     fun contextLoads() {

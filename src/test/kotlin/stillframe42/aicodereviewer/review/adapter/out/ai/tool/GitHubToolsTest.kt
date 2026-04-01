@@ -5,15 +5,13 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.ai.chat.model.ToolContext
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.boot.test.context.SpringBootTest
 import stillframe42.aicodereviewer.github.adapter.out.github.ratelimit.GitHubRateLimitState
-import stillframe42.aicodereviewer.github.support.GitHubTestCredentials
+import stillframe42.aicodereviewer.integration.AbstractIntegrationTest
+import stillframe42.aicodereviewer.integration.support.WireMockStubs
 import java.time.Instant
 
-// GitHubTools 통합 테스트
-// 실제 GitHub API 호출 — 환경변수 미설정 시 assumeTrue로 자동 스킵
-@SpringBootTest
-class GitHubToolsTest {
+// GitHubTools 통합 테스트 — WireMock으로 GitHub API를 모킹합니다.
+class GitHubToolsTest : AbstractIntegrationTest() {
 
     @Autowired
     private lateinit var gitHubTools: GitHubTools
@@ -21,11 +19,47 @@ class GitHubToolsTest {
     @Autowired
     private lateinit var rateLimitState: GitHubRateLimitState
 
+    // 테스트에서 사용하는 고정 ToolContext
+    private val testContext = ToolContext(mapOf("installationId" to WireMockStubs.TEST_INSTALLATION_ID))
+
     @BeforeEach
-    fun resetRateLimitState() {
+    fun setUpStubs() {
         // Rate Limit 테스트용으로 등록된 더미 installationId의 상태를 초기화한다
-        // 카운터 테스트가 Long.MAX_VALUE를 재사용하므로 Rate Limit 간섭을 방지한다
         rateLimitState.update(Long.MAX_VALUE, Int.MAX_VALUE, Instant.now().plusSeconds(600))
+
+        // 모든 installation ID에 대한 토큰 발급 stub (rate limit / counter 테스트용 ID 포함)
+        WireMockStubs.stubAnyInstallationToken(wireMock)
+
+        // getFileContent stubs
+        WireMockStubs.stubGitHubFileContent(wireMock, WireMockStubs.TEST_REPO, "README.md", "main")
+        WireMockStubs.stubGitHubNotFound(wireMock, WireMockStubs.TEST_REPO, "this/file/does/not/exist.kt", "main")
+
+        // getRelatedFile stubs — 루트 수준 파일 (README.md)
+        WireMockStubs.stubGitHubDirectoryContents(
+            wireMock, WireMockStubs.TEST_REPO, path = "", ref = "main",
+            entries = """[{"name":"README.md","path":"README.md","type":"file"},{"name":"build.gradle.kts","path":"build.gradle.kts","type":"file"},{"name":"src","path":"src","type":"dir"}]""",
+        )
+
+        // getRelatedFile stubs — 하위 디렉토리 파일 (gradle/wrapper/gradle-wrapper.properties)
+        WireMockStubs.stubGitHubDirectoryContents(
+            wireMock, WireMockStubs.TEST_REPO, path = "gradle/wrapper", ref = "main",
+            entries = """[{"name":"gradle-wrapper.jar","path":"gradle/wrapper/gradle-wrapper.jar","type":"file"},{"name":"gradle-wrapper.properties","path":"gradle/wrapper/gradle-wrapper.properties","type":"file"}]""",
+        )
+        WireMockStubs.stubGitHubDirectoryContents(
+            wireMock, WireMockStubs.TEST_REPO, path = "gradle", ref = "main",
+            entries = """[{"name":"wrapper","path":"gradle/wrapper","type":"dir"},{"name":"gradle.properties","path":"gradle/gradle.properties","type":"file"}]""",
+        )
+
+        // getRelatedFile stubs — 존재하지 않는 경로 (this/does/not)
+        WireMockStubs.stubGitHubNotFound(wireMock, WireMockStubs.TEST_REPO, "this/does/not", "main")
+
+        // getPRDescription stubs
+        WireMockStubs.stubGitHubPrDescription(wireMock, WireMockStubs.TEST_REPO, WireMockStubs.TEST_PR_NUMBER)
+        WireMockStubs.stubGitHubPrNotFound(wireMock, WireMockStubs.TEST_REPO, Int.MAX_VALUE)
+
+        // getFileHistory stubs
+        WireMockStubs.stubGitHubCommitHistory(wireMock, WireMockStubs.TEST_REPO, "README.md")
+        WireMockStubs.stubGitHubCommitHistoryEmpty(wireMock, WireMockStubs.TEST_REPO, "this/does/not/exist.kt")
     }
 
     @Test
@@ -37,13 +71,11 @@ class GitHubToolsTest {
 
     @Test
     fun `존재하는 파일을 조회하면 파일 내용을 반환한다`() {
-        val (installationId, repo, _) = GitHubTestCredentials.assumeValidAndGet()
-
         val result = gitHubTools.getFileContent(
-            repositoryFullName = repo,
+            repositoryFullName = WireMockStubs.TEST_REPO,
             path = "README.md",
             ref = "main",
-            toolContext = ToolContext(mapOf("installationId" to installationId)),
+            toolContext = testContext,
         )
 
         assertThat(result).isNotBlank()
@@ -53,13 +85,11 @@ class GitHubToolsTest {
 
     @Test
     fun `존재하지 않는 파일을 조회하면 오류 메시지 문자열을 반환한다`() {
-        val (installationId, repo, _) = GitHubTestCredentials.assumeValidAndGet()
-
         val result = gitHubTools.getFileContent(
-            repositoryFullName = repo,
+            repositoryFullName = WireMockStubs.TEST_REPO,
             path = "this/file/does/not/exist.kt",
             ref = "main",
-            toolContext = ToolContext(mapOf("installationId" to installationId)),
+            toolContext = testContext,
         )
 
         assertThat(result).startsWith("파일을 찾을 수 없습니다")
@@ -69,13 +99,11 @@ class GitHubToolsTest {
 
     @Test
     fun `루트 수준 파일로 관련 파일을 조회하면 같은 디렉토리 목록만 반환한다`() {
-        val (installationId, repo, _) = GitHubTestCredentials.assumeValidAndGet()
-
         val result = gitHubTools.getRelatedFile(
-            repositoryFullName = repo,
+            repositoryFullName = WireMockStubs.TEST_REPO,
             filePath = "README.md",
             ref = "main",
-            toolContext = ToolContext(mapOf("installationId" to installationId)),
+            toolContext = testContext,
         )
 
         assertThat(result).contains("[같은 디렉토리:")
@@ -84,13 +112,11 @@ class GitHubToolsTest {
 
     @Test
     fun `루트 수준 파일 조회 결과에 자기 자신이 포함되지 않는다`() {
-        val (installationId, repo, _) = GitHubTestCredentials.assumeValidAndGet()
-
         val result = gitHubTools.getRelatedFile(
-            repositoryFullName = repo,
+            repositoryFullName = WireMockStubs.TEST_REPO,
             filePath = "README.md",
             ref = "main",
-            toolContext = ToolContext(mapOf("installationId" to installationId)),
+            toolContext = testContext,
         )
 
         val lines = result.lines().filter { it.startsWith("- ") }
@@ -99,13 +125,11 @@ class GitHubToolsTest {
 
     @Test
     fun `하위 디렉토리 파일로 관련 파일을 조회하면 같은 디렉토리와 상위 디렉토리 목록을 반환한다`() {
-        val (installationId, repo, _) = GitHubTestCredentials.assumeValidAndGet()
-
         val result = gitHubTools.getRelatedFile(
-            repositoryFullName = repo,
+            repositoryFullName = WireMockStubs.TEST_REPO,
             filePath = "gradle/wrapper/gradle-wrapper.properties",
             ref = "main",
-            toolContext = ToolContext(mapOf("installationId" to installationId)),
+            toolContext = testContext,
         )
 
         assertThat(result).contains("[같은 디렉토리: gradle/wrapper]")
@@ -116,13 +140,11 @@ class GitHubToolsTest {
 
     @Test
     fun `존재하지 않는 경로로 관련 파일을 조회하면 오류 메시지 문자열을 반환한다`() {
-        val (installationId, repo, _) = GitHubTestCredentials.assumeValidAndGet()
-
         val result = gitHubTools.getRelatedFile(
-            repositoryFullName = repo,
+            repositoryFullName = WireMockStubs.TEST_REPO,
             filePath = "this/does/not/exist.kt",
             ref = "main",
-            toolContext = ToolContext(mapOf("installationId" to installationId)),
+            toolContext = testContext,
         )
 
         assertThat(result).startsWith("디렉토리를 찾을 수 없습니다")
@@ -132,12 +154,10 @@ class GitHubToolsTest {
 
     @Test
     fun `유효한 PR 번호로 조회하면 제목을 포함한 문자열을 반환한다`() {
-        val (installationId, repo, prNumber) = GitHubTestCredentials.assumeValidAndGet()
-
         val result = gitHubTools.getPRDescription(
-            repositoryFullName = repo,
-            prNumber = prNumber,
-            toolContext = ToolContext(mapOf("installationId" to installationId)),
+            repositoryFullName = WireMockStubs.TEST_REPO,
+            prNumber = WireMockStubs.TEST_PR_NUMBER,
+            toolContext = testContext,
         )
 
         assertThat(result).startsWith("제목:")
@@ -146,12 +166,10 @@ class GitHubToolsTest {
 
     @Test
     fun `존재하지 않는 PR 번호로 조회하면 오류 메시지 문자열을 반환한다`() {
-        val (installationId, repo, _) = GitHubTestCredentials.assumeValidAndGet()
-
         val result = gitHubTools.getPRDescription(
-            repositoryFullName = repo,
+            repositoryFullName = WireMockStubs.TEST_REPO,
             prNumber = Int.MAX_VALUE,
-            toolContext = ToolContext(mapOf("installationId" to installationId)),
+            toolContext = testContext,
         )
 
         assertThat(result).startsWith("PR을 찾을 수 없습니다")
@@ -161,12 +179,10 @@ class GitHubToolsTest {
 
     @Test
     fun `존재하는 파일의 커밋 히스토리를 조회하면 번호 붙은 항목 목록을 반환한다`() {
-        val (installationId, repo, _) = GitHubTestCredentials.assumeValidAndGet()
-
         val result = gitHubTools.getFileHistory(
-            repositoryFullName = repo,
+            repositoryFullName = WireMockStubs.TEST_REPO,
             filePath = "README.md",
-            toolContext = ToolContext(mapOf("installationId" to installationId)),
+            toolContext = testContext,
         )
 
         assertThat(result).contains("[1]")
@@ -177,13 +193,11 @@ class GitHubToolsTest {
 
     @Test
     fun `존재하지 않는 파일의 커밋 히스토리를 조회하면 빈 이력 메시지를 반환한다`() {
-        val (installationId, repo, _) = GitHubTestCredentials.assumeValidAndGet()
-
         // GitHub Commits API는 존재하지 않는 파일 경로에도 200 + 빈 배열 반환
         val result = gitHubTools.getFileHistory(
-            repositoryFullName = repo,
+            repositoryFullName = WireMockStubs.TEST_REPO,
             filePath = "this/does/not/exist.kt",
-            toolContext = ToolContext(mapOf("installationId" to installationId)),
+            toolContext = testContext,
         )
 
         assertThat(result).startsWith("커밋 이력이 없습니다")

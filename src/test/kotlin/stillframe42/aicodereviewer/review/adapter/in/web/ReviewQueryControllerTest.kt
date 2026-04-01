@@ -3,12 +3,9 @@ package stillframe42.aicodereviewer.review.adapter.`in`.web
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.boot.test.context.SpringBootTest
-import org.springframework.boot.test.web.server.LocalServerPort
-import org.springframework.test.web.servlet.client.RestTestClient
+import stillframe42.aicodereviewer.integration.AbstractIntegrationTest
 import stillframe42.aicodereviewer.review.adapter.out.persistence.ReviewIssueCategoryRepository
 import stillframe42.aicodereviewer.review.adapter.out.persistence.ReviewPersistenceAdapter
 import stillframe42.aicodereviewer.review.adapter.out.persistence.ReviewRequestRepository
@@ -22,11 +19,7 @@ import stillframe42.aicodereviewer.review.adapter.`in`.web.dto.ReviewSummaryResp
 import stillframe42.aicodereviewer.review.domain.model.ReviewRequestStatus
 
 // ReviewQueryController 통합 테스트 — RANDOM_PORT 실제 서버에 RestTestClient로 검증합니다.
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-class ReviewQueryControllerTest {
-
-    @LocalServerPort
-    private var port: Int = 0
+class ReviewQueryControllerTest : AbstractIntegrationTest() {
 
     @Autowired
     private lateinit var persistenceAdapter: ReviewPersistenceAdapter
@@ -39,13 +32,6 @@ class ReviewQueryControllerTest {
 
     @Autowired
     private lateinit var reviewRequestRepository: ReviewRequestRepository
-
-    private lateinit var client: RestTestClient
-
-    @BeforeEach
-    fun setUp() {
-        client = RestTestClient.bindToServer().baseUrl("http://localhost:$port").build()
-    }
 
     @AfterEach
     fun tearDown() {

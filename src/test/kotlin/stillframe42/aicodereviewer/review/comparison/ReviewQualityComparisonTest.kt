@@ -14,9 +14,11 @@ import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.test.web.server.LocalServerPort
 import org.springframework.http.MediaType
 import org.springframework.http.client.ReactorClientHttpRequestFactory
+import org.springframework.test.context.ActiveProfiles
 import org.springframework.test.context.DynamicPropertyRegistry
 import org.springframework.test.context.DynamicPropertySource
 import org.springframework.test.web.servlet.client.RestTestClient
+import stillframe42.aicodereviewer.integration.AbstractIntegrationTest
 import reactor.netty.http.client.HttpClient
 import stillframe42.aicodereviewer.common.TokenEstimator
 import stillframe42.aicodereviewer.github.domain.port.out.GitHubApiPort
@@ -31,16 +33,24 @@ import kotlin.system.measureTimeMillis
 //            GITHUB_TEST_REPO, GITHUB_TEST_PR_NUMBER 환경변수 설정 필요
 // 미설정 시 assumeTrue에 의해 자동 스킵됨
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@ActiveProfiles("integration-test")
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class ReviewQualityComparisonTest {
 
     companion object {
-        // 테스트 application.yml은 application-secret.yml을 로드하지 않으므로
-        // @DynamicPropertySource로 런타임에 GITHUB_APP_ID env var를 Spring 프로퍼티에 주입한다
-        // (GitHubAppJwtGeneratorTest와 동일한 패턴)
+        // AbstractIntegrationTest의 싱글톤 컨테이너를 참조하여 datasource + AI URL 주입
+        // GITHUB_APP_ID도 함께 주입 — application-secret.yml을 로드하지 않으므로 직접 바인딩
         @JvmStatic
         @DynamicPropertySource
         fun registerProperties(registry: DynamicPropertyRegistry) {
+            val pg = AbstractIntegrationTest.postgres
+            val wm = AbstractIntegrationTest.wireMock
+            registry.add("spring.datasource.url") { pg.jdbcUrl }
+            registry.add("spring.datasource.username") { pg.username }
+            registry.add("spring.datasource.password") { pg.password }
+            registry.add("github.api.base-url") { "http://localhost:${wm.port()}" }
+            registry.add("spring.ai.anthropic.base-url") { "http://localhost:${wm.port()}" }
+            registry.add("spring.ai.openai.base-url") { "http://localhost:${wm.port()}" }
             val appId = System.getenv("GITHUB_APP_ID") ?: "0"
             registry.add("github.app.app-id") { appId }
         }
