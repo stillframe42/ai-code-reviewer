@@ -1,7 +1,9 @@
 package stillframe42.aicodereviewer.review.comparison
 
-import com.fasterxml.jackson.databind.ObjectMapper
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
+import tools.jackson.databind.ObjectMapper
+import kotlin.time.Duration.Companion.seconds
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
@@ -50,18 +52,20 @@ class ReviewQualityComparisonTest {
         credentials = GitHubTestCredentials.assumeFullCredentials()
         client = RestTestClient.bindToServer().baseUrl("http://localhost:$port").build()
         diff = runBlocking {
-            gitHubApiPort.getPrDiff(
-                credentials.repo,
-                credentials.prNumber,
-                credentials.installationId,
-            )
+            withTimeout(30.seconds) {
+                gitHubApiPort.getPrDiff(
+                    credentials.repo,
+                    credentials.prNumber,
+                    credentials.installationId,
+                )
+            }
         }
     }
 
     @Test
     fun `WITHOUT_TOOLS 모드로 리뷰를 실행하고 결과를 캡처한다`() {
         val requestBody = objectMapper.writeValueAsString(
-            mapOf("code" to diff, "reviewMode" to "WITHOUT_TOOLS"),
+            mapOf("code" to diff, "reviewMode" to ReviewModeRequest.WITHOUT_TOOLS.name),
         )
 
         var review: CodeReview? = null
@@ -88,7 +92,7 @@ class ReviewQualityComparisonTest {
         val requestBody = objectMapper.writeValueAsString(
             mapOf(
                 "code" to diff,
-                "reviewMode" to "WITH_TOOLS",
+                "reviewMode" to ReviewModeRequest.WITH_TOOLS.name,
                 "installationId" to credentials.installationId,
             ),
         )
