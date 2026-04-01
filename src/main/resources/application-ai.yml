@@ -11,7 +11,7 @@ app:
       # Tool Calling 최대 라운드트립 횟수 참고값 (Spring AI 2.0.0-M2 내장 제한 미지원 — 현재 60s 타임아웃이 안전망)
       max-roundtrips: 3
   prompt:
-    review-system: classpath:prompts/review-system-v7.st   # v7: v6 기반 + summary 2문장 제한, positives 최대 3개 제한
+    review-system: classpath:prompts/review-system-v8.st   # v8: v7 기반 + Tool Calling 사용 지침 추가
     chat-system: classpath:prompts/chat-system.st
     chat-user: classpath:prompts/chat-user.st
 
