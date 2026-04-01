@@ -12,6 +12,8 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.test.web.server.LocalServerPort
 import org.springframework.http.MediaType
+import org.springframework.test.context.DynamicPropertyRegistry
+import org.springframework.test.context.DynamicPropertySource
 import org.springframework.test.web.servlet.client.RestTestClient
 import stillframe42.aicodereviewer.common.TokenEstimator
 import stillframe42.aicodereviewer.github.domain.port.out.GitHubApiPort
@@ -28,6 +30,18 @@ import kotlin.system.measureTimeMillis
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class ReviewQualityComparisonTest {
+
+    companion object {
+        // 테스트 application.yml은 application-secret.yml을 로드하지 않으므로
+        // @DynamicPropertySource로 런타임에 GITHUB_APP_ID env var를 Spring 프로퍼티에 주입한다
+        // (GitHubAppJwtGeneratorTest와 동일한 패턴)
+        @JvmStatic
+        @DynamicPropertySource
+        fun registerProperties(registry: DynamicPropertyRegistry) {
+            val appId = System.getenv("GITHUB_APP_ID") ?: "0"
+            registry.add("github.app.app-id") { appId }
+        }
+    }
 
     @LocalServerPort
     private var port: Int = 0
