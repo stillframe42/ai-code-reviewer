@@ -33,6 +33,11 @@ class GlobalExceptionHandler {
         ResponseEntity.status(HttpStatus.NOT_FOUND)
             .body(mapOf("error" to "요청한 경로를 찾을 수 없습니다: ${ex.resourcePath}"))
 
+    // 잘못된 인자 예외 — 400 Bad Request 반환 (500 catch-all과 구분하기 위해 먼저 선언)
+    @ExceptionHandler(IllegalArgumentException::class)
+    fun handleIllegalArgument(ex: IllegalArgumentException): ResponseEntity<Map<String, String>> =
+        ResponseEntity.badRequest().body(mapOf("error" to (ex.message ?: "잘못된 요청입니다")))
+
     // 일반 예외 처리 — 500 Internal Server Error 반환
     @ExceptionHandler(Exception::class)
     fun handleException(ex: Exception): ResponseEntity<Map<String, String>> =

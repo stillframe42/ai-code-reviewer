@@ -1,12 +1,10 @@
 package stillframe42.aicodereviewer.review.domain.model
 
-import com.fasterxml.jackson.annotation.JsonProperty
-
-// 코드 리뷰 전체 결과
+// 코드 리뷰 전체 결과 — 순수 도메인 모델 (외부 라이브러리 어노테이션 없음)
 data class CodeReview(
-    @field:JsonProperty("overall_score") val overallScore: Int,
+    val overallScore: Int,
     val summary: String,
     val issues: List<CodeIssue>,
     val positives: List<String>,
-    @field:JsonProperty("tool_call_count") val toolCallCount: Int = 0,
+    val toolCallCount: Int = 0,
 )

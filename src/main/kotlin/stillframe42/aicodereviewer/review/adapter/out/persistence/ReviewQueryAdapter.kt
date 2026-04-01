@@ -50,7 +50,7 @@ class ReviewQueryAdapter(
         generateSequence(reviewIssueCategoryRepository.findAllBy(PageRequest.of(0, 1000))) { prev ->
             if (prev.hasNext()) reviewIssueCategoryRepository.findAllBy(prev.nextPageable()) else null
         }
-            .flatMap { it }
+            .flatten()
             .groupingBy { it.category }
             .fold(0L) { acc, _ -> acc + 1L }
             .let { counts -> IssueCategory.entries.associateWith { counts[it] ?: 0L } }
@@ -61,7 +61,7 @@ class ReviewQueryAdapter(
         generateSequence(reviewResultRepository.findAllBy(PageRequest.of(0, 1000))) { prev ->
             if (prev.hasNext()) reviewResultRepository.findAllBy(prev.nextPageable()) else null
         }
-            .flatMap { it }
+            .flatten()
             .map { it.toolCallCount.toLong() }
             .fold(0L to 0L) { (sum, count), v -> (sum + v) to (count + 1L) }
             .let { (sum, count) -> if (count == 0L) 0.0 else sum.toDouble() / count }
