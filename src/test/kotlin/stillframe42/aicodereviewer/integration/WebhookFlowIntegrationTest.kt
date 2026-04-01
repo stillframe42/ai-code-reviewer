@@ -17,6 +17,8 @@ import stillframe42.aicodereviewer.integration.support.WireMockStubs
 import stillframe42.aicodereviewer.review.adapter.out.persistence.ReviewIssueCategoryRepository
 import stillframe42.aicodereviewer.review.adapter.out.persistence.ReviewRequestRepository
 import stillframe42.aicodereviewer.review.adapter.out.persistence.ReviewResultRepository
+import stillframe42.aicodereviewer.review.adapter.out.persistence.ToolCallLogRepository
+import java.util.concurrent.TimeUnit.MILLISECONDS
 import java.util.concurrent.TimeUnit.SECONDS
 
 // Webhook 수신 → AI 리뷰 생성 → GitHub PR 리뷰 등록 전체 플로우 통합 테스트
@@ -36,6 +38,9 @@ class WebhookFlowIntegrationTest : AbstractIntegrationTest() {
 
     @Autowired
     private lateinit var reviewRequestRepository: ReviewRequestRepository
+
+    @Autowired
+    private lateinit var toolCallLogRepository: ToolCallLogRepository
 
     // 테스트에서 사용하는 payload — owner/repo PR #42, headSha: abc123def456
     private val pullRequestPayload = """
@@ -58,8 +63,9 @@ class WebhookFlowIntegrationTest : AbstractIntegrationTest() {
 
     @AfterEach
     fun cleanDb() {
-        // FK 순서: reviewIssueCategoryRepository → reviewResultRepository → reviewRequestRepository → processedEventRepository
+        // FK 순서: reviewIssueCategoryRepository → toolCallLogRepository → reviewResultRepository → reviewRequestRepository → processedEventRepository
         reviewIssueCategoryRepository.deleteAll()
+        toolCallLogRepository.deleteAll()
         reviewResultRepository.deleteAll()
         reviewRequestRepository.deleteAll()
         processedEventRepository.deleteAll()
@@ -111,8 +117,9 @@ class WebhookFlowIntegrationTest : AbstractIntegrationTest() {
             .expectStatus().isEqualTo(202)
 
         // 중복 체크 후 즉시 종료 — 충분한 대기 후에도 GitHub 리뷰 등록 요청이 없어야 한다
-        Thread.sleep(500)
-        wireMock.verify(0, postRequestedFor(urlPathEqualTo("/repos/owner/repo/pulls/42/reviews")))
+        await.during(500, MILLISECONDS).atMost(1, SECONDS).untilAsserted {
+            wireMock.verify(0, postRequestedFor(urlPathEqualTo("/repos/owner/repo/pulls/42/reviews")))
+        }
     }
 
     @Test
