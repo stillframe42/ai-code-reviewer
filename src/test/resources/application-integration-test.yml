@@ -12,7 +12,7 @@ github:
   app:
     app-id: 1
     webhook-secret: test-webhook-secret
-    private-key-path: test-keys/rsa-test-key.pem
+    private-key-path: src/test/resources/test-keys/rsa-test-key.pem
 
 spring:
   datasource:

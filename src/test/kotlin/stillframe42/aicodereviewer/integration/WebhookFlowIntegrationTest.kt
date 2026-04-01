@@ -1,0 +1,131 @@
+package stillframe42.aicodereviewer.integration
+
+import com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor
+import com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo
+import org.awaitility.kotlin.await
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.Test
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.http.MediaType
+import stillframe42.aicodereviewer.config.GitHubProperties
+import stillframe42.aicodereviewer.github.adapter.`in`.web.HmacSignatureVerifier
+import stillframe42.aicodereviewer.github.adapter.out.persistence.ProcessedPullRequestEventEntity
+import stillframe42.aicodereviewer.github.adapter.out.persistence.ProcessedPullRequestEventRepository
+import stillframe42.aicodereviewer.integration.support.AnthropicResponseFixtures
+import stillframe42.aicodereviewer.integration.support.WireMockStubs
+import stillframe42.aicodereviewer.review.adapter.out.persistence.ReviewIssueCategoryRepository
+import stillframe42.aicodereviewer.review.adapter.out.persistence.ReviewRequestRepository
+import stillframe42.aicodereviewer.review.adapter.out.persistence.ReviewResultRepository
+import java.util.concurrent.TimeUnit.SECONDS
+
+// Webhook 수신 → AI 리뷰 생성 → GitHub PR 리뷰 등록 전체 플로우 통합 테스트
+class WebhookFlowIntegrationTest : AbstractIntegrationTest() {
+
+    @Autowired
+    private lateinit var properties: GitHubProperties
+
+    @Autowired
+    private lateinit var processedEventRepository: ProcessedPullRequestEventRepository
+
+    @Autowired
+    private lateinit var reviewIssueCategoryRepository: ReviewIssueCategoryRepository
+
+    @Autowired
+    private lateinit var reviewResultRepository: ReviewResultRepository
+
+    @Autowired
+    private lateinit var reviewRequestRepository: ReviewRequestRepository
+
+    // 테스트에서 사용하는 payload — owner/repo PR #42, headSha: abc123def456
+    private val pullRequestPayload = """
+        {
+          "action": "opened",
+          "installation": { "id": 12345678 },
+          "repository": { "full_name": "owner/repo" },
+          "pull_request": {
+            "number": 42,
+            "head": { "sha": "abc123def456" },
+            "title": "feat: 새로운 기능",
+            "user": { "login": "octocat" }
+          }
+        }
+    """.trimIndent()
+
+    // 설정에서 주입받은 secret으로 서명 계산 — 설정값 변경에도 테스트가 깨지지 않도록 한다
+    private fun sign(payload: String): String =
+        "sha256=${HmacSignatureVerifier.computeSignature(payload.toByteArray(Charsets.UTF_8), properties.app.webhookSecret)}"
+
+    @AfterEach
+    fun cleanDb() {
+        // FK 순서: reviewIssueCategoryRepository → reviewResultRepository → reviewRequestRepository → processedEventRepository
+        reviewIssueCategoryRepository.deleteAll()
+        reviewResultRepository.deleteAll()
+        reviewRequestRepository.deleteAll()
+        processedEventRepository.deleteAll()
+    }
+
+    @Test
+    fun `PR webhook 수신 시 전체 플로우가 완료되고 GitHub에 리뷰가 등록된다`() {
+        // 모든 외부 API stub 등록
+        WireMockStubs.stubInstallationToken(wireMock, 12345678L)
+        WireMockStubs.stubPrDiff(wireMock, "owner/repo", 42, AnthropicResponseFixtures.SIMPLE_DIFF)
+        WireMockStubs.stubPrFiles(wireMock, "owner/repo", 42)
+        WireMockStubs.stubAnthropicReview(wireMock)
+        WireMockStubs.stubPostPrReview(wireMock, "owner/repo", 42)
+
+        // Webhook POST — fire-and-forget이므로 202 즉시 반환
+        client.post().uri("/api/github/webhook")
+            .contentType(MediaType.APPLICATION_JSON)
+            .header("X-Hub-Signature-256", sign(pullRequestPayload))
+            .header("X-GitHub-Event", "pull_request")
+            .body(pullRequestPayload)
+            .exchange()
+            .expectStatus().isEqualTo(202)
+
+        // 백그라운드 처리가 완료될 때까지 최대 10초 대기 — WireMock에 리뷰 등록 요청 1회 수신 확인
+        await.atMost(10, SECONDS).untilAsserted {
+            wireMock.verify(1, postRequestedFor(urlPathEqualTo("/repos/owner/repo/pulls/42/reviews")))
+        }
+    }
+
+    @Test
+    fun `이미 처리된 이벤트는 중복 처리하지 않는다`() {
+        // 동일 (레포, PR번호, SHA) 조합을 DB에 미리 저장 — 중복으로 인식되어야 한다
+        processedEventRepository.save(
+            ProcessedPullRequestEventEntity(
+                repositoryFullName = "owner/repo",
+                pullRequestNumber = 42,
+                headSha = "abc123def456",
+                reviewId = 9001L,
+            )
+        )
+
+        // Webhook POST — 서명은 올바르므로 202 반환
+        client.post().uri("/api/github/webhook")
+            .contentType(MediaType.APPLICATION_JSON)
+            .header("X-Hub-Signature-256", sign(pullRequestPayload))
+            .header("X-GitHub-Event", "pull_request")
+            .body(pullRequestPayload)
+            .exchange()
+            .expectStatus().isEqualTo(202)
+
+        // 중복 체크 후 즉시 종료 — 충분한 대기 후에도 GitHub 리뷰 등록 요청이 없어야 한다
+        Thread.sleep(500)
+        wireMock.verify(0, postRequestedFor(urlPathEqualTo("/repos/owner/repo/pulls/42/reviews")))
+    }
+
+    @Test
+    fun `잘못된 서명이면 401 Unauthorized 반환하고 리뷰를 등록하지 않는다`() {
+        // 잘못된 서명 헤더로 Webhook POST
+        client.post().uri("/api/github/webhook")
+            .contentType(MediaType.APPLICATION_JSON)
+            .header("X-Hub-Signature-256", "sha256=invalidsignature")
+            .header("X-GitHub-Event", "pull_request")
+            .body(pullRequestPayload)
+            .exchange()
+            .expectStatus().isUnauthorized
+
+        // 서명 검증 실패로 처리 자체가 시작되지 않으므로 GitHub 리뷰 등록 요청이 없어야 한다
+        wireMock.verify(0, postRequestedFor(urlPathEqualTo("/repos/owner/repo/pulls/42/reviews")))
+    }
+}
