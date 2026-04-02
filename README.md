@@ -6,14 +6,17 @@
 
 ## 시스템 개요
 
-`ai-code-reviewer`는 코드 변경사항을 자동으로 분석하고 품질 피드백을 제공하는 AI 코드 리뷰 시스템입니다.
+`ai-code-reviewer`는 GitHub Pull Request 이벤트를 자동으로 감지해 AI가 코드를 분석하고, 인라인 리뷰 코멘트를 작성하는 코드 리뷰 자동화 시스템입니다.
 
 ### 핵심 기능
 
-- **자동 코드 리뷰**: Pull Request 또는 코드 스니펫을 AI가 분석하여 개선 사항 제안
+- **GitHub Webhook 통합**: PR 이벤트(opened, synchronize, reopened) 수신 → AI 리뷰 자동 실행 → 인라인 코멘트 작성
+- **자동 코드 리뷰**: Pull Request diff 또는 코드 스니펫을 AI가 분석하여 개선 사항 제안
 - **diff 전처리**: 테스트 파일·잠금 파일 자동 제거, context 줄 수 조정으로 토큰 절감
+- **Tool Calling 리뷰**: GitHub API를 도구로 활용해 파일별 상세 정보를 조회하는 고급 리뷰 모드
 - **AI 채팅**: 단일 응답 및 SSE 스트리밍 방식으로 자유 형식 AI 대화 지원
 - **다양한 AI 백엔드**: Anthropic Claude / OpenAI GPT 프로바이더 선택 지원
+- **리뷰 이력 관리**: 리뷰 결과 PostgreSQL 저장, PR별·통계 조회 API 제공
 
 ### 기술 스택
 
@@ -26,6 +29,7 @@
 | 빌드 도구 | Gradle (Kotlin DSL) |
 | JDK | JDK 21 |
 | DB | PostgreSQL 15 (운영) / H2 (테스트) |
+| DB 마이그레이션 | Flyway 10+ |
 | 기본 모델 | claude-haiku-4-5-20251001 |
 
 ---
@@ -35,40 +39,46 @@
 헥사고날 아키텍처(Ports & Adapters)를 따릅니다. 도메인은 외부 시스템을 직접 참조하지 않으며, 포트 인터페이스를 통해 어댑터와 통신합니다.
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│  Inbound Adapters                                           │
-│  ┌────────────────────┐  ┌────────────────────┐             │
-│  │  ChatController    │  │  ReviewController  │             │
-│  │  POST /api/chat    │  │  POST /api/review  │             │
-│  │  POST /api/chat/   │  │                    │             │
-│  │       stream (SSE) │  │                    │             │
-│  └────────┬───────────┘  └──────────┬─────────┘             │
-│           │ ChatUseCase             │ ReviewUseCase         │
-│  ┌────────▼───────────┐  ┌──────────▼─────────┐             │
-│  │ DefaultChatService │  │DefaultReviewService│  Application│
-│  └────────┬───────────┘  └──────────┬─────────┘             │
-│           │ AiChatPort              │ AiReviewPort          │
-│  ┌────────▼───────────────────────── ▼─────────┐            │
-│  │         SpringAiChatAdapter / SpringAiReviewAdapter      │
-│  │                  (Outbound Adapters)                     │
-│  └─────────────────────────────────────────────┘            │
-│                         │                                   │
-│                    Spring AI                                │
-│              (Anthropic Claude / OpenAI)                    │
-└─────────────────────────────────────────────────────────────┘
+┌────────────────────────────────────────────────────────────────────────────┐
+│  Inbound Adapters                                                          │
+│  ┌──────────────┐  ┌──────────────┐  ┌────────────────┐  ┌────────────┐    │
+│  │ChatController│  │ReviewCtrl    │  │ReviewQueryCtrl │  │WebhookCtrl │    │
+│  │POST /api/chat│  │POST /review  │  │GET  /reviews/… │  │POST /github│    │
+│  │     /stream  │  │              │  │GET  /stats     │  │    /webhook│    │
+│  └──────┬───────┘  └──────┬───────┘  └───────┬────────┘  └─────┬──────┘    │
+│  ChatUseCase      ReviewUseCase    ReviewQueryUseCase  GitHubWebhookUseCase│
+│  ┌──────▼───────┐  ┌──────▼───────┐  ┌───────▼────────┐  ┌─────▼───────┐   │
+│  │DefaultChat   │  │DefaultReview │  │DefaultReview   │  │DefaultGitHub│   │
+│  │  Service     │  │  Service     │  │  QueryService  │  │  Webhook    │   │
+│  │              │  │              │  │                │  │  Service    │   │
+│  └──────┬───────┘  └──┬────────┬──┘  └───────┬────────┘  └─────┬───────┘   │
+│  AiChatPort       AiReview   Review       ReviewQuery     GitHubApiPort    │           
+│                     Port   Persist.Port   ReviewUseCase        │           │
+│  ┌──────▼────────────▼────────▼──────────────▼─────────────────▼────────┐  │
+│  │             Outbound Adapters                                        │  │
+│  │  SpringAiChatAdapter  SpringAiReviewAdapter  ReviewPersistenceAdapter│  │
+│  │  ReviewQueryAdapter   GitHubApiAdapter       ProcessedEventAdapter   │  │
+│  └──────────────────────────────────────────────────────────────────────┘  │
+│                    │                │                 │                    │
+│              Spring AI          GitHub API       PostgreSQL                │
+│        (Anthropic / OpenAI)                                                │
+└────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ### 계층 역할
 
 | 계층 | 역할 | 주요 클래스 |
 |------|------|------------|
-| `domain/model` | 순수 도메인 모델 (외부 의존 없음) | `CodeReview`, `CodeIssue`, `DiffFilterOptions` |
-| `domain/port/in` | 인바운드 포트 — UseCase 인터페이스 | `ChatUseCase`, `ReviewUseCase` |
-| `domain/port/out` | 아웃바운드 포트 — 외부 시스템 추상화 | `AiChatPort`, `AiReviewPort` |
-| `domain/service` | 순수 도메인 로직 | `DiffPreprocessor` |
-| `application` | UseCase 구현체 — 포트 조합 | `DefaultChatService`, `DefaultReviewService` |
-| `adapter/in/web` | HTTP 컨트롤러 | `ChatController`, `ReviewController` |
+| `domain/model` | 순수 도메인 모델 (외부 의존 없음) | `CodeReview`, `CodeIssue`, `DiffFilterOptions`, `PullRequestEvent` |
+| `domain/port/in` | 인바운드 포트 — UseCase 인터페이스 | `ChatUseCase`, `ReviewUseCase`, `ReviewQueryUseCase`, `GitHubWebhookUseCase` |
+| `domain/port/out` | 아웃바운드 포트 — 외부 시스템 추상화 | `AiChatPort`, `AiReviewPort`, `ReviewPersistencePort`, `GitHubApiPort`, `ProcessedEventPort` |
+| `domain/service` | 순수 도메인 로직 | `DiffPreprocessor`, `FileExtensionClassifier`, `DiffPositionResolver` |
+| `application` | UseCase 구현체 — 포트 조합 | `DefaultChatService`, `DefaultReviewService`, `DefaultReviewQueryService`, `DefaultGitHubWebhookService` |
+| `adapter/in/web` | HTTP 컨트롤러 | `ChatController`, `ReviewController`, `ReviewQueryController`, `WebhookController` |
 | `adapter/out/ai` | AI API 클라이언트 | `SpringAiChatAdapter`, `SpringAiReviewAdapter` |
+| `adapter/out/github` | GitHub API 클라이언트 | `GitHubApiAdapter`, `GitHubAppTokenProvider` |
+| `adapter/out/persistence` | DB 영속성 어댑터 | `ReviewPersistenceAdapter`, `ReviewQueryAdapter`, `ProcessedEventAdapter` |
+| `adapter/out/formatter` | 포맷팅 어댑터 | `MarkdownReviewCommentFormatter` |
 
 ---
 
@@ -78,6 +88,7 @@
 
 - JDK 21
 - Gradle 8.x (또는 `./gradlew` Wrapper 사용)
+- Docker (PostgreSQL 컨테이너 실행용)
 - LLM API 키 (Anthropic 또는 OpenAI)
 
 ### 1. 저장소 클론
@@ -87,7 +98,15 @@ git clone https://github.com/your-org/ai-code-reviewer.git
 cd ai-code-reviewer
 ```
 
-### 2. API 키 설정
+### 2. PostgreSQL 실행
+
+```bash
+docker-compose up -d
+```
+
+기본 설정: `localhost:15432`, DB `aireviewer`, 사용자 `aireviewer`/`aireviewer`
+
+### 3. API 키 설정
 
 `src/main/resources/application-secret.yml` 파일을 생성하고 API 키를 설정합니다.
 (이 파일은 `.gitignore`에 등록되어 있어 커밋되지 않습니다.)
@@ -107,7 +126,7 @@ export ANTHROPIC_API_KEY=sk-ant-...
 export OPENAI_API_KEY=sk-...
 ```
 
-### 3. 빌드 및 실행
+### 4. 빌드 및 실행
 
 ```bash
 # 빌드
@@ -117,12 +136,40 @@ export OPENAI_API_KEY=sk-...
 ./gradlew bootRun
 ```
 
-### 4. 동작 확인
+### 5. 동작 확인
 
 ```bash
 # 헬스 체크
 curl http://localhost:8080/actuator/health
 ```
+
+---
+
+## GitHub App 설정 (Webhook 자동화)
+
+GitHub PR 이벤트를 수신하고 자동 리뷰를 실행하려면 GitHub App 등록이 필요합니다.
+
+### application-github.yml 설정
+
+`src/main/resources/application-secret.yml`에 아래 항목을 추가합니다.
+
+```yaml
+app:
+  github:
+    webhook-secret: <GitHub App Webhook Secret>
+    app-id: <GitHub App ID>
+    private-key-path: <RSA 개인키 파일 경로 (.pem)>
+```
+
+### Webhook 이벤트 처리 흐름
+
+1. GitHub PR 이벤트 수신 (`POST /api/github/webhook`)
+2. HMAC-SHA256 서명 검증
+3. 중복 이벤트 확인 (repository + PR 번호 + head SHA 기준)
+4. PR diff 조회 및 전처리
+5. AI 코드 리뷰 실행
+6. 리뷰 결과 DB 저장
+7. GitHub PR에 인라인 코멘트 작성
 
 ---
 
@@ -183,18 +230,36 @@ curl -X POST http://localhost:8080/api/review \
 
 ```json
 {
+  "overallScore": 3,
+  "summary": "CRITICAL 보안 이슈 1건이 발견되었습니다.",
   "issues": [
     {
-      "title": "SQL Injection 취약점",
-      "description": "문자열 연결로 SQL을 구성하면 SQL Injection 공격에 노출됩니다.",
+      "id": "issue-1",
       "category": "SECURITY",
       "severity": "CRITICAL",
-      "lineNumber": 1,
+      "filename": "UserRepository.kt",
+      "line": 1,
+      "description": "문자열 연결로 SQL을 구성하면 SQL Injection 공격에 노출됩니다.",
       "suggestion": "PreparedStatement 또는 파라미터화된 쿼리를 사용하세요."
     }
   ],
-  "summary": "CRITICAL 보안 이슈 1건이 발견되었습니다."
+  "positives": []
 }
+```
+
+#### Tool Calling 모드 사용
+
+GitHub API를 도구로 활용해 파일별 상세 정보를 조회하는 고급 리뷰 모드입니다.
+
+```bash
+curl -X POST http://localhost:8080/api/review \
+  -H "Content-Type: application/json" \
+  -d '{
+    "code": "<git diff 문자열>",
+    "provider": "ANTHROPIC",
+    "reviewMode": "WITH_TOOLS",
+    "installationId": 12345678
+  }'
 ```
 
 #### `diffOptions` 파라미터
@@ -255,6 +320,79 @@ curl -X POST http://localhost:8080/api/review \
 | `MINOR` | 선택적 개선 (코드 스타일, 사소한 최적화 등) |
 | `SUGGESTION` | 제안 사항 (선택 사항) |
 
+### GET /api/reviews/{owner}/{repo}/{prNumber} — PR 리뷰 조회
+
+```bash
+curl http://localhost:8080/api/reviews/my-org/my-repo/42
+```
+
+```json
+{
+  "repoFullName": "my-org/my-repo",
+  "prNumber": 42,
+  "headSha": "abc1234",
+  "status": "DONE",
+  "createdAt": "2026-04-02T10:00:00",
+  "completedAt": "2026-04-02T10:00:15",
+  "summary": "전반적으로 코드 품질이 양호합니다.",
+  "issueCount": 2,
+  "toolCallCount": 3,
+  "modelName": "claude-haiku-4-5-20251001"
+}
+```
+
+### GET /api/reviews/stats — 리뷰 통계
+
+```bash
+curl http://localhost:8080/api/reviews/stats
+```
+
+```json
+{
+  "totalReviews": 128,
+  "categoryDistribution": {
+    "SECURITY": 15,
+    "PERFORMANCE": 32,
+    "READABILITY": 48,
+    "ARCHITECTURE": 33
+  },
+  "averageToolCallCount": 2.4
+}
+```
+
+---
+
+## 데이터베이스 스키마
+
+Flyway로 마이그레이션을 관리합니다. `src/main/resources/db/migration/` 에 버전별 SQL이 있습니다.
+
+| 테이블 | 설명 |
+|--------|------|
+| `processed_pull_request_event` | 처리된 Webhook 이벤트 기록 (중복 처리 방지) |
+| `review_requests` | 리뷰 요청 상태 추적 (PENDING → PROCESSING → DONE / FAILED) |
+| `review_results` | AI 리뷰 결과 (요약, 이슈 목록 JSON, 모델명) |
+| `tool_call_logs` | Tool Calling 호출 이력 (도구명, 인자, 응답 크기, 소요 시간) |
+| `review_issue_categories` | 이슈 카테고리 집계용 정규화 테이블 |
+
+---
+
+## 프롬프트 버전
+
+현재 활성 버전: **v8** (`application-ai.yml`에서 변경 가능)
+
+| 버전 | 주요 변경 |
+|------|---------|
+| v1 | 초기: 단순 역할 정의 |
+| v2 | few-shot 예시, 카테고리·심각도 정의 추가 |
+| v3 | 토큰 최적화 (메타 설명 제거) |
+| v4 | v1 기반 재정립 (필수 스키마만 유지) |
+| v5 | `[QUERY_REVIEW]` 헤더 파일 처리 지침 추가 |
+| v6 | `filename` 필드 안내 (diff position 매핑용) |
+| v7 | summary 2문장 제한, positives 최대 3개 제한 |
+| **v8** | **현재**: Tool Calling 사용 지침 추가 |
+
+버전별 상세 변경 이력은 `src/main/resources/prompts/README.md` 참조.
+
 ---
 
 ## 프로젝트 구조
@@ -264,82 +402,96 @@ src/
 ├── main/
 │   ├── kotlin/stillframe42/aicodereviewer/
 │   │   ├── AiCodeReviewerApplication.kt
-│   │   ├── config/                        # 전역 빈 설정 (@Configuration)
-│   │   │   └── ChatClientConfig.kt
-│   │   ├── common/                        # 공통 컴포넌트
+│   │   ├── core/
+│   │   │   └── AiProvider.kt                  # ANTHROPIC, OPENAI 열거형
+│   │   ├── config/                             # 전역 빈 설정 (@Configuration)
+│   │   │   ├── ChatClientConfig.kt
+│   │   │   ├── ReviewConfig.kt
+│   │   │   └── GitHubConfig.kt
+│   │   ├── common/                             # 공통 컴포넌트
 │   │   │   ├── GlobalExceptionHandler.kt
 │   │   │   ├── AiPromptBuilder.kt
-│   │   │   └── TokenEstimator.kt
-│   │   ├── core/                          # 공통 도메인 타입
-│   │   │   └── AiProvider.kt
-│   │   ├── chat/                          # 채팅 기능
-│   │   │   ├── domain/
-│   │   │   │   └── port/in/ChatUseCase.kt
-│   │   │   │   └── port/out/AiChatPort.kt
+│   │   │   ├── TokenEstimator.kt
+│   │   │   ├── JwtSigner.kt
+│   │   │   └── RsaKeyLoader.kt
+│   │   ├── chat/                               # 채팅 기능
+│   │   │   ├── domain/port/in/ChatUseCase.kt
+│   │   │   ├── domain/port/out/AiChatPort.kt
 │   │   │   ├── application/DefaultChatService.kt
 │   │   │   └── adapter/
 │   │   │       ├── in/web/ChatController.kt
 │   │   │       └── out/ai/SpringAiChatAdapter.kt
-│   │   └── review/                        # 코드 리뷰 기능
+│   │   ├── review/                             # 코드 리뷰 기능
+│   │   │   ├── domain/
+│   │   │   │   ├── model/                      # CodeReview, CodeIssue, DiffFilterOptions 등
+│   │   │   │   ├── service/
+│   │   │   │   │   ├── DiffPreprocessor.kt
+│   │   │   │   │   └── FileExtensionClassifier.kt
+│   │   │   │   └── port/
+│   │   │   │       ├── in/ReviewUseCase.kt
+│   │   │   │       ├── in/ReviewQueryUseCase.kt
+│   │   │   │       ├── out/AiReviewPort.kt
+│   │   │   │       ├── out/ReviewPersistencePort.kt
+│   │   │   │       └── out/ReviewQueryPort.kt
+│   │   │   ├── application/
+│   │   │   │   ├── DefaultReviewService.kt
+│   │   │   │   └── DefaultReviewQueryService.kt
+│   │   │   └── adapter/
+│   │   │       ├── in/web/ReviewController.kt
+│   │   │       ├── in/web/ReviewQueryController.kt
+│   │   │       ├── out/ai/SpringAiReviewAdapter.kt
+│   │   │       └── out/persistence/ReviewPersistenceAdapter.kt
+│   │   └── github/                             # GitHub Webhook & API 통합
 │   │       ├── domain/
-│   │       │   ├── model/                 # CodeReview, CodeIssue, DiffFilterOptions
-│   │       │   ├── service/DiffPreprocessor.kt
-│   │       │   └── port/in/ReviewUseCase.kt
-│   │       │   └── port/out/AiReviewPort.kt
-│   │       ├── application/DefaultReviewService.kt
+│   │       │   ├── model/                      # PullRequestEvent, PrFile 등
+│   │       │   ├── service/DiffPositionResolver.kt
+│   │       │   └── port/
+│   │       │       ├── in/GitHubWebhookUseCase.kt
+│   │       │       └── out/GitHubApiPort.kt, GitHubTokenPort.kt 등
+│   │       ├── application/DefaultGitHubWebhookService.kt
 │   │       └── adapter/
-│   │           ├── in/web/ReviewController.kt
-│   │           └── out/ai/SpringAiReviewAdapter.kt
+│   │           ├── in/web/WebhookController.kt
+│   │           ├── in/web/HmacSignatureVerifier.kt
+│   │           ├── out/github/GitHubApiAdapter.kt
+│   │           ├── out/github/GitHubAppTokenProvider.kt
+│   │           ├── out/formatter/MarkdownReviewCommentFormatter.kt
+│   │           └── out/persistence/ProcessedEventAdapter.kt
 │   └── resources/
 │       ├── application.yml
-│       ├── application-ai.yml             # AI 모델·프롬프트 설정
-│       ├── application-db.yml             # DB 설정
-│       ├── application-secret.yml         # API 키 (gitignore)
+│       ├── application-ai.yml                  # AI 모델·프롬프트 설정
+│       ├── application-db.yml                  # DB 설정
+│       ├── application-github.yml              # GitHub App 설정
+│       ├── application-secret.yml              # API 키 (gitignore)
+│       ├── db/migration/                       # Flyway 마이그레이션
+│       │   ├── V1__create_processed_event.sql
+│       │   ├── V2__create_review_tables.sql
+│       │   └── V3__add_tool_call_count.sql
 │       └── prompts/
-│           ├── review-system-v1.st        # 리뷰 시스템 프롬프트 v1 (기본)
-│           ├── review-system-v2.st        # 리뷰 시스템 프롬프트 v2
-│           ├── review-system-v3.st        # 리뷰 시스템 프롬프트 v3
-│           ├── review-system-v4.st        # 리뷰 시스템 프롬프트 v4
-│           ├── review-user.st             # 리뷰 유저 프롬프트
-│           ├── chat-system.st             # 채팅 시스템 프롬프트
-│           ├── chat-user.st               # 채팅 유저 프롬프트
-│           └── README.md                  # 버전별 변경 이력
+│           ├── review-system-v1.st ~ v8.st     # 리뷰 시스템 프롬프트 버전별
+│           ├── review-user.st
+│           ├── chat-system.st
+│           ├── chat-user.st
+│           └── README.md                       # 버전별 변경 이력
 └── test/
     ├── kotlin/stillframe42/aicodereviewer/
-    │   ├── chat/
-    │   │   ├── adapter/in/web/ChatControllerTest.kt
-    │   │   ├── adapter/in/web/dto/ChatRequestTest.kt
-    │   │   └── application/DefaultChatServiceTest.kt
-    │   └── review/
-    │       ├── adapter/in/web/ReviewControllerTest.kt
-    │       ├── application/DefaultReviewServiceTest.kt
-    │       ├── domain/service/DiffPreprocessorTest.kt
-    │       └── benchmark/                 # 프롬프트 버전별 벤치마크
-    │           ├── AbstractVersionBenchmark.kt
-    │           ├── PromptV1BenchmarkTest.kt
-    │           ├── PromptV2BenchmarkTest.kt
-    │           ├── PromptV3BenchmarkTest.kt
-    │           ├── PromptV4BenchmarkTest.kt
-    │           ├── PromptBenchmarkResult.kt
-    │           └── BenchmarkResultStore.kt
+    │   ├── chat/                               # 채팅 단위/통합 테스트
+    │   ├── review/                             # 리뷰 단위/통합 테스트
+    │   │   └── benchmark/                      # 프롬프트 버전별 벤치마크
+    │   └── github/                             # GitHub Webhook 통합 테스트
+    │       └── WebhookFlowIntegrationTest.kt   # WireMock + Testcontainers
     └── resources/
-        └── fixtures/review/               # 벤치마크 테스트 픽스처
-            ├── security-sql-injection.kt
-            ├── security-hardcoded-credentials.kt
-            ├── performance-n-plus-one.kt
-            ├── performance-inefficient-loop.kt
-            ├── readability-magic-numbers.kt
-            ├── architecture-spr-violation.kt
-            └── clean-simple-function.kt
+        ├── fixtures/review/                    # 벤치마크 테스트용 코드 픽스처
+        └── test-keys/                          # JWT 테스트용 RSA 키
 ```
 
 ---
 
 ## 테스트 실행 방법
 
-### 일반 테스트 (더미 키 환경)
+### 일반 테스트
 
-AI API를 호출하지 않는 단위/통합 테스트는 API 키 없이 실행할 수 있습니다.
+AI API 호출이 없는 단위/통합 테스트는 API 키 없이 실행할 수 있습니다.
+통합 테스트는 Testcontainers로 PostgreSQL을 자동 실행하며, 외부 API는 WireMock으로 모킹합니다.
 
 ```bash
 ./gradlew test
@@ -352,50 +504,6 @@ AI API를 호출하지 않는 단위/통합 테스트는 API 키 없이 실행�
 ```bash
 ANTHROPIC_API_KEY=sk-ant-... ./gradlew test
 ```
-
-### 프롬프트 버전별 벤치마크 테스트
-
-v1 / v2 / v3 / v4 시스템 프롬프트 버전 간 이슈 감지 품질을 비교하는 벤치마크입니다.
-7개 픽스처 × 4개 버전 = 총 28회 AI 호출이 발생합니다.
-
-```bash
-# 더미 키 환경 — AI 호출 없이 구조/컴파일만 확인 (전체 스킵)
-./gradlew test --tests "*.benchmark.*"
-
-# 실제 API 키 환경 — 전체 벤치마크 실행
-ANTHROPIC_API_KEY=sk-ant-... ./gradlew test --tests "*.benchmark.*"
-```
-
-테스트가 완료되면 버전별 비교 결과가 콘솔에 출력됩니다.
-
-```
-╔══════════════════════════════════════════════╗
-║       프롬프트 버전별 벤치마크 통합 결과             ║
-╚══════════════════════════════════════════════╝
-시스템 프롬프트 토큰 추정: v1=35 / v2=290 / v3=240 / v4=61
-
-버전 | 픽스처                                 | 점수 | 이슈수 | CRIT | SEC | PERF | READ | ARCH | 응답시간 | 필드완전
---------------------------------------------------------------------
-v1  | security-sql-injection                 |  4  |    1  |   0 |   1 |    0 |    0 |    0 |  1200ms | O
-v2  | security-sql-injection                 |  3  |    2  |   1 |   2 |    0 |    0 |    0 |  1400ms | O
-v3  | security-sql-injection                 |  3  |    3  |   2 |   3 |    0 |    0 |    0 |  1300ms | O
-v4  | security-sql-injection                 |  4  |    2  |   1 |   2 |    0 |    0 |    0 |  1100ms | O
-...
-```
-
-#### 픽스처 목록
-
-| 파일 | 심는 이슈 | 기대 감지 |
-|------|---------|---------|
-| `security-sql-injection.kt` | 문자열 연결 SQL | SECURITY / CRITICAL |
-| `security-hardcoded-credentials.kt` | API 키·비밀번호 하드코딩 | SECURITY / CRITICAL |
-| `performance-n-plus-one.kt` | 루프 내 개별 DB 조회 | PERFORMANCE / MAJOR |
-| `performance-inefficient-loop.kt` | O(n²) 루프, 문자열 연결 | PERFORMANCE / MAJOR |
-| `readability-magic-numbers.kt` | 매직넘버, 불명확한 변수명 | READABILITY |
-| `architecture-spr-violation.kt` | SRP 위반 (DB+HTTP+이메일+SMS 단일 클래스) | ARCHITECTURE / MAJOR |
-| `clean-simple-function.kt` | 깨끗한 코드 (false positive 측정용) | CRITICAL/MAJOR 0개 기대 |
-
----
 
 ## 라이선스
 
