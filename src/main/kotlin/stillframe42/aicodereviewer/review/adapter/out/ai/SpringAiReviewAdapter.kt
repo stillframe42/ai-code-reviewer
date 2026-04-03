@@ -23,6 +23,7 @@ import stillframe42.aicodereviewer.core.AiProvider
 import stillframe42.aicodereviewer.review.adapter.out.ai.dto.CodeReviewAiResponse
 import stillframe42.aicodereviewer.review.adapter.out.ai.tool.GitHubTools
 import stillframe42.aicodereviewer.review.domain.model.CodeReview
+import stillframe42.aicodereviewer.review.domain.model.ReviewContext
 import stillframe42.aicodereviewer.review.domain.model.ReviewMode
 import stillframe42.aicodereviewer.review.domain.port.out.AiReviewPort
 
@@ -53,7 +54,12 @@ class SpringAiReviewAdapter(
     private val converter = BeanOutputConverter(CodeReviewAiResponse::class.java, lenientMapper)
 
     // toolCallCounter: 요청별 독립 생성 — 병렬 리뷰 시 파일별로 카운터가 분리됨
-    override suspend fun reviewCode(code: String, provider: AiProvider, mode: ReviewMode): CodeReview {
+    override suspend fun reviewCode(
+        code: String,
+        provider: AiProvider,
+        mode: ReviewMode,
+        reviewContext: ReviewContext?,
+    ): CodeReview {
         val timeout = when (mode) {
             is ReviewMode.Simple -> SIMPLE_TIMEOUT
             is ReviewMode.WithGitHubTools -> TOOL_TIMEOUT
