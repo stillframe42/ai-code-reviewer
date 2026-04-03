@@ -19,6 +19,7 @@ import stillframe42.aicodereviewer.common.Logging
 import stillframe42.aicodereviewer.common.advisor.CostTrackingAdvisor
 import stillframe42.aicodereviewer.common.advisor.LoggingAdvisor
 import stillframe42.aicodereviewer.common.advisor.RetryAdvisor
+import stillframe42.aicodereviewer.common.langfuse.ReviewObservationContextHolder
 import stillframe42.aicodereviewer.core.AiProvider
 import stillframe42.aicodereviewer.review.adapter.out.ai.dto.CodeReviewAiResponse
 import stillframe42.aicodereviewer.review.adapter.out.ai.tool.GitHubTools
@@ -66,7 +67,7 @@ class SpringAiReviewAdapter(
         }
         val toolCallCounter = AtomicInteger(0)
         return withTimeout(timeout) {
-            withContext(Dispatchers.IO) {
+            withContext(Dispatchers.IO + ReviewObservationContextHolder.asElement(reviewContext)) {
                 val rawText = buildRequestSpec(code, provider, mode, toolCallCounter)
                     .call()
                     .content()
