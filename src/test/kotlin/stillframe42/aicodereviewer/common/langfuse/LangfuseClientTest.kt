@@ -20,7 +20,6 @@ class LangfuseClientTest : AbstractIntegrationTest() {
             host = "http://localhost:${wireMock.port()}",
             secretKey = "test-secret",
             publicKey = "test-public",
-            enabled = true,
         )
         return LangfuseClient(testProperties)
     }

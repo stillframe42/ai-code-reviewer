@@ -9,5 +9,4 @@ data class LangfuseProperties(
     val host: String = "http://localhost:3000",
     val secretKey: String = "",
     val publicKey: String = "",
-    val enabled: Boolean = true,
 )

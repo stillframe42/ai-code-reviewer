@@ -18,6 +18,7 @@ class ChatClientConfig {
         anthropicChatModel: AnthropicChatModel,
         observationRegistry: ObservationRegistry,
     ): ChatClient =
+        // ChatClientObservationConvention = null (기본값 사용), AdvisorObservationConvention = null (기본값 사용)
         ChatClient.builder(anthropicChatModel, observationRegistry, null, null)
             .build()
 
@@ -27,6 +28,7 @@ class ChatClientConfig {
         openAiChatModel: OpenAiChatModel,
         observationRegistry: ObservationRegistry,
     ): ChatClient =
+        // ChatClientObservationConvention = null (기본값 사용), AdvisorObservationConvention = null (기본값 사용)
         ChatClient.builder(openAiChatModel, observationRegistry, null, null)
             .build()
 
