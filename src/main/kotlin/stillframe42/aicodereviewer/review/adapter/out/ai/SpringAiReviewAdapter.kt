@@ -19,6 +19,7 @@ import org.springframework.core.io.Resource
 import org.springframework.stereotype.Component
 import stillframe42.aicodereviewer.common.AiPromptBuilder
 import stillframe42.aicodereviewer.common.Logging
+import stillframe42.aicodereviewer.common.advisor.LoggingAdvisor
 import stillframe42.aicodereviewer.core.AiProvider
 import stillframe42.aicodereviewer.review.adapter.out.ai.dto.CodeReviewAiResponse
 import stillframe42.aicodereviewer.review.adapter.out.ai.tool.GitHubTools
@@ -38,6 +39,8 @@ class SpringAiReviewAdapter(
     @param:Value("classpath:prompts/review-user.st")
     private val userPromptResource: Resource,
 ) : AiReviewPort, Logging {
+
+    private val loggingAdvisor = LoggingAdvisor()
 
     // LLM이 Kotlin/Shell 코드의 $ 앞에 \를 붙이는 경우가 있어 \$ → $ 전처리 허용
     // Kotlin data class 역직렬화를 위해 KotlinModule 등록 필수
@@ -90,6 +93,7 @@ class SpringAiReviewAdapter(
         mode: ReviewMode,
         toolCallCounter: AtomicInteger,
     ) = promptBuilder.build(systemPromptResource, userPromptResource, mapOf("code" to code), provider)
+        .advisors(loggingAdvisor)
         .let { baseSpec ->
             when (mode) {
                 is ReviewMode.Simple -> baseSpec
