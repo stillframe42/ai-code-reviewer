@@ -18,6 +18,8 @@ import stillframe42.aicodereviewer.core.AiProvider
 @Component
 class SpringAiChatAdapter(
     private val promptBuilder: AiPromptBuilder,
+    private val loggingAdvisor: LoggingAdvisor,
+    private val retryAdvisor: RetryAdvisor,
     private val costTrackingAdvisor: CostTrackingAdvisor,
 
     @param:Value("\${app.prompt.chat-system}")
@@ -26,9 +28,6 @@ class SpringAiChatAdapter(
     @param:Value("\${app.prompt.chat-user}")
     private val userPromptResource: Resource,
 ) : AiChatPort {
-
-    private val loggingAdvisor = LoggingAdvisor()
-    private val retryAdvisor = RetryAdvisor()
 
     // 지정된 AI 프로바이더에게 메시지를 전달하고 응답을 반환 (코루틴 비동기)
     override suspend fun chat(message: String, provider: AiProvider): String =

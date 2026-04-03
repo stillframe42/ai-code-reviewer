@@ -31,6 +31,8 @@ import stillframe42.aicodereviewer.review.domain.port.out.AiReviewPort
 class SpringAiReviewAdapter(
     private val promptBuilder: AiPromptBuilder,
     private val gitHubTools: GitHubTools,
+    private val loggingAdvisor: LoggingAdvisor,
+    private val retryAdvisor: RetryAdvisor,
     private val costTrackingAdvisor: CostTrackingAdvisor,
 
     @param:Value("\${app.prompt.review-system}")
@@ -39,9 +41,6 @@ class SpringAiReviewAdapter(
     @param:Value("classpath:prompts/review-user.st")
     private val userPromptResource: Resource,
 ) : AiReviewPort, Logging {
-
-    private val loggingAdvisor = LoggingAdvisor()
-    private val retryAdvisor = RetryAdvisor()
 
     // LLM이 Kotlin/Shell 코드의 $ 앞에 \를 붙이는 경우가 있어 \$ → $ 전처리 허용
     // Kotlin data class 역직렬화를 위해 KotlinModule 등록 필수
@@ -69,9 +68,8 @@ class SpringAiReviewAdapter(
                 // AI가 preamble 텍스트나 마크다운 코드 펜스를 포함하는 경우 대비
                 val jsonText = extractJson(rawText)
                 converter.convert(jsonText)
-                    ?.toDomain()
-                    ?.copy(toolCallCount = toolCallCounter.get())
-                    ?: throw IllegalStateException("AI로부터 리뷰 결과를 받지 못했습니다")
+                    .toDomain()
+                    .copy(toolCallCount = toolCallCounter.get())
             }
         }
     }
