@@ -17,6 +17,10 @@ class RetryAdvisor(
     private val order: Int = Ordered.HIGHEST_PRECEDENCE + 1,
 ) : CallAdvisor, Logging {
 
+    init {
+        require(maxAttempts >= 1) { "maxAttempts는 1 이상이어야 합니다: $maxAttempts" }
+    }
+
     override fun getName(): String = "RetryAdvisor"
 
     // LoggingAdvisor(HIGHEST_PRECEDENCE)보다 안쪽에 위치 — 재시도 전체 소요시간이 로그에 반영됨
@@ -31,7 +35,7 @@ class RetryAdvisor(
                 // 재시도 불필요한 예외이거나 마지막 시도라면 즉시 throw
                 if (!isRetriable(e) || attempt == maxAttempts) throw e
                 lastException = e
-                logger.warn("[RETRY] attempt={}/{} after {}", attempt, maxAttempts, e.javaClass.simpleName)
+                logger.warn("[RETRY] attempt={}/{} after {}", attempt, maxAttempts, e::class.simpleName)
                 // Exponential Backoff: 1차 1초, 2차 2초
                 // adviseCall은 Java 인터페이스 메서드라 suspend 불가 — Dispatchers.IO에서 실행되므로 Thread.sleep 허용
                 Thread.sleep(attempt.seconds.inWholeMilliseconds)
