@@ -79,12 +79,13 @@ class CostTrackingAdvisor(
             logger.warn("[COST] 모델 단가 설정 없음 — 비용 0으로 저장: model={}", model)
             return BigDecimal.ZERO
         }
-        val inputCost = promptTokens.toBigDecimal()
-            .multiply(modelCost.inputPer1k)
-            .divide(BigDecimal(1000), 6, RoundingMode.HALF_UP)
-        val outputCost = completionTokens.toBigDecimal()
-            .multiply(modelCost.outputPer1k)
-            .divide(BigDecimal(1000), 6, RoundingMode.HALF_UP)
-        return (inputCost + outputCost).setScale(6, RoundingMode.HALF_UP)
+        return (promptTokens.toCost(modelCost.inputPer1k) + completionTokens.toCost(modelCost.outputPer1k))
+            .setScale(6, RoundingMode.HALF_UP)
     }
+
+    // 토큰 수에 1,000토큰당 단가를 곱해 비용을 계산한다 (소수점 6자리, 반올림)
+    private fun Int.toCost(ratePerThousand: BigDecimal): BigDecimal =
+        toBigDecimal()
+            .multiply(ratePerThousand)
+            .divide(BigDecimal(1000), 6, RoundingMode.HALF_UP)
 }
