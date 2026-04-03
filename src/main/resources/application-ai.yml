@@ -10,6 +10,18 @@ app:
     tool:
       # Tool Calling 최대 라운드트립 횟수 참고값 (Spring AI 2.0.0-M2 내장 제한 미지원 — 현재 60s 타임아웃이 안전망)
       max-roundtrips: 3
+  ai:
+    cost:
+      models:
+        claude-haiku-4-5-20251001:
+          input-per-1k: 0.000800
+          output-per-1k: 0.004000
+        gpt-4o:
+          input-per-1k: 0.005000
+          output-per-1k: 0.015000
+        gpt-4o-mini:
+          input-per-1k: 0.000150
+          output-per-1k: 0.000600
   prompt:
     review-system: classpath:prompts/review-system-v8.st   # v8: v7 기반 + Tool Calling 사용 지침 추가
     chat-system: classpath:prompts/chat-system.st
