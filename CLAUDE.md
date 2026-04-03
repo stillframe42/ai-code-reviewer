@@ -10,7 +10,7 @@ AI 기반 코드 리뷰 자동화 시스템. GitHub PR에 대해 Spring AI를 �
 - AI: Spring AI (Anthropic, OpenAI 프로바이더 지원)
 - Build: Gradle Kotlin DSL
 - JDK: 21
-- DB: PostgreSQL (운영) / H2 (테스트용 인메모리)
+- DB: PostgreSQL (운영 및 테스트, Testcontainers 사용)
 
 ---
 

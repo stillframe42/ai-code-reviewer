@@ -58,6 +58,7 @@ dependencies {
     // Test
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
+    testImplementation("io.projectreactor:reactor-test") // StepVerifier
 
     // Test — Testcontainers (버전은 Spring Boot BOM 관리)
     testImplementation("org.testcontainers:testcontainers-postgresql")

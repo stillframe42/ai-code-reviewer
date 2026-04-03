@@ -46,8 +46,9 @@ class LoggingAdvisor(
     // 응답 메타데이터(모델, 토큰 수, 소요 시간, 종료 이유)를 INFO 레벨로 기록
     private fun logResponse(request: ChatClientRequest, response: ChatClientResponse, elapsedMs: Long) {
         try {
-            val model = response.chatResponse()?.metadata?.model ?: "unknown"
-            val finishReason = response.chatResponse()?.result?.metadata?.finishReason ?: "unknown"
+            val chatResponse = response.chatResponse()
+            val model = chatResponse?.metadata?.model ?: "unknown"
+            val finishReason = chatResponse?.result?.metadata?.finishReason ?: "unknown"
             val tokens = extractTokens(request, response)
             logger.info(
                 "[LLM] {} | prompt={}tok | completion={}tok | {}ms | finish={}",
@@ -60,13 +61,14 @@ class LoggingAdvisor(
 
     // usage가 있으면 실제 토큰 수, 없으면 TokenEstimator로 추정값 반환
     private fun extractTokens(request: ChatClientRequest, response: ChatClientResponse): TokenInfo {
-        val usage = response.chatResponse()?.metadata?.usage
+        val chatResponse = response.chatResponse()
+        val usage = chatResponse?.metadata?.usage
         return TokenInfo(
             prompt = usage?.promptTokens ?: TokenEstimator.estimate(
                 request.prompt().instructions.joinToString(" ") { it.text.orEmpty() },
             ),
             completion = usage?.completionTokens ?: TokenEstimator.estimate(
-                response.chatResponse()?.result?.output?.text.orEmpty(),
+                chatResponse?.result?.output?.text.orEmpty(),
             ),
         )
     }
