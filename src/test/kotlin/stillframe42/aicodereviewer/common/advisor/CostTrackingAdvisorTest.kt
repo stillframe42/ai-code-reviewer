@@ -1,7 +1,7 @@
 package stillframe42.aicodereviewer.common.advisor
 
 import java.math.BigDecimal
-import java.util.concurrent.TimeUnit
+import java.time.Duration
 import org.assertj.core.api.Assertions.assertThat
 import org.awaitility.kotlin.await
 import org.junit.jupiter.api.BeforeEach
@@ -64,7 +64,7 @@ class CostTrackingAdvisorTest : AbstractIntegrationTest() {
         costTrackingAdvisor.adviseCall(request, chain)
 
         // 비동기 저장 완료 대기
-        await.atMost(2, TimeUnit.SECONDS).until { costLogRepository.count() == 1L }
+        await.atMost(Duration.ofSeconds(2)).until { costLogRepository.count() == 1L }
 
         val log = costLogRepository.findAll().first()
         assertThat(log.modelName).isEqualTo("claude-haiku-4-5-20251001")
@@ -83,7 +83,7 @@ class CostTrackingAdvisorTest : AbstractIntegrationTest() {
 
         costTrackingAdvisor.adviseCall(request, chain)
 
-        await.atMost(2, TimeUnit.SECONDS).until { costLogRepository.count() == 1L }
+        await.atMost(Duration.ofSeconds(2)).until { costLogRepository.count() == 1L }
 
         val log = costLogRepository.findAll().first()
         assertThat(log.estimatedCostUsd).isEqualByComparingTo(BigDecimal.ZERO)
