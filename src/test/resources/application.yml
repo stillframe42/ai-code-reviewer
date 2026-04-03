@@ -1,6 +1,7 @@
 app:
   ai:
     cost:
+      # application-ai.yml의 단가와 동기화 필요 — 단가 변경 시 두 파일 함께 수정
       models:
         claude-haiku-4-5-20251001:
           input-per-1k: 0.000800
