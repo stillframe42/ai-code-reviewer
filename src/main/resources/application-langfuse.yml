@@ -3,3 +3,11 @@
 langfuse:
   host: ${LANGFUSE_HOST:http://localhost:3000}
   enabled: true
+
+spring:
+  ai:
+    chat:
+      observations:
+        # LLM 호출 관찰 시 프롬프트/응답 전문을 Observation에 포함
+        include-prompt: true
+        include-completion: true

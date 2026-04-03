@@ -34,3 +34,9 @@ spring:
     # 신규 Testcontainers DB이므로 baseline 불필요
     baseline-on-migrate: false
     enabled: true
+
+langfuse:
+  enabled: false
+  host: http://localhost:9999   # 사용되지 않는 더미 주소
+  secret-key: test-secret
+  public-key: test-public
