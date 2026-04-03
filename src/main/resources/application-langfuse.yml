@@ -1,0 +1,5 @@
+# Langfuse LLM Observability 설정
+# 실제 API Key는 application-secret.yml에서 주입됩니다.
+langfuse:
+  host: ${LANGFUSE_HOST:http://localhost:3000}
+  enabled: true
