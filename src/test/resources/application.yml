@@ -1,4 +1,16 @@
 app:
+  ai:
+    cost:
+      models:
+        claude-haiku-4-5-20251001:
+          input-per-1k: 0.000800
+          output-per-1k: 0.004000
+        gpt-4o:
+          input-per-1k: 0.005000
+          output-per-1k: 0.015000
+        gpt-4o-mini:
+          input-per-1k: 0.000150
+          output-per-1k: 0.000600
   prompt:
     review-system: classpath:prompts/review-system-v8.st
     chat-system: classpath:prompts/chat-system.st
