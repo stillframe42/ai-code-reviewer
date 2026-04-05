@@ -16,6 +16,7 @@ import stillframe42.aicodereviewer.github.adapter.out.github.client.GitHubHttpCl
 import stillframe42.aicodereviewer.github.adapter.out.github.dto.DirectoryEntryResponse
 import stillframe42.aicodereviewer.github.adapter.out.github.ratelimit.GitHubRateLimitChecker
 import stillframe42.aicodereviewer.github.domain.port.out.GitHubTokenPort
+import stillframe42.aicodereviewer.review.domain.port.out.ToolObservationPort
 import java.util.Base64
 import java.util.concurrent.atomic.AtomicInteger
 
@@ -25,6 +26,7 @@ class GitHubTools(
     private val tokenPort: GitHubTokenPort,
     private val toolCallLogger: ToolCallLogger,
     private val rateLimitChecker: GitHubRateLimitChecker,
+    private val toolObservationPort: ToolObservationPort,
 ) : Logging {
 
     @Tool(description = "특정 파일의 전체 내용을 가져옵니다")
@@ -158,11 +160,16 @@ class GitHubTools(
         return toolCallLogger.log(toolName, argsLog) {
             runBlocking(Dispatchers.IO) {
                 logger.info("{} 호출 ({}번째): {}", toolName, count, argsLog)
+                val spanId = toolObservationPort.startSpan(toolName, mapOf("args" to argsLog, "count" to count))
                 runCatching {
                     val token = tokenPort.getInstallationToken(installationId)
                     withTimeout(TOOL_CALL_TIMEOUT) {
                         block(token, installationId)
                     }
+                }.onSuccess { result ->
+                    toolObservationPort.endSpan(spanId, result)
+                }.onFailure { e ->
+                    toolObservationPort.endSpanWithError(spanId, e.message ?: e.javaClass.simpleName)
                 }.getOrElse { e ->
                     when (e) {
                         is WebClientResponseException.NotFound -> notFoundMessage
