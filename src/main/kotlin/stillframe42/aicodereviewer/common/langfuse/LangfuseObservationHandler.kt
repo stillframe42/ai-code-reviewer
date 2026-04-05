@@ -33,6 +33,7 @@ class LangfuseObservationHandler(
 
             // onStop에서 재사용하기 위해 IdentityHashMap에 저장
             traceInfoMap[context] = TraceInfo(traceId, generationId, startTime)
+            LangfuseTraceContextHolder.set(traceId)
 
             val reviewContext = ReviewObservationContextHolder.local.get()
             val metadata = buildMetadata(reviewContext)
@@ -53,6 +54,7 @@ class LangfuseObservationHandler(
     override fun onStop(context: ChatModelObservationContext) {
         try {
             val traceInfo = traceInfoMap.remove(context) ?: return
+            LangfuseTraceContextHolder.clear()
             val generationId = traceInfo.generationId
             val endTime = Instant.now().toString()
 
@@ -76,6 +78,7 @@ class LangfuseObservationHandler(
     override fun onError(context: ChatModelObservationContext) {
         try {
             val traceInfo = traceInfoMap[context] ?: return
+            LangfuseTraceContextHolder.clear()
             val endTime = Instant.now().toString()
 
             langfuseClient.ingest(listOf(
