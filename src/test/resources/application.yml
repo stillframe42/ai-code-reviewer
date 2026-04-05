@@ -26,6 +26,9 @@ app:
       # Tool Calling 최대 라운드트립 횟수 — main application-ai.yml과 동일
       max-roundtrips: 3
 
+langfuse:
+  enabled: false   # 테스트 기본값 — Langfuse 전송 비활성화 (LangfuseObservationVerificationTest에서 true로 오버라이드)
+
 logging:
   level:
     # macOS 네이티브 DNS 라이브러리 미지원 오류 메시지 숨김 — main application.yml과 동일

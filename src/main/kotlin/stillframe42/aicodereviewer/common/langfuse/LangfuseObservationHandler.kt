@@ -64,13 +64,14 @@ class LangfuseObservationHandler(
 
             val response = context.response
             val outputText = response?.result?.output?.text.orEmpty()
+            val model = response?.metadata?.model
             val usage = response?.metadata?.usage
             val promptTokens = usage?.promptTokens ?: 0
             val completionTokens = usage?.completionTokens ?: 0
 
             langfuseClient.ingest(
                 listOf(
-                    buildGenerationUpdate(generationId, endTime, outputText, promptTokens, completionTokens),
+                    buildGenerationUpdate(generationId, endTime, outputText, promptTokens, completionTokens, model),
                 ),
             )
         } catch (e: Exception) {
@@ -129,7 +130,7 @@ class LangfuseObservationHandler(
         context: ChatModelObservationContext,
         metadata: Map<String, String>,
     ): Map<String, Any> {
-        val model = context.response?.metadata?.model ?: "unknown"
+        // onStart() 시점에는 아직 응답이 없으므로 모델명을 알 수 없음 — onStop()에서 generation-update로 덮어씀
         val promptText = context.request?.instructions
             ?.joinToString("\n") { "${it.messageType}: ${it.text.orEmpty()}" }
             .orEmpty()
@@ -143,7 +144,6 @@ class LangfuseObservationHandler(
                 "traceId" to traceId,
                 "name" to "chat-model",
                 "startTime" to startTime,
-                "model" to model,
                 "input" to promptText,
                 "metadata" to metadata,
             ),
@@ -156,21 +156,27 @@ class LangfuseObservationHandler(
         outputText: String,
         promptTokens: Int,
         completionTokens: Int,
-    ): Map<String, Any> =
-        mapOf(
+        model: String?,
+    ): Map<String, Any> {
+        val body = mutableMapOf<String, Any>(
+            "id" to generationId,
+            "endTime" to endTime,
+            "output" to outputText,
+            "usage" to mapOf(
+                "input" to promptTokens,
+                "output" to completionTokens,
+                "total" to (promptTokens + completionTokens),
+                "unit" to "TOKENS",
+            ),
+        )
+        // onStart() 시점에는 응답이 없어 "unknown"으로 기록되므로, onStop()에서 실제 모델명으로 덮어씀
+        if (model != null) body["model"] = model
+
+        return mapOf(
             "type" to "generation-update",
             "id" to UUID.randomUUID().toString(),
             "timestamp" to endTime,
-            "body" to mapOf(
-                "id" to generationId,
-                "endTime" to endTime,
-                "output" to outputText,
-                "usage" to mapOf(
-                    "input" to promptTokens,
-                    "output" to completionTokens,
-                    "total" to (promptTokens + completionTokens),
-                    "unit" to "TOKENS",
-                ),
-            ),
+            "body" to body,
         )
+    }
 }
