@@ -15,7 +15,7 @@ data class CodeIssueAiResponse(
     val id: String? = null,
 
     @field:JsonPropertyDescription("이슈 카테고리: PERFORMANCE(성능), SECURITY(보안), READABILITY(가독성), ARCHITECTURE(아키텍처)")
-    val category: String,
+    val category: String = "READABILITY",
 
     @field:JsonPropertyDescription("이슈가 발생한 파일 경로 (예: src/main/kotlin/Foo.kt). 특정할 수 없으면 null")
     val filename: String?,
@@ -29,10 +29,10 @@ data class CodeIssueAiResponse(
     val severity: String = "MINOR",
 
     @field:JsonPropertyDescription("이슈에 대한 한국어 설명")
-    val description: String,
+    val description: String = "",
 
     @field:JsonPropertyDescription("구체적인 개선 방법 또는 수정 코드 예시")
-    val suggestion: String,
+    val suggestion: String = "",
 ) {
     fun toDomain(): CodeIssue = CodeIssue(
         id = id ?: "ISSUE-?",
