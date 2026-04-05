@@ -1,5 +1,6 @@
 package stillframe42.aicodereviewer.github.adapter.`in`.web
 
+import tools.jackson.core.JacksonException
 import tools.jackson.databind.ObjectMapper
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
@@ -45,7 +46,12 @@ class WebhookController(
         }
 
         // 3단계: JSON 파싱 및 도메인 변환 — 지원하지 않는 action이면 무시
-        val dto = objectMapper.readValue(body, WebhookPayloadDto::class.java)
+        val dto = try {
+            objectMapper.readValue(body, WebhookPayloadDto::class.java)
+        } catch (e: JacksonException) {
+            logger.warn("Webhook payload 파싱 실패: {}", e.message)
+            return ResponseEntity.badRequest().build()
+        }
         val event = dto.toDomain() ?: run {
             logger.debug("지원하지 않는 PR action 무시: {}", dto.action)
             return ResponseEntity.ok().build()

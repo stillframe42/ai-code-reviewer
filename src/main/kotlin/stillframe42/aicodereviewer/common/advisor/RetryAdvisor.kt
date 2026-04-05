@@ -41,7 +41,7 @@ class RetryAdvisor(
                 Thread.sleep(attempt.seconds.inWholeMilliseconds)
             }
         }
-        throw lastException!!  // 컴파일러를 위한 코드 — 실제로는 도달 불가
+        throw checkNotNull(lastException) { "재시도 루프 종료 후 lastException이 null — 로직 버그" }
     }
 
     // Rate Limit(429) 또는 5xx 서버 오류만 재시도 대상으로 허용

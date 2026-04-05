@@ -75,19 +75,20 @@ class DiffPositionResolver : Logging {
                     position++
                     newLine = parseNewStart(line) ?: newLine
                 }
-                // hunk 내부 줄 처리
+                // hunk 내부 줄 처리 — val로 캡처해 스마트 캐스트 활성화 (var는 스마트 캐스트 불가)
                 inHunk && currentFile != null -> {
+                    val file = currentFile
                     when {
                         // context 줄 — 새 파일 라인 번호 포함, position 증가
                         line.startsWith(" ") -> {
                             position++
-                            result[currentFile]!![newLine] = position
+                            result.getValue(file)[newLine] = position
                             newLine++
                         }
                         // 추가 줄 — 새 파일 라인 번호 포함, position 증가
                         line.startsWith("+") -> {
                             position++
-                            result[currentFile]!![newLine] = position
+                            result.getValue(file)[newLine] = position
                             newLine++
                         }
                         // 삭제 줄 — 새 파일에 존재하지 않음, position만 증가

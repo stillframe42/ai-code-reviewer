@@ -268,7 +268,7 @@ class DiffPreprocessor : Logging {
     // trailing whitespace 제거 및 연속 빈줄(2개 이상) 압축
     private fun String.cleanWhitespace(): String =
         lines()
-            .map { it.trimEnd() }
+            .map(String::trimEnd)
             .fold(mutableListOf<String>()) { acc, line ->
                 if (line.isBlank() && acc.lastOrNull()?.isBlank() == true) acc
                 else acc.also { it.add(line) }

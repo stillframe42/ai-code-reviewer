@@ -48,8 +48,8 @@ class CostTrackingAdvisor(
     // 응답 메타데이터에서 토큰 수를 추출해 비용을 계산하고 DB에 저장
     private fun saveCostLog(response: ChatClientResponse) {
         val chatResponse = response.chatResponse() ?: return
-        val model = chatResponse.metadata?.model ?: return
-        val usage = chatResponse.metadata?.usage ?: return
+        val model = chatResponse.metadata.model
+        val usage = chatResponse.metadata.usage
 
         val promptTokens = usage.promptTokens ?: 0
         val completionTokens = usage.completionTokens ?: 0

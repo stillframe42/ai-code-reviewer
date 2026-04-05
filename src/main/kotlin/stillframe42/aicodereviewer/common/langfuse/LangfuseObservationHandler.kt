@@ -131,9 +131,8 @@ class LangfuseObservationHandler(
         metadata: Map<String, String>,
     ): Map<String, Any> {
         // onStart() 시점에는 아직 응답이 없으므로 모델명을 알 수 없음 — onStop()에서 generation-update로 덮어씀
-        val promptText = context.request?.instructions
-            ?.joinToString("\n") { "${it.messageType}: ${it.text.orEmpty()}" }
-            .orEmpty()
+        val promptText = context.request.instructions
+            .joinToString("\n") { "${it.messageType}: ${it.text.orEmpty()}" }
 
         return mapOf(
             "type" to "generation-create",

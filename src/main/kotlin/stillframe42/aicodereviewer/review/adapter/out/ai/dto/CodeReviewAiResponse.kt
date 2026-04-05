@@ -27,7 +27,7 @@ data class CodeReviewAiResponse(
     @field:JsonDeserialize(contentUsing = PositiveItemDeserializer::class)
     val positives: List<String> = emptyList(),
 ) {
-    fun toDomain(): CodeReview = CodeReview(overall_score, summary, issues.map { it.toDomain() }, positives)
+    fun toDomain(): CodeReview = CodeReview(overall_score, summary, issues.map(CodeIssueAiResponse::toDomain), positives)
 }
 
 // positives 항목이 단순 String 또는 {title, description} 객체 둘 다 처리

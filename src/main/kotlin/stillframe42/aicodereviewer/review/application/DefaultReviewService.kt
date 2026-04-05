@@ -74,7 +74,7 @@ class DefaultReviewService(
     private fun aggregate(reviews: List<CodeReview>): CodeReview {
         if (reviews.size == 1) return reviews.first()
         return CodeReview(
-            overallScore = reviews.map { it.overallScore }.average().toInt().coerceIn(0, 10),
+            overallScore = reviews.map(CodeReview::overallScore).average().toInt().coerceIn(0, 10),
             summary = reviews.joinToString("\n") { it.summary },
             issues = reviews.flatMap { it.issues },
             positives = reviews.flatMap { it.positives }.distinct().take(3),

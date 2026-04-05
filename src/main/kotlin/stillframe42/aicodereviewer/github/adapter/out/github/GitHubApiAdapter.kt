@@ -2,6 +2,7 @@ package stillframe42.aicodereviewer.github.adapter.out.github
 
 import org.springframework.stereotype.Component
 import stillframe42.aicodereviewer.github.adapter.out.github.dto.CreatePullRequestReviewRequest
+import stillframe42.aicodereviewer.github.adapter.out.github.dto.PrFileResponse
 import stillframe42.aicodereviewer.github.adapter.out.github.dto.ReviewLineComment
 import stillframe42.aicodereviewer.github.domain.model.PrFile
 import stillframe42.aicodereviewer.github.domain.model.PrReview
@@ -34,7 +35,7 @@ class GitHubApiAdapter(
     ): List<PrFile> {
         val token = tokenPort.getInstallationToken(installationId)
         return gitHubHttpClient.fetchPrFiles(repositoryFullName, pullRequestNumber, token)
-            .map { it.toDomain() }
+            .map(PrFileResponse::toDomain)
     }
 
     // PR Reviews API로 코드 리뷰를 등록하고 생성된 review ID를 반환한다
