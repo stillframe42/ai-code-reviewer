@@ -85,9 +85,8 @@ class SpringAiReviewAdapter(
                 // AI가 preamble 텍스트나 마크다운 코드 펜스를 포함하는 경우 대비
                 val jsonText = extractJson(rawText)
                 converter.convert(jsonText)
-                    ?.toDomain()
-                    ?.copy(toolCallCount = toolCallCounter.get())
-                    ?: throw IllegalStateException("AI로부터 리뷰 결과를 받지 못했습니다")
+                    .toDomain()
+                    .copy(toolCallCount = toolCallCounter.get())
             }
         }
     }
