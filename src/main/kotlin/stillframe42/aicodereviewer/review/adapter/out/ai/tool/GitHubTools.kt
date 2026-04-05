@@ -130,8 +130,7 @@ class GitHubTools(
         else files.forEach { appendLine("- ${it.path}") }
     }
 
-    // 모든 Tool 메서드의 공통 골격 — Rate Limit 체크, 횟수 제한, 로깅, 에러 처리를 한 곳에서 관리한다
-    // CoroutineScope 수신자: getRelatedFile의 async { } 호출을 위해 block에 CoroutineScope를 전달한다
+    // 모든 Tool 메서드의 공통 골격 — Rate Limit 체크, 횟수 제한, Langfuse 컨텍스트 전파를 담당한다
     private fun executeToolCall(
         toolContext: ToolContext,
         toolName: String,
@@ -159,28 +158,40 @@ class GitHubTools(
         val traceContextElement = LangfuseTraceContextHolder.asElement(currentTraceId)
         return toolCallLogger.log(toolName, argsLog) {
             runBlocking(Dispatchers.IO + traceContextElement) {
-                logger.info("{} 호출 ({}번째): {}", toolName, count, argsLog)
-                val spanId = toolObservationPort.startSpan(toolName, mapOf("args" to argsLog, "count" to count))
-                runCatching {
-                    val token = tokenPort.getInstallationToken(installationId)
-                    withTimeout(TOOL_CALL_TIMEOUT) {
-                        block(token, installationId)
-                    }
-                }.onSuccess { result ->
-                    // Span은 추적용이므로 대용량 파일 내용 전송 방지를 위해 500자로 제한
-                    toolObservationPort.endSpan(spanId, result.take(500))
-                }.onFailure { e ->
-                    toolObservationPort.endSpanWithError(spanId, e.message ?: e.javaClass.simpleName)
-                }.getOrElse { e ->
-                    when (e) {
-                        is WebClientResponseException.NotFound -> notFoundMessage
-                        is WebClientResponseException ->
-                            "GitHub API 오류 (${e.statusCode}): ${e.message}"
-                        else -> {
-                            logger.warn("{} 실패", toolName, e)
-                            "[ERROR] $toolName 실패: ${e.message}"
-                        }
-                    }
+                executeInSpan(toolName, argsLog, count, notFoundMessage, installationId, block)
+            }
+        }
+    }
+
+    // Span 생명주기 관리 + 실제 실행 + 에러 메시지 변환
+    // CoroutineScope 수신자: getRelatedFile의 async { } 호출을 위해 block에 CoroutineScope를 전달한다
+    private suspend fun CoroutineScope.executeInSpan(
+        toolName: String,
+        argsLog: String,
+        count: Int,
+        notFoundMessage: String,
+        installationId: Long,
+        block: suspend CoroutineScope.(token: String, installationId: Long) -> String,
+    ): String {
+        logger.info("{} 호출 ({}번째): {}", toolName, count, argsLog)
+        val spanId = toolObservationPort.startSpan(toolName, mapOf("args" to argsLog, "count" to count))
+        return runCatching {
+            val token = tokenPort.getInstallationToken(installationId)
+            withTimeout(TOOL_CALL_TIMEOUT) {
+                block(token, installationId)
+            }
+        }.onSuccess { result ->
+            // Span은 추적용이므로 대용량 파일 내용 전송 방지를 위해 500자로 제한
+            toolObservationPort.endSpan(spanId, result.take(500))
+        }.onFailure { e ->
+            toolObservationPort.endSpanWithError(spanId, e.message ?: e.javaClass.simpleName)
+        }.getOrElse { e ->
+            when (e) {
+                is WebClientResponseException.NotFound -> notFoundMessage
+                is WebClientResponseException -> "GitHub API 오류 (${e.statusCode}): ${e.message}"
+                else -> {
+                    logger.warn("{} 실패", toolName, e)
+                    "[ERROR] $toolName 실패: ${e.message}"
                 }
             }
         }
