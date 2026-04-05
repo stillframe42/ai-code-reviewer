@@ -2,6 +2,7 @@ package stillframe42.aicodereviewer.common.langfuse
 
 import io.micrometer.observation.Observation
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.mockito.ArgumentMatchers.anyList
@@ -24,6 +25,12 @@ class LangfuseObservationHandlerTest {
         langfuseClient = mock(LangfuseClient::class.java)
         handler = LangfuseObservationHandler(langfuseClient)
         ReviewObservationContextHolder.local.remove()
+        LangfuseTraceContextHolder.clear()
+    }
+
+    @AfterEach
+    fun tearDown() {
+        LangfuseTraceContextHolder.clear()
     }
 
     @Test
@@ -99,5 +106,33 @@ class LangfuseObservationHandlerTest {
         assertThat(metadata["review.request.id"]).isEqualTo("42")
         assertThat(metadata["review.pr.number"]).isEqualTo("7")
         assertThat(metadata["review.repo"]).isEqualTo("owner/repo")
+    }
+
+    @Test
+    @Suppress("UNCHECKED_CAST")
+    fun `LangfuseTraceContextHolder에 traceId가 있으면 onStart는 기존 traceId를 사용한다`() {
+        val existingTraceId = "existing-trace-id"
+        LangfuseTraceContextHolder.set(existingTraceId)
+        val context = mock(ChatModelObservationContext::class.java)
+
+        // Langfuse에 전송된 이벤트 배치를 캡쳐
+        var capturedBatch: List<Map<String, Any>>? = null
+        doAnswer { invocation ->
+            @Suppress("UNCHECKED_CAST")
+            capturedBatch = invocation.getArgument<List<Map<String, Any>>>(0)
+            null
+        }.`when`(langfuseClient).ingest(anyList())
+
+        handler.onStart(context)
+
+        // trace-create 이벤트의 body.id가 기존 traceId여야 한다
+        val traceEvent = capturedBatch!!.first { it["type"] == "trace-create" }
+        val body = traceEvent["body"] as Map<*, *>
+        assertThat(body["id"]).isEqualTo(existingTraceId)
+
+        // generation-create 이벤트의 body.traceId도 기존 traceId여야 한다
+        val generationEvent = capturedBatch!!.first { it["type"] == "generation-create" }
+        val generationBody = generationEvent["body"] as Map<*, *>
+        assertThat(generationBody["traceId"]).isEqualTo(existingTraceId)
     }
 }
