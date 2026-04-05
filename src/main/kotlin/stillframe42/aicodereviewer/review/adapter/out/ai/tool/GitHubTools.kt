@@ -167,7 +167,8 @@ class GitHubTools(
                         block(token, installationId)
                     }
                 }.onSuccess { result ->
-                    toolObservationPort.endSpan(spanId, result)
+                    // Span은 추적용이므로 대용량 파일 내용 전송 방지를 위해 500자로 제한
+                    toolObservationPort.endSpan(spanId, result.take(500))
                 }.onFailure { e ->
                     toolObservationPort.endSpanWithError(spanId, e.message ?: e.javaClass.simpleName)
                 }.getOrElse { e ->
