@@ -19,6 +19,8 @@ import stillframe42.aicodereviewer.common.Logging
 import stillframe42.aicodereviewer.common.advisor.CostTrackingAdvisor
 import stillframe42.aicodereviewer.common.advisor.LoggingAdvisor
 import stillframe42.aicodereviewer.common.advisor.RetryAdvisor
+import java.util.UUID
+import stillframe42.aicodereviewer.common.langfuse.LangfuseTraceContextHolder
 import stillframe42.aicodereviewer.common.langfuse.ReviewObservationContextHolder
 import stillframe42.aicodereviewer.core.AiProvider
 import stillframe42.aicodereviewer.review.adapter.out.ai.dto.CodeReviewAiResponse
@@ -66,8 +68,16 @@ class SpringAiReviewAdapter(
             is ReviewMode.WithGitHubTools -> TOOL_TIMEOUT
         }
         val toolCallCounter = AtomicInteger(0)
+        // traceId를 미리 생성하여 코루틴 컨텍스트로 전파한다.
+        // LangfuseObservationHandler.onStart()는 이 traceId를 재사용하고,
+        // Tool 실행(executeToolCall)에서 LangfuseTraceContextHolder.get()으로 안전하게 접근할 수 있다.
+        val traceId = UUID.randomUUID().toString()
         return withTimeout(timeout) {
-            withContext(Dispatchers.IO + ReviewObservationContextHolder.asElement(reviewContext)) {
+            withContext(
+                Dispatchers.IO +
+                    ReviewObservationContextHolder.asElement(reviewContext) +
+                    LangfuseTraceContextHolder.asElement(traceId),
+            ) {
                 val rawText = buildRequestSpec(code, provider, mode, toolCallCounter)
                     .call()
                     .content()

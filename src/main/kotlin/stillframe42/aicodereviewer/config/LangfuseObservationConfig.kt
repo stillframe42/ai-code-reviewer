@@ -1,6 +1,5 @@
 package stillframe42.aicodereviewer.config
 
-import io.micrometer.observation.ObservationRegistry
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean
@@ -24,14 +23,9 @@ class LangfuseObservationConfig {
     fun langfuseToolSpanAdapter(langfuseClient: LangfuseClient): ToolObservationPort =
         LangfuseToolSpanAdapter(langfuseClient)
 
-    // ObservationRegistry에 핸들러를 등록 — Spring AI LLM 호출이 자동으로 핸들러로 라우팅됨
+    // ObservationHandler 빈으로 등록 — Spring Boot의 ObservationHandlerGroupingCustomizer가
+    // 자동으로 ObservationRegistry에 추가한다. ObservationRegistry 직접 주입 시 순환 의존성 발생.
     @Bean
-    fun langfuseObservationHandler(
-        langfuseClient: LangfuseClient,
-        observationRegistry: ObservationRegistry,
-    ): LangfuseObservationHandler {
-        val handler = LangfuseObservationHandler(langfuseClient)
-        observationRegistry.observationConfig().observationHandler(handler)
-        return handler
-    }
+    fun langfuseObservationHandler(langfuseClient: LangfuseClient): LangfuseObservationHandler =
+        LangfuseObservationHandler(langfuseClient)
 }

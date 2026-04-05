@@ -39,6 +39,8 @@ abstract class AbstractIntegrationTest {
             // Spring AI (Anthropic + OpenAI) → WireMock
             registry.add("spring.ai.anthropic.base-url") { "http://localhost:${wireMock.port()}" }
             registry.add("spring.ai.openai.base-url") { "http://localhost:${wireMock.port()}" }
+            // Langfuse API → WireMock (langfuse.enabled=false인 기본 프로필에서는 실제 호출 안 됨)
+            registry.add("langfuse.host") { "http://localhost:${wireMock.port()}" }
         }
     }
 

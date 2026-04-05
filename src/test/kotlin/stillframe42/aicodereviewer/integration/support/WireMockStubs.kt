@@ -9,7 +9,10 @@ import com.github.tomakehurst.wiremock.client.WireMock.okJson
 import com.github.tomakehurst.wiremock.client.WireMock.post
 import com.github.tomakehurst.wiremock.client.WireMock.put
 import com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo
+import com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor
 import com.github.tomakehurst.wiremock.client.WireMock.urlPathMatching
+import com.github.tomakehurst.wiremock.stubbing.Scenario
+import com.github.tomakehurst.wiremock.verification.LoggedRequest
 
 // WireMock stub 등록 헬퍼 — 각 테스트의 @BeforeEach에서 필요한 stub을 조합해 사용한다.
 // wireMock.resetAll()은 AbstractIntegrationTest.setUpBase()에서 처리하므로 여기서 호출하지 않는다.
@@ -222,6 +225,40 @@ object WireMockStubs {
             get(urlPathEqualTo("/repos/$owner/$repoName/pulls/$prNumber"))
                 .withHeader("Accept", containing("diff"))
                 .willReturn(aResponse().withStatus(500).withBody("Internal Server Error"))
+        )
+    }
+
+    // Langfuse ingestion API stub — POST /api/public/ingestion에 200 응답
+    fun stubLangfuseIngestion(server: WireMockServer) {
+        server.stubFor(
+            post(urlPathEqualTo("/api/public/ingestion"))
+                .willReturn(
+                    aResponse()
+                        .withStatus(200)
+                        .withHeader("Content-Type", "application/json")
+                        .withBody("""{"successes":[],"errors":[]}""")
+                )
+        )
+    }
+
+    // Langfuse로 전송된 모든 ingestion 요청 반환
+    fun findLangfuseIngestionRequests(server: WireMockServer): List<LoggedRequest> =
+        server.findAll(postRequestedFor(urlPathEqualTo("/api/public/ingestion")))
+
+    // Anthropic Tool Calling 시나리오 stub — 1차: tool_use 응답, 2차: 최종 리뷰 응답
+    fun stubAnthropicWithToolCall(server: WireMockServer) {
+        server.stubFor(
+            post(urlPathEqualTo("/v1/messages"))
+                .inScenario("tool-calling")
+                .whenScenarioStateIs(Scenario.STARTED)
+                .willSetStateTo("after-tool")
+                .willReturn(okJson(AnthropicResponseFixtures.REVIEW_WITH_TOOL_CALL))
+        )
+        server.stubFor(
+            post(urlPathEqualTo("/v1/messages"))
+                .inScenario("tool-calling")
+                .whenScenarioStateIs("after-tool")
+                .willReturn(okJson(AnthropicResponseFixtures.REVIEW_SUCCESS))
         )
     }
 }

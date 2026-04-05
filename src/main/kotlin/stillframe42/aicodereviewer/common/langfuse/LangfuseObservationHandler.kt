@@ -25,20 +25,27 @@ class LangfuseObservationHandler(
         context is ChatModelObservationContext
 
     // LLM 호출 시작 시: Langfuse에 Trace + Generation 생성
+    // Tool Calling 시나리오: 첫 번째 LLM 호출 후 tool 실행, 두 번째 LLM 호출이 이어진다.
+    // traceId가 이미 설정되어 있으면 재사용하여 모든 Generation/Span이 같은 Trace에 속하도록 한다.
     override fun onStart(context: ChatModelObservationContext) {
         try {
-            val traceId = UUID.randomUUID().toString()
+            val existingTraceId = LangfuseTraceContextHolder.get()
+            val traceId = existingTraceId ?: UUID.randomUUID().toString()
             val generationId = UUID.randomUUID().toString()
             val startTime = Instant.now().toString()
 
             // onStop에서 재사용하기 위해 IdentityHashMap에 저장
             traceInfoMap[context] = TraceInfo(traceId, generationId, startTime)
-            LangfuseTraceContextHolder.set(traceId)
+            // 새 traceId인 경우에만 설정 — 재진입 시 덮어쓰기 방지
+            if (existingTraceId == null) {
+                LangfuseTraceContextHolder.set(traceId)
+            }
 
             val reviewContext = ReviewObservationContextHolder.local.get()
             val metadata = buildMetadata(reviewContext)
 
             // trace-create + generation-create를 한 번의 배치로 전송
+            // 같은 traceId가 이미 있으면 trace-create는 Langfuse에서 멱등 처리됨
             langfuseClient.ingest(
                 listOf(
                     buildTraceCreate(traceId, startTime, metadata),
@@ -51,10 +58,10 @@ class LangfuseObservationHandler(
     }
 
     // LLM 응답 수신 후: Generation에 출력, 토큰, 종료 시간 업데이트
+    // traceId는 Tool Calling 전체 흐름이 끝날 때까지 유지 — SpringAiReviewAdapter withContext 종료 시 소멸
     override fun onStop(context: ChatModelObservationContext) {
         try {
             val traceInfo = traceInfoMap.remove(context) ?: return
-            LangfuseTraceContextHolder.clear()
             val generationId = traceInfo.generationId
             val endTime = Instant.now().toString()
 
@@ -75,10 +82,10 @@ class LangfuseObservationHandler(
     }
 
     // LLM 호출 에러 시: Generation을 에러 상태로 업데이트
+    // traceId 정리는 SpringAiReviewAdapter withContext 블록의 finally에서 처리
     override fun onError(context: ChatModelObservationContext) {
         try {
             val traceInfo = traceInfoMap[context] ?: return
-            LangfuseTraceContextHolder.clear()
             val endTime = Instant.now().toString()
 
             langfuseClient.ingest(listOf(

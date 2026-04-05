@@ -12,6 +12,7 @@ import org.springframework.ai.tool.annotation.ToolParam
 import org.springframework.stereotype.Component
 import org.springframework.web.reactive.function.client.WebClientResponseException
 import stillframe42.aicodereviewer.common.Logging
+import stillframe42.aicodereviewer.common.langfuse.LangfuseTraceContextHolder
 import stillframe42.aicodereviewer.github.adapter.out.github.client.GitHubHttpClient
 import stillframe42.aicodereviewer.github.adapter.out.github.dto.DirectoryEntryResponse
 import stillframe42.aicodereviewer.github.adapter.out.github.ratelimit.GitHubRateLimitChecker
@@ -157,8 +158,12 @@ class GitHubTools(
             logger.warn("Tool 호출 횟수 경고: {}회 / 최대 {}회 (toolName={})", count, MAX_TOOL_CALLS, toolName)
         }
 
+        // runBlocking(Dispatchers.IO)은 새로운 스레드를 사용하므로 ThreadLocal이 전파되지 않는다.
+        // 현재 코루틴 컨텍스트에서 traceId를 캡처하고 runBlocking 코루틴 컨텍스트로 명시적으로 전달한다.
+        val currentTraceId = LangfuseTraceContextHolder.get()
+        val traceContextElement = LangfuseTraceContextHolder.asElement(currentTraceId)
         return toolCallLogger.log(toolName, argsLog) {
-            runBlocking(Dispatchers.IO) {
+            runBlocking(Dispatchers.IO + traceContextElement) {
                 logger.info("{} 호출 ({}번째): {}", toolName, count, argsLog)
                 val spanId = toolObservationPort.startSpan(toolName, mapOf("args" to argsLog, "count" to count))
                 runCatching {

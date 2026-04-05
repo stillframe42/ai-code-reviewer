@@ -76,6 +76,27 @@ object AnthropicResponseFixtures {
         "event: message_stop\n" +
         "data: {\"type\":\"message_stop\"}\n\n"
 
+    // Tool Calling 응답 — 1차 응답: getPRDescription 도구 요청
+    val REVIEW_WITH_TOOL_CALL = """
+        {
+          "id": "msg_tool_01",
+          "type": "message",
+          "role": "assistant",
+          "content": [
+            {
+              "type": "tool_use",
+              "id": "toolu_01",
+              "name": "getPRDescription",
+              "input": {"repositoryFullName": "owner/repo", "prNumber": 42}
+            }
+          ],
+          "model": "claude-haiku-4-5-20251001",
+          "stop_reason": "tool_use",
+          "stop_sequence": null,
+          "usage": { "input_tokens": 100, "output_tokens": 20 }
+        }
+    """.trimIndent()
+
     // 단순 diff 픽스처 — getPrDiff WireMock stub 응답용
     val SIMPLE_DIFF = """
         diff --git a/src/Foo.kt b/src/Foo.kt
