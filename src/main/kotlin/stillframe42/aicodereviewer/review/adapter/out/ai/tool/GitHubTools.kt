@@ -41,7 +41,6 @@ class GitHubTools(
         toolName = "getFileContent",
         argsLog = "repo=$repositoryFullName, path=$path, ref=$ref",
         notFoundMessage = "파일을 찾을 수 없습니다: $path (ref=$ref)",
-        fallbackMessage = "파일 내용을 가져오는 중 오류가 발생했습니다",
     ) { token, installationId ->
         gitHubHttpClient.fetchFileContent(repositoryFullName, path, ref, token, installationId)
             .let { Base64.getMimeDecoder().decode(it.content).toString(Charsets.UTF_8) }
@@ -58,7 +57,6 @@ class GitHubTools(
         toolName = "getRelatedFile",
         argsLog = "repo=$repositoryFullName, filePath=$filePath, ref=$ref",
         notFoundMessage = "디렉토리를 찾을 수 없습니다: ${filePath.substringBeforeLast("/", missingDelimiterValue = "(루트)")}",
-        fallbackMessage = "관련 파일을 가져오는 중 오류가 발생했습니다",
     ) { token, installationId ->
         val sameDir = filePath.substringBeforeLast("/", missingDelimiterValue = "")
         val parentDir = sameDir.substringBeforeLast("/", missingDelimiterValue = "")
@@ -79,7 +77,6 @@ class GitHubTools(
         toolName = "getPRDescription",
         argsLog = "repo=$repositoryFullName, prNumber=$prNumber",
         notFoundMessage = "PR을 찾을 수 없습니다: #$prNumber",
-        fallbackMessage = "PR 설명을 가져오는 중 오류가 발생했습니다",
     ) { token, installationId ->
         val response = gitHubHttpClient.fetchPrDescription(repositoryFullName, prNumber, token, installationId)
         val body = response.body?.takeIf { it.isNotBlank() } ?: "(설명 없음)"
@@ -96,7 +93,6 @@ class GitHubTools(
         toolName = "getFileHistory",
         argsLog = "repo=$repositoryFullName, filePath=$filePath",
         notFoundMessage = "파일을 찾을 수 없습니다: $filePath",
-        fallbackMessage = "커밋 이력을 가져오는 중 오류가 발생했습니다",
     ) { token, installationId ->
         val commits = gitHubHttpClient.fetchFileCommitHistory(repositoryFullName, filePath, token, installationId)
         if (commits.isEmpty()) return@executeToolCall "커밋 이력이 없습니다: $filePath"
@@ -141,7 +137,6 @@ class GitHubTools(
         toolName: String,
         argsLog: String,
         notFoundMessage: String,
-        fallbackMessage: String,
         block: suspend CoroutineScope.(token: String, installationId: Long) -> String,
     ): String {
         val installationId = toolContext.installationId()
