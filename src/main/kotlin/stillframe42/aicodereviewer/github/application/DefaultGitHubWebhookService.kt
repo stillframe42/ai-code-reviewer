@@ -32,12 +32,11 @@ class DefaultGitHubWebhookService(
     private val reviewPersistencePort: ReviewPersistencePort,
 ) : GitHubWebhookUseCase, Logging {
 
-    // AI 리뷰 완료 후 PR에 등록할 준비가 된 결과물
+    // diff position 매핑 + 포맷팅이 완료된 PR 코멘트 구성용 출력
     private data class ReviewOutput(
         val body: String,
         val lineComments: List<PrReviewLineComment>,
         val hasNoIssues: Boolean,
-        val review: CodeReview,  // 저장용 원본 리뷰 결과
     )
 
     override suspend fun handlePullRequestEvent(event: PullRequestEvent) {
@@ -76,7 +75,7 @@ class DefaultGitHubWebhookService(
             return
         }
 
-        // 1.5단계: 리뷰 요청 저장 (PENDING) — 저장 실패가 리뷰 흐름을 중단시키지 않도록 격리
+        // 2단계: 리뷰 요청 저장 (PENDING) — 저장 실패가 리뷰 흐름을 중단시키지 않도록 격리
         val reviewRequestId = runOrWarn("리뷰 요청 저장 실패 (리뷰는 계속 진행)") {
             reviewPersistencePort.saveReviewRequest(
                 repoFullName = event.repositoryFullName,
@@ -85,36 +84,32 @@ class DefaultGitHubWebhookService(
             )
         }
 
-        // 1.6단계: PROCESSING 상태 업데이트
+        // 3단계: PROCESSING 상태 업데이트
         reviewRequestId?.let { id ->
             runOrWarn("리뷰 상태 업데이트 실패") {
                 reviewPersistencePort.updateReviewStatus(id, ReviewRequestStatus.PROCESSING)
             }
         }
 
-        // 2단계: AI 코드 리뷰 실행 (전처리 활성화)
-        // 실패 시 null을 반환하고, 4단계에서 에러 코멘트를 등록한다
-        val reviewOutput = generateReviewOutput(event, prDiff)
+        // 4단계: AI 코드 리뷰 실행 — 실패 시 null 반환, 4단계에서 에러 코멘트 등록
+        val review = runAiReview(event, prDiff)
 
-        // 2.5단계: 리뷰 결과 저장 — 성공: DONE + 결과, 실패: FAILED
+        // 5단계: 리뷰 결과 저장 — 성공: DONE + 결과, 실패: FAILED
         // saveReviewResult 실패 시에도 상태 업데이트(DONE)가 반드시 실행되도록 블록을 분리한다
         reviewRequestId?.let { id ->
             val now = Instant.now()
-            if (reviewOutput != null) {
-                runOrWarn("리뷰 결과 저장 실패") {
-                    reviewPersistencePort.saveReviewResult(id, reviewOutput.review, null)
-                }
-                runOrWarn("리뷰 상태 DONE 업데이트 실패") {
-                    reviewPersistencePort.updateReviewStatus(id, ReviewRequestStatus.DONE, now)
-                }
+            val status = if (review != null) {
+                runOrWarn("리뷰 결과 저장 실패") { reviewPersistencePort.saveReviewResult(id, review, null) }
+                ReviewRequestStatus.DONE
             } else {
-                runOrWarn("리뷰 상태 FAILED 업데이트 실패") {
-                    reviewPersistencePort.updateReviewStatus(id, ReviewRequestStatus.FAILED, now)
-                }
+                ReviewRequestStatus.FAILED
+            }
+            runOrWarn("리뷰 상태 $status 업데이트 실패") {
+                reviewPersistencePort.updateReviewStatus(id, status, now)
             }
         }
 
-        // 3단계: 이전 리뷰 dismiss — 실패해도 새 리뷰 등록은 계속 진행
+        // 6단계: 이전 리뷰 dismiss — 실패해도 새 리뷰 등록은 계속 진행
         processedEventPort.findLatestReviewId(
             repositoryFullName = event.repositoryFullName,
             pullRequestNumber = event.pullRequestNumber,
@@ -132,7 +127,10 @@ class DefaultGitHubWebhookService(
             }
         }
 
-        // 4단계: PR Reviews API로 등록 — 이슈 유무에 따라 이벤트 타입 결정
+        // 7단계: diff position 매핑 + 출력 구성
+        val reviewOutput = review?.let { buildReviewOutput(it, prDiff) }
+
+        // 8단계: PR Reviews API로 등록 — 이슈 유무에 따라 이벤트 타입 결정
         // 이슈 없음 → APPROVE, 이슈 있음 → REQUEST_CHANGES
         // 오류 발생 시 COMMENT 타입으로 에러 안내
         val newReviewId = gitHubApiPort.postPrReview(
@@ -152,9 +150,9 @@ class DefaultGitHubWebhookService(
         )
 
         // 리뷰 실패 시 markAsProcessed 호출 안 함 — 다음 이벤트에서 재처리 허용
-        if (reviewOutput == null) return
+        if (review == null) return
 
-        // 5단계: 처리 완료 기록 (중복 방지) — review_id 포함하여 저장
+        // 9단계: 처리 완료 기록 (중복 방지) — review_id 포함하여 저장
         processedEventPort.markAsProcessed(
             repositoryFullName = event.repositoryFullName,
             pullRequestNumber = event.pullRequestNumber,
@@ -163,35 +161,38 @@ class DefaultGitHubWebhookService(
         )
     }
 
-    // AI 리뷰 실행 및 diff position 매핑 — 실패 시 null 반환하여 에러 코멘트 등록으로 이어진다
-    private suspend fun generateReviewOutput(event: PullRequestEvent, prDiff: String): ReviewOutput? =
+    // AI 리뷰 실행 — 실패 시 null 반환, 에러 코멘트 등록으로 이어진다
+    private suspend fun runAiReview(event: PullRequestEvent, prDiff: String): CodeReview? =
         try {
-            val review = reviewUseCase.reviewCode(
+            reviewUseCase.reviewCode(
                 code = prDiff,
                 provider = AiProvider.ANTHROPIC,
                 diffOptions = DiffFilterOptions(),
                 mode = ReviewMode.WithGitHubTools(event.installationId),
-            )
-            logger.info(
-                "AI 리뷰 생성 완료: repo={}, pr={}, score={}",
-                event.repositoryFullName, event.pullRequestNumber, review.overallScore,
-            )
-
-            // diff position 매핑 — 성공한 이슈는 인라인 코멘트, 실패한 이슈는 본문에 포함
-            val resolution = diffPositionResolver.resolve(prDiff, review.issues)
-            val bodyReview = review.copy(issues = resolution.unmappedIssues)
-            ReviewOutput(
-                body = reviewCommentFormatterPort.format(bodyReview),
-                lineComments = resolution.lineComments,
-                hasNoIssues = review.issues.isEmpty(),
-                review = review,
-            )
+            ).also { review ->
+                logger.info(
+                    "AI 리뷰 생성 완료: repo={}, pr={}, score={}",
+                    event.repositoryFullName, event.pullRequestNumber, review.overallScore,
+                )
+            }
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
             logger.error("리뷰 생성 실패: repo={}, pr={}", event.repositoryFullName, event.pullRequestNumber, e)
             null
         }
+
+    // diff position 매핑 + PR 코멘트 출력 구성
+    // 성공한 이슈는 인라인 코멘트, 매핑 실패한 이슈는 리뷰 본문에 포함
+    private fun buildReviewOutput(review: CodeReview, prDiff: String): ReviewOutput {
+        val resolution = diffPositionResolver.resolve(prDiff, review.issues)
+        val bodyReview = review.copy(issues = resolution.unmappedIssues)
+        return ReviewOutput(
+            body = reviewCommentFormatterPort.format(bodyReview),
+            lineComments = resolution.lineComments,
+            hasNoIssues = review.issues.isEmpty(),
+        )
+    }
 
     // CancellationException은 재전파, 그 외 예외는 경고 로그 후 null 반환
     private suspend fun <T> runOrWarn(warnMessage: String, block: suspend () -> T): T? =
