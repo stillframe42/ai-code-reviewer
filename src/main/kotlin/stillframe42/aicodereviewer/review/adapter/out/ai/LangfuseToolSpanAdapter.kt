@@ -16,18 +16,20 @@ class LangfuseToolSpanAdapter(
     override fun startSpan(toolName: String, input: Map<String, Any>): String {
         val traceId = LangfuseTraceContextHolder.get() ?: return ""
         val spanId = UUID.randomUUID().toString()
+        // timestamp와 startTime에 동일한 시각 값을 사용하기 위해 단 한 번만 캡처
+        val now = Instant.now().toString()
         try {
             langfuseClient.ingest(
                 listOf(
                     mapOf(
                         "type" to "span-create",
                         "id" to UUID.randomUUID().toString(),
-                        "timestamp" to Instant.now().toString(),
+                        "timestamp" to now,
                         "body" to mapOf(
                             "id" to spanId,
                             "traceId" to traceId,
                             "name" to toolName,
-                            "startTime" to Instant.now().toString(),
+                            "startTime" to now,
                             "input" to input,
                         ),
                     ),
@@ -35,6 +37,8 @@ class LangfuseToolSpanAdapter(
             )
         } catch (e: Exception) {
             logger.warn("[LANGFUSE] span-create 전송 실패 (무시): {}", e.message)
+            // span-create 실패 시 빈 문자열 반환 → endSpan에서 orphan update 방지
+            return ""
         }
         return spanId
     }
@@ -42,17 +46,19 @@ class LangfuseToolSpanAdapter(
     override fun endSpan(spanId: String, output: String) {
         if (spanId.isEmpty()) return
         val traceId = LangfuseTraceContextHolder.get() ?: return
+        // timestamp와 endTime에 동일한 시각 값을 사용하기 위해 단 한 번만 캡처
+        val endTime = Instant.now().toString()
         try {
             langfuseClient.ingest(
                 listOf(
                     mapOf(
                         "type" to "span-update",
                         "id" to UUID.randomUUID().toString(),
-                        "timestamp" to Instant.now().toString(),
+                        "timestamp" to endTime,
                         "body" to mapOf(
                             "id" to spanId,
                             "traceId" to traceId,
-                            "endTime" to Instant.now().toString(),
+                            "endTime" to endTime,
                             "output" to output,
                         ),
                     ),
@@ -66,17 +72,19 @@ class LangfuseToolSpanAdapter(
     override fun endSpanWithError(spanId: String, error: String) {
         if (spanId.isEmpty()) return
         val traceId = LangfuseTraceContextHolder.get() ?: return
+        // timestamp와 endTime에 동일한 시각 값을 사용하기 위해 단 한 번만 캡처
+        val endTime = Instant.now().toString()
         try {
             langfuseClient.ingest(
                 listOf(
                     mapOf(
                         "type" to "span-update",
                         "id" to UUID.randomUUID().toString(),
-                        "timestamp" to Instant.now().toString(),
+                        "timestamp" to endTime,
                         "body" to mapOf(
                             "id" to spanId,
                             "traceId" to traceId,
-                            "endTime" to Instant.now().toString(),
+                            "endTime" to endTime,
                             "level" to "ERROR",
                             "statusMessage" to error,
                         ),

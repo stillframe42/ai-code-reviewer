@@ -26,7 +26,12 @@ class LangfuseToolSpanAdapterTest {
         wireMock = WireMockServer(options().dynamicPort()).also { it.start() }
         wireMock.stubFor(
             post(urlPathEqualTo("/api/public/ingestion"))
-                .willReturn(aResponse().withStatus(200).withBody("""{"successes":[],"errors":[]}""")),
+                .willReturn(
+                    aResponse()
+                        .withStatus(200)
+                        .withHeader("Content-Type", "application/json")
+                        .withBody("""{"successes":[],"errors":[]}"""),
+                ),
         )
         val properties = LangfuseProperties(
             host = "http://localhost:${wireMock.port()}",
@@ -96,6 +101,24 @@ class LangfuseToolSpanAdapterTest {
     @Test
     fun `spanId가 비어있으면 endSpan은 Langfuse에 전송하지 않는다`() {
         adapter.endSpan("", "output")
+
+        val requests = wireMock.findAll(postRequestedFor(urlPathEqualTo("/api/public/ingestion")))
+        assertThat(requests).isEmpty()
+    }
+
+    @Test
+    fun `spanId가 비어있으면 endSpanWithError는 Langfuse에 전송하지 않는다`() {
+        adapter.endSpanWithError("", "error message")
+
+        val requests = wireMock.findAll(postRequestedFor(urlPathEqualTo("/api/public/ingestion")))
+        assertThat(requests).isEmpty()
+    }
+
+    @Test
+    fun `traceId가 없으면 endSpan은 Langfuse에 전송하지 않는다`() {
+        LangfuseTraceContextHolder.clear()
+
+        adapter.endSpan("some-span-id", "output")
 
         val requests = wireMock.findAll(postRequestedFor(urlPathEqualTo("/api/public/ingestion")))
         assertThat(requests).isEmpty()
