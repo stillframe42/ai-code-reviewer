@@ -12,6 +12,7 @@ import org.springframework.ai.chat.client.advisor.api.CallAdvisor
 import org.springframework.ai.chat.client.advisor.api.CallAdvisorChain
 import org.springframework.core.Ordered
 import stillframe42.aicodereviewer.common.Logging
+import stillframe42.aicodereviewer.common.metrics.LlmMetrics
 import stillframe42.aicodereviewer.config.LlmCostProperties
 import stillframe42.aicodereviewer.review.adapter.out.persistence.LlmCostLogRepository
 import stillframe42.aicodereviewer.review.adapter.out.persistence.entity.LlmCostLogEntity
@@ -21,6 +22,7 @@ import stillframe42.aicodereviewer.review.adapter.out.persistence.entity.LlmCost
 class CostTrackingAdvisor(
     private val costProperties: LlmCostProperties,
     private val costLogRepository: LlmCostLogRepository,
+    private val llmMetrics: LlmMetrics,
     // CoroutineScope 주입 — 테스트에서 교체 가능하도록 설계
     // SupervisorJob: 개별 저장 실패가 scope를 취소하지 않도록 격리
     private val scope: CoroutineScope = CoroutineScope(Dispatchers.IO + SupervisorJob()),
@@ -45,7 +47,7 @@ class CostTrackingAdvisor(
         return response
     }
 
-    // 응답 메타데이터에서 토큰 수를 추출해 비용을 계산하고 DB에 저장
+    // 응답 메타데이터에서 토큰 수를 추출해 비용을 계산하고 DB에 저장, 메트릭을 기록한다
     private fun saveCostLog(response: ChatClientResponse) {
         val chatResponse = response.chatResponse() ?: return
         val model = chatResponse.metadata.model
@@ -60,6 +62,9 @@ class CostTrackingAdvisor(
             "[COST] model={} | tokens={} | est=\${}",
             model, totalTokens, cost,
         )
+
+        llmMetrics.recordTokens(model, promptTokens, completionTokens)
+        llmMetrics.recordCost(model, cost)
 
         costLogRepository.save(
             LlmCostLogEntity(
