@@ -154,6 +154,9 @@ class DefaultReviewQueryServiceTest : AbstractIntegrationTest() {
 
         assertEquals(0L, stats.totalReviews)
         assertEquals(0.0, stats.averageToolCallCount)
+        assertThat(stats.costByModel).isEmpty()
+        assertThat(stats.cacheHitRate).isEqualTo(0.0)
+        assertThat(stats.estimatedSavings).isEqualByComparingTo(BigDecimal.ZERO)
     }
 
     @Test
@@ -183,14 +186,4 @@ class DefaultReviewQueryServiceTest : AbstractIntegrationTest() {
         assertThat(stats.cacheHitRate).isEqualTo(0.0)
         // 캐시 히트 횟수 0 → estimatedSavings = 0
         assertThat(stats.estimatedSavings).isEqualByComparingTo(BigDecimal.ZERO)
-    }
-
-    @Test
-    fun `getStats는 데이터가 없을 때 신규 필드도 기본값을 반환한다`() = runTest {
-        val stats = service.getStats()
-
-        assertThat(stats.costByModel).isEmpty()
-        assertThat(stats.cacheHitRate).isEqualTo(0.0)
-        assertThat(stats.estimatedSavings).isEqualByComparingTo(BigDecimal.ZERO)
-    }
-}
+    }}
