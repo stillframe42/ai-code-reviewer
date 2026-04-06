@@ -56,7 +56,7 @@ class DefaultReviewServiceTest : AbstractIntegrationTest() {
     }
 
     @Test
-    fun `CRITICAL 패턴 파일이 포함된 diff는 sonnet 모델을 사용한다`() = runBlocking {
+    fun `CRITICAL 패턴 파일이 포함된 diff는 sonnet 모델을 사용한다`(): Unit = runBlocking {
         // SecurityConfig.kt → **/*Security* 패턴 매칭 → CRITICAL → test-sonnet-model
         reviewUseCase.reviewCode(
             code = """
@@ -78,7 +78,7 @@ class DefaultReviewServiceTest : AbstractIntegrationTest() {
     }
 
     @Test
-    fun `일반 파일만 포함된 diff는 haiku 모델을 사용한다`() = runBlocking {
+    fun `일반 파일만 포함된 diff는 haiku 모델을 사용한다`(): Unit = runBlocking {
         // MyService.kt → 패턴 미매칭 → NORMAL → test-haiku-model
         reviewUseCase.reviewCode(
             code = """
