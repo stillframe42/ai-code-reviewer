@@ -27,7 +27,7 @@ class DefaultReviewServiceTest : AbstractIntegrationTest() {
     }
 
     @Test
-    fun `코드를 리뷰하면 구조화된 결과를 반환한다`() = runBlocking {
+    fun `코드를 리뷰하면 구조화된 결과를 반환한다`(): Unit = runBlocking {
         val result = reviewUseCase.reviewCode(
             code = "fun add(a: Int, b: Int) = a + b",
             provider = AiProvider.ANTHROPIC
@@ -37,11 +37,10 @@ class DefaultReviewServiceTest : AbstractIntegrationTest() {
         assertThat(result.summary).isNotBlank()
         assertThat(result.issues).isNotNull
         assertThat(result.positives).isNotNull
-        Unit
     }
 
     @Test
-    fun `문제가 있는 코드를 리뷰하면 이슈를 감지한다`() = runBlocking {
+    fun `문제가 있는 코드를 리뷰하면 이슈를 감지한다`(): Unit = runBlocking {
         val result = reviewUseCase.reviewCode(
             code = """
                 fun divide(a: Int, b: Int): Int {
@@ -54,7 +53,6 @@ class DefaultReviewServiceTest : AbstractIntegrationTest() {
         assertThat(result.overallScore).isBetween(1, 10)
         assertThat(result.summary).isNotBlank()
         assertThat(result.issues).isNotEmpty
-        Unit
     }
 
     @Test
