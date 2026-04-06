@@ -27,8 +27,8 @@ class RedisReviewCacheStatsAdapter(
     }
 
     override suspend fun getHitCount(): Long =
-        redisTemplate.opsForValue().get(HIT_KEY).awaitSingleOrNull()?.toLong() ?: 0L
+        redisTemplate.opsForValue().get(HIT_KEY).awaitSingleOrNull()?.toLongOrNull() ?: 0L
 
     override suspend fun getMissCount(): Long =
-        redisTemplate.opsForValue().get(MISS_KEY).awaitSingleOrNull()?.toLong() ?: 0L
+        redisTemplate.opsForValue().get(MISS_KEY).awaitSingleOrNull()?.toLongOrNull() ?: 0L
 }

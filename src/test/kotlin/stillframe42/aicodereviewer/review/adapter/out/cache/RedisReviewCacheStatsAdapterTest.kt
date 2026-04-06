@@ -34,4 +34,12 @@ class RedisReviewCacheStatsAdapterTest : AbstractIntegrationTest() {
     fun `데이터가 없을 때 getMissCount는 0을 반환한다`() = runTest {
         assertThat(reviewCacheStatsStore.getMissCount()).isEqualTo(0L)
     }
+
+    @Test
+    fun `incrementHit 3회 호출 후 getHitCount는 3을 반환한다`() = runTest {
+        reviewCacheStatsStore.incrementHit()
+        reviewCacheStatsStore.incrementHit()
+        reviewCacheStatsStore.incrementHit()
+        assertThat(reviewCacheStatsStore.getHitCount()).isEqualTo(3L)
+    }
 }
