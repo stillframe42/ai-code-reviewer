@@ -36,6 +36,7 @@ dependencies {
 
     // Actuator
     implementation("org.springframework.boot:spring-boot-starter-actuator")
+    runtimeOnly("io.micrometer:micrometer-registry-prometheus")
 
     // Spring AI
     implementation("org.springframework.ai:spring-ai-starter-model-anthropic")
