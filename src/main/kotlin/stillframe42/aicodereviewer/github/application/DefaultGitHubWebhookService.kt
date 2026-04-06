@@ -1,7 +1,9 @@
 package stillframe42.aicodereviewer.github.application
 
+import kotlinx.coroutines.CancellationException
 import org.springframework.stereotype.Service
 import stillframe42.aicodereviewer.common.Logging
+import stillframe42.aicodereviewer.common.metrics.ReviewMetrics
 import stillframe42.aicodereviewer.core.AiProvider
 import stillframe42.aicodereviewer.github.domain.model.PrReview
 import stillframe42.aicodereviewer.github.domain.model.PrReviewEvent
@@ -19,7 +21,6 @@ import stillframe42.aicodereviewer.review.domain.model.ReviewRequestStatus
 import stillframe42.aicodereviewer.review.domain.port.`in`.ReviewUseCase
 import stillframe42.aicodereviewer.review.domain.port.out.ReviewPersistencePort
 import java.time.Instant
-import kotlinx.coroutines.CancellationException
 
 // GitHub Webhook 유스케이스 구현 — PR 이벤트 수신 시 diff 조회 → AI 리뷰 → 코멘트 등록 흐름을 조율한다
 @Service
@@ -30,6 +31,7 @@ class DefaultGitHubWebhookService(
     private val processedEventPort: ProcessedEventPort,
     private val diffPositionResolver: DiffPositionResolver,
     private val reviewPersistencePort: ReviewPersistencePort,
+    private val reviewMetrics: ReviewMetrics,
 ) : GitHubWebhookUseCase, Logging {
 
     // diff position 매핑 + 포맷팅이 완료된 PR 코멘트 구성용 출력
@@ -74,6 +76,9 @@ class DefaultGitHubWebhookService(
             )
             return
         }
+
+        // diff 확인 후 타이머 시작 — 의미 있는 리뷰 플로우 전체 시간을 측정한다
+        val timerSample = reviewMetrics.startTimer()
 
         // 2단계: 리뷰 요청 저장 (PENDING) — 저장 실패가 리뷰 흐름을 중단시키지 않도록 격리
         val reviewRequestId = runOrWarn("리뷰 요청 저장 실패 (리뷰는 계속 진행)") {
@@ -131,8 +136,6 @@ class DefaultGitHubWebhookService(
         val reviewOutput = review?.let { buildReviewOutput(it, prDiff) }
 
         // 8단계: PR Reviews API로 등록 — 이슈 유무에 따라 이벤트 타입 결정
-        // 이슈 없음 → APPROVE, 이슈 있음 → REQUEST_CHANGES
-        // 오류 발생 시 COMMENT 타입으로 에러 안내
         val newReviewId = gitHubApiPort.postPrReview(
             repositoryFullName = event.repositoryFullName,
             pullRequestNumber = event.pullRequestNumber,
@@ -148,6 +151,13 @@ class DefaultGitHubWebhookService(
             },
             installationId = event.installationId,
         )
+
+        // 메트릭 기록 — postPrReview 완료 시점 (Webhook 수신 ~ GitHub 코멘트 등록까지 전체 시간)
+        val status = if (review != null) "DONE" else "FAILED"
+        reviewMetrics.recordReview(timerSample, event.repositoryFullName, status)
+        if (review != null) {
+            reviewMetrics.recordIssues(review.issues)
+        }
 
         // 리뷰 실패 시 markAsProcessed 호출 안 함 — 다음 이벤트에서 재처리 허용
         if (review == null) return
@@ -183,7 +193,6 @@ class DefaultGitHubWebhookService(
         }
 
     // diff position 매핑 + PR 코멘트 출력 구성
-    // 성공한 이슈는 인라인 코멘트, 매핑 실패한 이슈는 리뷰 본문에 포함
     private fun buildReviewOutput(review: CodeReview, prDiff: String): ReviewOutput {
         val resolution = diffPositionResolver.resolve(prDiff, review.issues)
         val bodyReview = review.copy(issues = resolution.unmappedIssues)
