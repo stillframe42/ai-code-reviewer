@@ -17,21 +17,6 @@ app:
       # 파일별 병렬 AI 호출 최대 동시 실행 수 — API rate limit 초과 방지 (기본: 3)
       max-concurrency: 3
 
-management:
-  server:
-    port: 8081                    # 메인 API(8080)와 분리 — 내부망 전용
-  endpoints:
-    web:
-      exposure:
-        include: health, info, prometheus
-  endpoint:
-    health:
-      show-details: always
-  metrics:
-    export:
-      prometheus:
-        enabled: true
-
 spring:
   jackson:
     mapper:
@@ -43,4 +28,5 @@ spring:
       - classpath:application-ai.yml          # AI 관련 설정
       - classpath:application-github.yml      # Github 관련 설정
       - classpath:application-langfuse.yml    # Langfuse LLM Observability 설정
+      - classpath:application-actuator.yml        # Actuator 관리 포트 및 메트릭 설정
       - optional:classpath:application-secret.yml  # 로컬 시크릿 (없어도 기동 가능)

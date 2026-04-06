@@ -1,0 +1,14 @@
+management:
+  server:
+    port: 8081                    # 메인 API(8080)와 분리 — 내부망 전용
+  endpoints:
+    web:
+      exposure:
+        include: health, info, prometheus
+  endpoint:
+    health:
+      show-details: always
+  metrics:
+    export:
+      prometheus:
+        enabled: true
