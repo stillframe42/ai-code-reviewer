@@ -40,3 +40,9 @@ langfuse:
   host: http://localhost:9999   # 사용되지 않는 더미 주소
   secret-key: test-secret
   public-key: test-public
+
+app:
+  ai:
+    reviewer:
+      default-model: test-haiku-model
+      critical-model: test-sonnet-model
