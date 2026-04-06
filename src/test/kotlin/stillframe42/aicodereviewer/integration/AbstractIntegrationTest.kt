@@ -9,10 +9,11 @@ import org.springframework.test.context.ActiveProfiles
 import org.springframework.test.context.DynamicPropertyRegistry
 import org.springframework.test.context.DynamicPropertySource
 import org.springframework.test.web.servlet.client.RestTestClient
+import org.testcontainers.containers.GenericContainer
 import org.testcontainers.postgresql.PostgreSQLContainer
 
 // 모든 통합 테스트의 베이스 클래스
-// PostgreSQL Testcontainers + WireMockServer를 Singleton으로 관리한다.
+// PostgreSQL Testcontainers + WireMockServer + Redis를 Singleton으로 관리한다.
 // Spring Test 컨텍스트 캐싱과 함께 동작하여 전체 스위트에서 컨테이너/서버가 1번만 기동된다.
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("integration-test")
@@ -27,6 +28,11 @@ abstract class AbstractIntegrationTest {
         val wireMock: WireMockServer =
             WireMockServer(options().dynamicPort()).also { it.start() }
 
+        val redis: GenericContainer<*> =
+            GenericContainer("redis:7-alpine")
+                .withExposedPorts(6379)
+                .also { it.start() }
+
         @JvmStatic
         @DynamicPropertySource
         fun overrideProperties(registry: DynamicPropertyRegistry) {
@@ -39,8 +45,11 @@ abstract class AbstractIntegrationTest {
             // Spring AI (Anthropic + OpenAI) → WireMock
             registry.add("spring.ai.anthropic.base-url") { "http://localhost:${wireMock.port()}" }
             registry.add("spring.ai.openai.base-url") { "http://localhost:${wireMock.port()}" }
-            // Langfuse API → WireMock (langfuse.enabled=false인 기본 프로필에서는 실제 호출 안 됨)
+            // Langfuse API → WireMock
             registry.add("langfuse.host") { "http://localhost:${wireMock.port()}" }
+            // Redis → Testcontainers
+            registry.add("spring.data.redis.host") { redis.host }
+            registry.add("spring.data.redis.port") { redis.getMappedPort(6379).toString() }
         }
     }
 
