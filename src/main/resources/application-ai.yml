@@ -11,6 +11,9 @@ app:
       # Tool Calling 최대 라운드트립 횟수 참고값 (Spring AI 2.0.0-M2 내장 제한 미지원 — 현재 60s 타임아웃이 안전망)
       max-roundtrips: 3
   ai:
+    reviewer:
+      default-model: claude-haiku-4-5-20251001   # 일반 PR 기본 모델
+      critical-model: claude-sonnet-4-6           # 중요 PR 전용 모델
     cost:
       models:
         claude-haiku-4-5-20251001:
