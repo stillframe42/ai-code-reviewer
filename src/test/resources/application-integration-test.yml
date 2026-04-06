@@ -42,6 +42,8 @@ langfuse:
   public-key: test-public
 
 app:
+  cache:
+    enabled: true
   ai:
     reviewer:
       default-model: test-haiku-model
