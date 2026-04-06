@@ -3,6 +3,7 @@ package stillframe42.aicodereviewer.common.metrics
 import com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor
 import com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo
 import io.micrometer.core.instrument.MeterRegistry
+import io.micrometer.core.instrument.Tag
 import java.util.concurrent.TimeUnit.SECONDS
 import org.assertj.core.api.Assertions.assertThat
 import org.awaitility.kotlin.await
@@ -55,17 +56,7 @@ class MetricsIntegrationTest : AbstractIntegrationTest() {
         "sha256=${HmacSignatureVerifier.computeSignature(body.toByteArray(Charsets.UTF_8), properties.app.webhookSecret)}"
 
     @BeforeEach
-    fun setupTest() {
-        // 이전 테스트의 리뷰 플로우가 완전히 종료될 때까지 대기한다.
-        // DefaultGitHubWebhookService의 마지막 단계(markAsProcessed)가 완료된 이후에 DB를 정리해야
-        // 다음 테스트에서 같은 PR/SHA로 웹훅을 보낼 때 "이미 처리된 이벤트 스킵"이 발생하지 않는다.
-        // 첫 번째 테스트 실행 시에는 processedEvent가 없으므로 즉시 통과한다.
-        if (processedEventRepository.count() > 0) {
-            await.atMost(10, SECONDS).until { processedEventRepository.count() > 0 }
-        }
-
-        cleanDb()
-
+    fun stubExternalApis() {
         WireMockStubs.stubAnyInstallationToken(wireMock)
         WireMockStubs.stubPrDiff(wireMock, "owner/repo", 200, AnthropicResponseFixtures.SIMPLE_DIFF)
         WireMockStubs.stubPrFiles(wireMock, "owner/repo", 200)
@@ -108,7 +99,7 @@ class MetricsIntegrationTest : AbstractIntegrationTest() {
     // before 값을 읽어 delta로 검증 — 다른 테스트와 meterRegistry 공유하므로 누적값이 아닌 증가분을 검증한다
     // Search.tags(Iterable<Tag>) 오버로드 사용 — spread 연산자(*) 없이 리스트를 직접 전달한다
     private fun tagsFrom(vararg pairs: String) =
-        pairs.toList().chunked(2).map { io.micrometer.core.instrument.Tag.of(it[0], it[1]) }
+        pairs.toList().chunked(2).map { Tag.of(it[0], it[1]) }
 
     private fun counterBefore(name: String, vararg tags: String): Double =
         meterRegistry.find(name).tags(tagsFrom(*tags)).counter()?.count() ?: 0.0
