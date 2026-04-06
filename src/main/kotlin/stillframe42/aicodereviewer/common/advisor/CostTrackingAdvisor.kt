@@ -26,12 +26,13 @@ class CostTrackingAdvisor(
     // CoroutineScope 주입 — 테스트에서 교체 가능하도록 설계
     // SupervisorJob: 개별 저장 실패가 scope를 취소하지 않도록 격리
     private val scope: CoroutineScope = CoroutineScope(Dispatchers.IO + SupervisorJob()),
-    private val order: Int = Ordered.LOWEST_PRECEDENCE,
+    private val order: Int = Ordered.HIGHEST_PRECEDENCE + 2,
 ) : CallAdvisor, Logging {
 
     override fun getName(): String = "CostTrackingAdvisor"
 
-    // AI 호출 직후(가장 안쪽)에서 실행 — 실제 usage 메타데이터를 확보하기 위해 LOWEST_PRECEDENCE
+    // LoggingAdvisor(HIGHEST_PRECEDENCE), RetryAdvisor(HIGHEST_PRECEDENCE+1) 다음에 실행
+    // LOWEST_PRECEDENCE(Integer.MAX_VALUE)는 Spring AI 내부 advisor와 충돌 가능성이 있어 사용하지 않는다
     override fun getOrder(): Int = order
 
     override fun adviseCall(request: ChatClientRequest, chain: CallAdvisorChain): ChatClientResponse {
