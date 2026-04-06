@@ -29,4 +29,5 @@ spring:
       - classpath:application-github.yml      # Github 관련 설정
       - classpath:application-langfuse.yml    # Langfuse LLM Observability 설정
       - classpath:application-actuator.yml        # Actuator 관리 포트 및 메트릭 설정
+      - classpath:application-redis.yml        # Redis 연결 설정
       - optional:classpath:application-secret.yml  # 로컬 시크릿 (없어도 기동 가능)

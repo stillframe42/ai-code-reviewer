@@ -35,6 +35,17 @@ services:
       SALT: ${SALT}
       TELEMETRY_ENABLED: "false"
 
+  redis:
+    image: redis:7-alpine
+    container_name: aireviewer-redis
+    ports:
+      - "16379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
 volumes:
   postgres_data:
     driver: local

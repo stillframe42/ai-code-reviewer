@@ -20,6 +20,8 @@ app:
         - "**/migration/**"
         - "**/*Config*"
         - "build.gradle.kts"
+      cache:
+        ttl: PT1H    # java.time.Duration ISO-8601 형식, 1시간 TTL
     cost:
       models:
         claude-haiku-4-5-20251001:

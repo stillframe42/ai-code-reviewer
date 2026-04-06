@@ -1,0 +1,6 @@
+# Redis 연결 설정 (로컬: docker-compose의 redis 서비스)
+spring:
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:16379}
