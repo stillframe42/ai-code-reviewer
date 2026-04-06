@@ -226,7 +226,7 @@ paths:
     get:
       operationId: getReviewStats
       summary: 리뷰 통계 조회
-      description: 전체 리뷰 건수, 카테고리별 이슈 분포, 평균 Tool 호출 횟수를 반환합니다.
+      description: 전체 리뷰 건수, 카테고리별 이슈 분포, 평균 Tool 호출 횟수, 모델별 비용, 캐시 히트율, 추정 절감액을 반환합니다.
       tags:
         - reviews
       responses:
@@ -244,6 +244,11 @@ paths:
                   READABILITY: 12
                   ARCHITECTURE: 5
                 averageToolCallCount: 2.8
+                costByModel:
+                  claude-sonnet-4-6: 0.004521
+                  claude-haiku-4-5: 0.000128
+                cacheHitRate: 0.72
+                estimatedSavings: 0.003255
 
   /api/github/webhook:
     post:
@@ -633,6 +638,9 @@ components:
         - totalReviews
         - categoryDistribution
         - averageToolCallCount
+        - costByModel
+        - cacheHitRate
+        - estimatedSavings
       properties:
         totalReviews:
           type: integer
@@ -655,6 +663,23 @@ components:
           format: double
           description: 리뷰당 평균 Tool 호출 횟수
           example: 2.8
+        costByModel:
+          type: object
+          additionalProperties:
+            type: number
+          description: 모델별 누적 LLM 비용 합계 (USD, BigDecimal)
+          example:
+            claude-sonnet-4-6: 0.004521
+            claude-haiku-4-5: 0.000128
+        cacheHitRate:
+          type: number
+          format: double
+          description: 캐시 히트율 (0.0~1.0)
+          example: 0.72
+        estimatedSavings:
+          type: number
+          description: 캐시로 인한 추정 비용 절감액 (USD, BigDecimal)
+          example: 0.003255
 
     # ── 에러 응답 ────────────────────────────────────────────────────────────
 

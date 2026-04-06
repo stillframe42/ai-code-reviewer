@@ -50,4 +50,7 @@ private fun ReviewStatsResult.toResponse() = ReviewStatsResponse(
     totalReviews = totalReviews,
     categoryDistribution = categoryDistribution,
     averageToolCallCount = averageToolCallCount,
+    costByModel = costByModel,
+    cacheHitRate = cacheHitRate,
+    estimatedSavings = estimatedSavings,
 )

@@ -6,6 +6,7 @@ import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import stillframe42.aicodereviewer.integration.AbstractIntegrationTest
@@ -35,6 +36,15 @@ class ReviewQueryAdapterTest : AbstractIntegrationTest() {
 
     @Autowired
     private lateinit var llmCostLogRepository: LlmCostLogRepository
+
+    @BeforeEach
+    fun setUp() {
+        // 다른 테스트가 남긴 데이터를 초기화
+        llmCostLogRepository.deleteAll()
+        reviewIssueCategoryRepository.deleteAll()
+        reviewResultRepository.deleteAll()
+        reviewRequestRepository.deleteAll()
+    }
 
     @AfterEach
     fun tearDown() {

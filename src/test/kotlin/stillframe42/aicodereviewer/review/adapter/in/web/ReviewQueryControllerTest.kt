@@ -1,11 +1,14 @@
 package stillframe42.aicodereviewer.review.adapter.`in`.web
 
+import java.math.BigDecimal
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import stillframe42.aicodereviewer.integration.AbstractIntegrationTest
+import stillframe42.aicodereviewer.review.adapter.out.persistence.LlmCostLogRepository
 import stillframe42.aicodereviewer.review.adapter.out.persistence.ReviewIssueCategoryRepository
 import stillframe42.aicodereviewer.review.adapter.out.persistence.ReviewPersistenceAdapter
 import stillframe42.aicodereviewer.review.adapter.out.persistence.ReviewRequestRepository
@@ -33,9 +36,22 @@ class ReviewQueryControllerTest : AbstractIntegrationTest() {
     @Autowired
     private lateinit var reviewRequestRepository: ReviewRequestRepository
 
+    @Autowired
+    private lateinit var llmCostLogRepository: LlmCostLogRepository
+
+    @BeforeEach
+    fun setUp() {
+        // 다른 테스트가 남긴 데이터를 초기화 (FK 순서: 자식 먼저 삭제)
+        llmCostLogRepository.deleteAll()
+        reviewIssueCategoryRepository.deleteAll()
+        reviewResultRepository.deleteAll()
+        reviewRequestRepository.deleteAll()
+    }
+
     @AfterEach
     fun tearDown() {
-        // FK 순서 삭제
+        // FK 순서: 자식 먼저 삭제
+        llmCostLogRepository.deleteAll()
         reviewIssueCategoryRepository.deleteAll()
         reviewResultRepository.deleteAll()
         reviewRequestRepository.deleteAll()
@@ -154,5 +170,24 @@ class ReviewQueryControllerTest : AbstractIntegrationTest() {
         assertEquals(1L, body.categoryDistribution[IssueCategory.PERFORMANCE])
         assertEquals(0L, body.categoryDistribution[IssueCategory.READABILITY])
         assertEquals(2.0, body.averageToolCallCount, 0.01)
+        // LLM 호출 이력 없으므로 기본값 검증
+        assertEquals(emptyMap<String, BigDecimal>(), body.costByModel)
+        assertEquals(0.0, body.cacheHitRate, 0.001)
+        assertEquals(BigDecimal.ZERO.setScale(0), body.estimatedSavings.setScale(0))
+    }
+
+    @Test
+    fun `stats 엔드포인트는 LLM 호출 이력이 없을 때 기본값을 반환한다`() = runTest {
+        // 리뷰 데이터 없이 바로 GET /api/reviews/stats 호출
+        val body = client.get().uri("/api/reviews/stats")
+            .exchange()
+            .expectStatus().isOk
+            .expectBody(ReviewStatsResponse::class.java)
+            .returnResult().responseBody!!
+
+        assertEquals(0L, body.totalReviews)
+        assertEquals(emptyMap<String, BigDecimal>(), body.costByModel)
+        assertEquals(0.0, body.cacheHitRate, 0.001)
+        assertEquals(BigDecimal.ZERO.setScale(0), body.estimatedSavings.setScale(0))
     }
 }
