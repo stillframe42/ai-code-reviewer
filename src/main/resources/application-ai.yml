@@ -14,6 +14,12 @@ app:
     reviewer:
       default-model: claude-haiku-4-5-20251001   # 일반 PR 기본 모델
       critical-model: claude-sonnet-4-6           # 중요 PR 전용 모델
+      critical-patterns:
+        - "**/*Security*"
+        - "**/*Auth*"
+        - "**/migration/**"
+        - "**/*Config*"
+        - "build.gradle.kts"
     cost:
       models:
         claude-haiku-4-5-20251001:

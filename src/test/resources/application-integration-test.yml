@@ -46,3 +46,9 @@ app:
     reviewer:
       default-model: test-haiku-model
       critical-model: test-sonnet-model
+      critical-patterns:
+        - "**/*Security*"
+        - "**/*Auth*"
+        - "**/migration/**"
+        - "**/*Config*"
+        - "build.gradle.kts"

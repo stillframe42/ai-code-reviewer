@@ -9,4 +9,8 @@ data class AiReviewerProperties(
     val defaultModel: String = "claude-haiku-4-5-20251001",
     // 중요 PR(CRITICAL)에 사용할 모델명
     val criticalModel: String = "claude-sonnet-4-6",
+    // CRITICAL 판단 glob 패턴 목록 — AntPathMatcher로 파일 경로와 매칭
+    val criticalPatterns: List<String> = listOf(
+        "**/*Security*", "**/*Auth*", "**/migration/**", "**/*Config*", "build.gradle.kts"
+    ),
 )

@@ -13,8 +13,12 @@ class AiReviewerPropertiesTest : AbstractIntegrationTest() {
 
     @Test
     fun `integration-test 프로파일 설정이 올바르게 바인딩된다`() {
-        // application-integration-test.yml의 오버라이드 값 검증 — Kotlin 기본값과 다른 값을 사용해 바인딩 동작 증명
         assertThat(properties.defaultModel).isEqualTo("test-haiku-model")
         assertThat(properties.criticalModel).isEqualTo("test-sonnet-model")
+    }
+
+    @Test
+    fun `criticalPatterns이 YAML에서 바인딩된다`() {
+        assertThat(properties.criticalPatterns).contains("**/*Security*")
     }
 }
