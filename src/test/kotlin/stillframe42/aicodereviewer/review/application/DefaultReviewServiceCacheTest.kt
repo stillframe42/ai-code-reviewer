@@ -22,16 +22,9 @@ class DefaultReviewServiceCacheTest : AbstractIntegrationTest() {
     @Autowired
     private lateinit var reviewUseCase: ReviewUseCase
 
-    @Autowired
-    private lateinit var redisTemplate: ReactiveRedisTemplate<String, String>
-
     @BeforeEach
     fun setUpCacheTest() {
         WireMockStubs.stubAnthropicReviewWithIssues(wireMock)
-        // 테스트 간 캐시 오염 방지 — review 캐시 키 전체 삭제
-        redisTemplate.keys("review:cache:*")
-            .flatMap { key -> redisTemplate.delete(key) }
-            .blockLast()
     }
 
     @Test

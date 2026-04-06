@@ -122,7 +122,7 @@ class DefaultReviewService(
     // diff 내용의 SHA-256 해시로 캐시 키 생성
     // 동일 파일 + 동일 headSha → diff 내용 동일 → 해시 동일 (의미상 repoFullName:filePath:headSha와 동등)
     private fun cacheKey(diff: String): String {
-        val digest = MessageDigest.getInstance("SHA-256").digest(diff.toByteArray())
+        val digest = MessageDigest.getInstance("SHA-256").digest(diff.toByteArray(Charsets.UTF_8))
         return "review:cache:" + digest.joinToString("") { "%02x".format(it) }
     }
 }
