@@ -8,7 +8,6 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.data.redis.core.ReactiveRedisTemplate
 import stillframe42.aicodereviewer.core.AiProvider
 import stillframe42.aicodereviewer.integration.AbstractIntegrationTest
 import stillframe42.aicodereviewer.integration.support.WireMockStubs
@@ -96,6 +95,7 @@ class DefaultReviewServiceCacheTest : AbstractIntegrationTest() {
         // 두 번째 호출 — 캐시 히트
         reviewUseCase.reviewCode(code = diff, provider = AiProvider.ANTHROPIC, diffOptions = DiffFilterOptions())
 
+        // AbstractIntegrationTest.setUpBase()의 FLUSHALL로 stats 카운터가 초기화됨을 전제로 절댓값 비교
         assertThat(reviewCacheStatsStore.getHitCount()).isEqualTo(1L)
         assertThat(reviewCacheStatsStore.getMissCount()).isEqualTo(1L)
     }
