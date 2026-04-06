@@ -12,11 +12,9 @@ class PrImportanceAnalyzer(private val properties: AiReviewerProperties) {
     private val matcher = AntPathMatcher()
 
     // 파일 목록 중 하나라도 CRITICAL 패턴에 매칭되면 CRITICAL 반환
-    fun analyze(fileNames: List<String>): PrImportance {
-        if (fileNames.isEmpty()) return PrImportance.NORMAL
-        return if (fileNames.any { isCritical(it) }) PrImportance.CRITICAL
+    fun analyze(fileNames: List<String>): PrImportance =
+        if (fileNames.any(::isCritical)) PrImportance.CRITICAL
         else PrImportance.NORMAL
-    }
 
     private fun isCritical(fileName: String): Boolean =
         properties.criticalPatterns.any { pattern -> matcher.match(pattern, fileName) }
