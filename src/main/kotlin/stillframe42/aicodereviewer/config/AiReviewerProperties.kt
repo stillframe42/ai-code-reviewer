@@ -1,5 +1,6 @@
 package stillframe42.aicodereviewer.config
 
+import java.time.Duration
 import org.springframework.boot.context.properties.ConfigurationProperties
 
 // AI 모델 선택 설정 — application-ai.yml의 app.ai.reviewer 섹션과 바인딩
@@ -13,4 +14,11 @@ data class AiReviewerProperties(
     val criticalPatterns: List<String> = listOf(
         "**/*Security*", "**/*Auth*", "**/migration/**", "**/*Config*", "build.gradle.kts"
     ),
-)
+    // 캐시 설정
+    val cache: CacheConfig = CacheConfig(),
+) {
+    data class CacheConfig(
+        // 캐시 항목 TTL — application-ai.yml의 app.ai.reviewer.cache.ttl (ISO-8601)
+        val ttl: Duration = Duration.ofHours(1),
+    )
+}
