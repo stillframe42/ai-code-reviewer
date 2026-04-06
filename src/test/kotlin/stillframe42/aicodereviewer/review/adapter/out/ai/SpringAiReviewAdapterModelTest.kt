@@ -36,7 +36,6 @@ class SpringAiReviewAdapterModelTest : AbstractIntegrationTest() {
             postRequestedFor(urlPathEqualTo("/v1/messages"))
                 .withRequestBody(containing("\"model\":\"claude-sonnet-4-6\""))
         )
-        Unit
     }
 
     @Test
@@ -51,6 +50,5 @@ class SpringAiReviewAdapterModelTest : AbstractIntegrationTest() {
             postRequestedFor(urlPathEqualTo("/v1/messages"))
                 .withRequestBody(containing("\"model\":\"claude-haiku-4-5-20251001\""))
         )
-        Unit
     }
 }
