@@ -13,11 +13,10 @@ import stillframe42.aicodereviewer.review.domain.port.out.ReviewCacheStore
 @Component
 class RedisReviewCacheAdapter(
     redisTemplate: ReactiveRedisTemplate<String, String>,
-    objectMapper: ObjectMapper,
     properties: AiReviewerProperties,
 ) : AbstractRedisCacheAdapter<CodeReview>(
     redisTemplate,
-    objectMapper,
+    ObjectMapper(),
     CodeReview::class.java,
     properties.cache.ttl,
 ),

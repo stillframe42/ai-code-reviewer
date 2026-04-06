@@ -10,6 +10,7 @@ import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.context.ApplicationContext
 import org.springframework.data.redis.core.ReactiveRedisTemplate
+import org.springframework.test.context.TestPropertySource
 import stillframe42.aicodereviewer.core.AiProvider
 import stillframe42.aicodereviewer.integration.AbstractIntegrationTest
 import stillframe42.aicodereviewer.integration.support.WireMockStubs
@@ -18,6 +19,7 @@ import stillframe42.aicodereviewer.review.domain.port.`in`.ReviewUseCase
 
 // DefaultReviewService 캐시 통합 테스트
 // 동일 diff의 두 번째 리뷰 호출이 캐시에서 반환되어 AI 호출이 발생하지 않음을 검증한다.
+@TestPropertySource(properties = ["app.cache.enabled=true"])
 class DefaultReviewServiceCacheTest : AbstractIntegrationTest() {
 
     @Autowired

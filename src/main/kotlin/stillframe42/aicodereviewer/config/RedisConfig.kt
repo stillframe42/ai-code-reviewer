@@ -1,7 +1,5 @@
 package stillframe42.aicodereviewer.config
 
-import com.fasterxml.jackson.databind.ObjectMapper
-import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.context.annotation.Primary
@@ -26,9 +24,4 @@ class RedisConfig {
             .build()
         return ReactiveRedisTemplate(connectionFactory, context)
     }
-
-    // ObjectMapper가 자동설정되지 않은 경우 대비
-    @Bean
-    @ConditionalOnMissingBean
-    fun objectMapper(): ObjectMapper = ObjectMapper()
 }
