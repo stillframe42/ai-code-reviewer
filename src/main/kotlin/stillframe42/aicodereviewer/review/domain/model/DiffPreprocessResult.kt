@@ -14,4 +14,15 @@ data class DiffPreprocessResult(
     val savedTokens: Int get() = estimatedTokensBefore - estimatedTokensAfter
     val reductionPercent: Int get() = if (estimatedTokensBefore > 0)
         (savedTokens * 100 / estimatedTokensBefore) else 0
+
+    // 처리된 청크에서 변경 파일 경로 목록 추출
+    // DiffPreprocessor.removeMetadataLines()가 diff --git 헤더를 제거하므로
+    // 수정·삭제 파일은 --- a/ 줄에서, 신규 파일(--- /dev/null)은 +++ b/ 줄에서 추출한다
+    val fileNames: List<String> get() = fileDiffs.mapNotNull { chunk ->
+        val lines = chunk.lines()
+        lines.firstOrNull { it.startsWith("--- a/") }
+            ?.removePrefix("--- a/")
+            ?: lines.firstOrNull { it.startsWith("+++ b/") }
+                ?.removePrefix("+++ b/")
+    }
 }
