@@ -17,6 +17,7 @@ import stillframe42.aicodereviewer.review.domain.model.ReviewMode
 import stillframe42.aicodereviewer.review.domain.port.`in`.ReviewUseCase
 import stillframe42.aicodereviewer.review.domain.port.out.AiReviewPort
 import stillframe42.aicodereviewer.review.domain.port.out.ReviewCacheStore
+import stillframe42.aicodereviewer.review.domain.port.out.ReviewCacheStatsStore
 import stillframe42.aicodereviewer.review.domain.service.DiffPreprocessor
 import stillframe42.aicodereviewer.review.domain.service.PrImportanceAnalyzer
 
@@ -30,6 +31,7 @@ class DefaultReviewService(
     private val aiModelSelector: AiModelSelector,
     private val reviewCacheStore: ReviewCacheStore,
     private val reviewMetrics: ReviewMetrics,
+    private val reviewCacheStatsStore: ReviewCacheStatsStore,
 ) : ReviewUseCase, Logging {
 
     override suspend fun reviewCode(
@@ -74,10 +76,12 @@ class DefaultReviewService(
         if (cached != null) {
             logger.debug("캐시 히트: key={}", key)
             reviewMetrics.recordCacheHit()
+            reviewCacheStatsStore.incrementHit()
             return cached
         }
         logger.debug("캐시 미스: key={}", key)
         reviewMetrics.recordCacheMiss()
+        reviewCacheStatsStore.incrementMiss()
         return aiReviewPort.reviewCode(diff, provider, mode, reviewContext = null, modelName = modelName)
             .also { result ->
                 // 캐시 저장 실패는 리뷰 결과 반환에 영향을 주지 않는다 (best-effort)

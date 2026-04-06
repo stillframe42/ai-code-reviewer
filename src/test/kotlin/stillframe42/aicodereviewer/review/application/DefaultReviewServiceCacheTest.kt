@@ -14,6 +14,7 @@ import stillframe42.aicodereviewer.integration.AbstractIntegrationTest
 import stillframe42.aicodereviewer.integration.support.WireMockStubs
 import stillframe42.aicodereviewer.review.domain.model.DiffFilterOptions
 import stillframe42.aicodereviewer.review.domain.port.`in`.ReviewUseCase
+import stillframe42.aicodereviewer.review.domain.port.out.ReviewCacheStatsStore
 
 // DefaultReviewService 캐시 통합 테스트
 // 동일 diff의 두 번째 리뷰 호출이 캐시에서 반환되어 AI 호출이 발생하지 않음을 검증한다.
@@ -21,6 +22,9 @@ class DefaultReviewServiceCacheTest : AbstractIntegrationTest() {
 
     @Autowired
     private lateinit var reviewUseCase: ReviewUseCase
+
+    @Autowired
+    private lateinit var reviewCacheStatsStore: ReviewCacheStatsStore
 
     @BeforeEach
     fun setUpCacheTest() {
@@ -74,5 +78,25 @@ class DefaultReviewServiceCacheTest : AbstractIntegrationTest() {
 
         // 서로 다른 diff이므로 각각 AI 호출 → 총 2회
         wireMock.verify(exactly(2), postRequestedFor(urlPathEqualTo("/v1/messages")))
+    }
+
+    @Test
+    fun `캐시 히트 시 Redis hit 카운터와 miss 카운터가 각각 1씩 증가한다`(): Unit = runBlocking {
+        val diff = """
+            diff --git a/src/Counter.kt b/src/Counter.kt
+            --- a/src/Counter.kt
+            +++ b/src/Counter.kt
+            @@ -1,1 +1,2 @@
+             class Counter
+            +    // Redis 카운터 테스트용 고유 변경
+        """.trimIndent()
+
+        // 첫 번째 호출 — 캐시 미스
+        reviewUseCase.reviewCode(code = diff, provider = AiProvider.ANTHROPIC, diffOptions = DiffFilterOptions())
+        // 두 번째 호출 — 캐시 히트
+        reviewUseCase.reviewCode(code = diff, provider = AiProvider.ANTHROPIC, diffOptions = DiffFilterOptions())
+
+        assertThat(reviewCacheStatsStore.getHitCount()).isEqualTo(1L)
+        assertThat(reviewCacheStatsStore.getMissCount()).isEqualTo(1L)
     }
 }
