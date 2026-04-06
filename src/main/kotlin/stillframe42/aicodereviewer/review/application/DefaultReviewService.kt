@@ -30,7 +30,7 @@ class DefaultReviewService(
         mode: ReviewMode,
     ): CodeReview {
         // diffOptions가 없으면 전처리 없이 바로 AI 호출
-        val options = diffOptions ?: return aiReviewPort.reviewCode(code, provider, mode, reviewContext = null)
+        val options = diffOptions ?: return aiReviewPort.reviewCode(code, provider, mode, reviewContext = null, modelName = null)
 
         // 요청 옵션에 외부 설정값을 병합 (요청값 우선, 패턴은 합산)
         val merged = options.copy(
@@ -43,7 +43,7 @@ class DefaultReviewService(
 
         val fileDiffs = preprocessResult.fileDiffs.filter { it.isNotBlank() }
         return if (fileDiffs.size > 1) reviewParallel(fileDiffs, provider, mode)
-        else aiReviewPort.reviewCode(preprocessResult.diff, provider, mode, reviewContext = null)
+        else aiReviewPort.reviewCode(preprocessResult.diff, provider, mode, reviewContext = null, modelName = null)
     }
 
     // Semaphore로 동시 호출 수를 제한하며 병렬 LLM 호출 후 결과 집계
@@ -58,7 +58,7 @@ class DefaultReviewService(
         logger.info("파일별 병렬 리뷰 시작: {}개 파일 (최대 동시 호출: {})", fileDiffs.size, concurrency)
         val semaphore = Semaphore(concurrency)
         return supervisorScope {
-            fileDiffs.map { async { semaphore.withPermit { aiReviewPort.reviewCode(it, provider, mode, reviewContext = null) } } }
+            fileDiffs.map { async { semaphore.withPermit { aiReviewPort.reviewCode(it, provider, mode, reviewContext = null, modelName = null) } } }
         }
             .mapNotNull { deferred ->
                 runCatching { deferred.await() }
