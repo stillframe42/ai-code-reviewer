@@ -65,6 +65,7 @@ dependencies {
     testImplementation("io.projectreactor:reactor-test") // StepVerifier
 
     // Test — Testcontainers (버전은 Spring Boot BOM 관리)
+    testImplementation("org.testcontainers:testcontainers")
     testImplementation("org.testcontainers:testcontainers-postgresql")
     testImplementation("org.testcontainers:testcontainers-junit-jupiter")
 

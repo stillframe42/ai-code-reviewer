@@ -79,7 +79,11 @@ class DefaultReviewService(
         logger.debug("캐시 미스: key={}", key)
         reviewMetrics.recordCacheMiss()
         return aiReviewPort.reviewCode(diff, provider, mode, reviewContext = null, modelName = modelName)
-            .also { result -> reviewCacheStore.put(key, result) }
+            .also { result ->
+                // 캐시 저장 실패는 리뷰 결과 반환에 영향을 주지 않는다 (best-effort)
+                runCatching { reviewCacheStore.put(key, result) }
+                    .onFailure { e -> logger.warn("캐시 저장 실패 (무시): {}", e.message) }
+            }
     }
 
     // Semaphore로 동시 호출 수를 제한하며 병렬 LLM 호출 후 결과 집계

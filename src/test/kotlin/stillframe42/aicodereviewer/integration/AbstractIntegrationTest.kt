@@ -61,7 +61,7 @@ abstract class AbstractIntegrationTest {
     protected lateinit var client: RestTestClient
 
     @Autowired
-    private lateinit var redisTemplate: ReactiveRedisTemplate<String, String>
+    protected lateinit var redisTemplate: ReactiveRedisTemplate<String, String>
 
     @BeforeEach
     fun setUpBase() {
