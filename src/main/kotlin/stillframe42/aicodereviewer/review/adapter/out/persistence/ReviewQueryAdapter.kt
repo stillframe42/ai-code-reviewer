@@ -72,7 +72,7 @@ class ReviewQueryAdapter(
 
     override suspend fun sumCostByModel(): Map<String, BigDecimal> = withContext(Dispatchers.IO) {
         llmCostLogRepository.sumCostGroupByModel()
-            .associate { row -> (row[0] as String) to (row[1] as BigDecimal) }
+            .associate { row -> (row[0] as String) to (row[1] as? BigDecimal ?: BigDecimal(row[1].toString())) }
     }
 
     override suspend fun totalLlmCostSummary(): LlmCostSummary = withContext(Dispatchers.IO) {
