@@ -1,6 +1,7 @@
 package stillframe42.aicodereviewer.review.adapter.out.persistence
 
 import kotlinx.coroutines.test.runTest
+import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
@@ -8,11 +9,13 @@ import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import stillframe42.aicodereviewer.integration.AbstractIntegrationTest
+import stillframe42.aicodereviewer.review.adapter.out.persistence.entity.LlmCostLogEntity
 import stillframe42.aicodereviewer.review.adapter.out.persistence.entity.ReviewIssueCategoryEntity
 import stillframe42.aicodereviewer.review.adapter.out.persistence.entity.ReviewRequestEntity
 import stillframe42.aicodereviewer.review.adapter.out.persistence.entity.ReviewResultEntity
 import stillframe42.aicodereviewer.review.domain.model.IssueCategory
 import stillframe42.aicodereviewer.review.domain.model.ReviewRequestStatus
+import java.math.BigDecimal
 import java.time.Instant
 
 // ReviewQueryAdapter 통합 테스트 — PostgreSQL Testcontainers 사용
@@ -30,9 +33,13 @@ class ReviewQueryAdapterTest : AbstractIntegrationTest() {
     @Autowired
     private lateinit var reviewRequestRepository: ReviewRequestRepository
 
+    @Autowired
+    private lateinit var llmCostLogRepository: LlmCostLogRepository
+
     @AfterEach
     fun tearDown() {
         // FK 제약으로 자식 테이블 먼저 삭제
+        llmCostLogRepository.deleteAll()
         reviewIssueCategoryRepository.deleteAll()
         reviewResultRepository.deleteAll()
         reviewRequestRepository.deleteAll()
@@ -142,5 +149,70 @@ class ReviewQueryAdapterTest : AbstractIntegrationTest() {
     fun `averageToolCallCount는 결과가 없으면 0_0을 반환한다`() = runTest {
         // 저장된 결과 없음
         assertEquals(0.0, adapter.averageToolCallCount())
+    }
+
+    @Test
+    fun `sumCostByModel은 모델별 누적 비용 합계를 반환한다`() = runTest {
+        llmCostLogRepository.saveAll(listOf(
+            LlmCostLogEntity(
+                modelName = "claude-haiku-4-5-20251001",
+                promptTokens = 100,
+                completionTokens = 80,
+                estimatedCostUsd = BigDecimal("0.000400"),
+            ),
+            LlmCostLogEntity(
+                modelName = "claude-haiku-4-5-20251001",
+                promptTokens = 100,
+                completionTokens = 80,
+                estimatedCostUsd = BigDecimal("0.000400"),
+            ),
+            LlmCostLogEntity(
+                modelName = "claude-sonnet-4-6",
+                promptTokens = 200,
+                completionTokens = 160,
+                estimatedCostUsd = BigDecimal("0.003000"),
+            ),
+        ))
+
+        val result = adapter.sumCostByModel()
+
+        assertThat(result["claude-haiku-4-5-20251001"]).isEqualByComparingTo(BigDecimal("0.000800"))
+        assertThat(result["claude-sonnet-4-6"]).isEqualByComparingTo(BigDecimal("0.003000"))
+    }
+
+    @Test
+    fun `sumCostByModel은 데이터가 없으면 빈 맵을 반환한다`() = runTest {
+        assertThat(adapter.sumCostByModel()).isEmpty()
+    }
+
+    @Test
+    fun `totalLlmCostSummary는 전체 비용 합계와 호출 수를 반환한다`() = runTest {
+        llmCostLogRepository.saveAll(listOf(
+            LlmCostLogEntity(
+                modelName = "claude-haiku-4-5-20251001",
+                promptTokens = 100,
+                completionTokens = 80,
+                estimatedCostUsd = BigDecimal("0.000400"),
+            ),
+            LlmCostLogEntity(
+                modelName = "claude-haiku-4-5-20251001",
+                promptTokens = 100,
+                completionTokens = 80,
+                estimatedCostUsd = BigDecimal("0.000400"),
+            ),
+        ))
+
+        val summary = adapter.totalLlmCostSummary()
+
+        assertThat(summary.totalCost).isEqualByComparingTo(BigDecimal("0.000800"))
+        assertThat(summary.totalCalls).isEqualTo(2L)
+    }
+
+    @Test
+    fun `totalLlmCostSummary는 데이터가 없으면 ZERO와 0을 반환한다`() = runTest {
+        val summary = adapter.totalLlmCostSummary()
+
+        assertThat(summary.totalCost).isEqualByComparingTo(BigDecimal.ZERO)
+        assertThat(summary.totalCalls).isEqualTo(0L)
     }
 }

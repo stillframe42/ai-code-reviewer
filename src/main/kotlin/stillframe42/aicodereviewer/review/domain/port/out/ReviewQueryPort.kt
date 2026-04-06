@@ -2,6 +2,7 @@ package stillframe42.aicodereviewer.review.domain.port.out
 
 import stillframe42.aicodereviewer.review.domain.model.IssueCategory
 import stillframe42.aicodereviewer.review.domain.model.ReviewRequestStatus
+import java.math.BigDecimal
 import java.time.Instant
 
 // 어댑터 → 포트 반환용 내부 데이터 클래스 (ReviewRequestEntity + ReviewResultEntity 조합)
@@ -18,11 +19,20 @@ data class ReviewSummaryResult(
     val modelName: String?,
 )
 
+// LLM 비용 집계 결과 — 전체 누적 비용 합계 + 호출 수
+data class LlmCostSummary(
+    val totalCost: BigDecimal,
+    val totalCalls: Long,
+)
+
 // 리뷰 통계 조회 결과 — UseCase 반환용 도메인 데이터
 data class ReviewStatsResult(
     val totalReviews: Long,
     val categoryDistribution: Map<IssueCategory, Long>,
     val averageToolCallCount: Double,
+    val costByModel: Map<String, BigDecimal>,
+    val cacheHitRate: Double,
+    val estimatedSavings: BigDecimal,
 )
 
 // 리뷰 조회 아웃바운드 포트 — 읽기 전용
@@ -39,4 +49,10 @@ interface ReviewQueryPort {
 
     // 전체 리뷰의 평균 Tool 호출 횟수
     suspend fun averageToolCallCount(): Double
+
+    // 모델명별 누적 LLM 비용 합계 (llm_cost_logs GROUP BY model_name)
+    suspend fun sumCostByModel(): Map<String, BigDecimal>
+
+    // 전체 LLM 호출 누적 비용 합계 + 호출 수 (estimatedSavings 계산용)
+    suspend fun totalLlmCostSummary(): LlmCostSummary
 }

@@ -5,8 +5,10 @@ import kotlinx.coroutines.withContext
 import org.springframework.data.domain.PageRequest
 import org.springframework.stereotype.Component
 import stillframe42.aicodereviewer.review.domain.model.IssueCategory
+import stillframe42.aicodereviewer.review.domain.port.out.LlmCostSummary
 import stillframe42.aicodereviewer.review.domain.port.out.ReviewQueryPort
 import stillframe42.aicodereviewer.review.domain.port.out.ReviewSummaryResult
+import java.math.BigDecimal
 
 // ReviewQueryPort 구현체 — JPA Repository로 리뷰 통계/조회를 처리한다
 @Component
@@ -14,6 +16,7 @@ class ReviewQueryAdapter(
     private val reviewRequestRepository: ReviewRequestRepository,
     private val reviewResultRepository: ReviewResultRepository,
     private val reviewIssueCategoryRepository: ReviewIssueCategoryRepository,
+    private val llmCostLogRepository: LlmCostLogRepository,
 ) : ReviewQueryPort {
 
     override suspend fun findLatestByRepoAndPr(
@@ -65,5 +68,17 @@ class ReviewQueryAdapter(
             .map { it.toolCallCount.toLong() }
             .fold(0L to 0L) { (sum, count), v -> (sum + v) to (count + 1L) }
             .let { (sum, count) -> if (count == 0L) 0.0 else sum.toDouble() / count }
+    }
+
+    override suspend fun sumCostByModel(): Map<String, BigDecimal> = withContext(Dispatchers.IO) {
+        llmCostLogRepository.sumCostGroupByModel()
+            .associate { row -> (row[0] as String) to (row[1] as BigDecimal) }
+    }
+
+    override suspend fun totalLlmCostSummary(): LlmCostSummary = withContext(Dispatchers.IO) {
+        LlmCostSummary(
+            totalCost = llmCostLogRepository.sumTotalCost() ?: BigDecimal.ZERO,
+            totalCalls = llmCostLogRepository.count(),
+        )
     }
 }
