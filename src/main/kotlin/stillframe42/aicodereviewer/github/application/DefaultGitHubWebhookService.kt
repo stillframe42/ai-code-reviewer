@@ -105,7 +105,7 @@ class DefaultGitHubWebhookService(
         reviewRequestId?.let { id ->
             val now = Instant.now()
             val status = if (review != null) {
-                runOrWarn("리뷰 결과 저장 실패") { reviewPersistencePort.saveReviewResult(id, review, null) }
+                runOrWarn("리뷰 결과 저장 실패") { reviewPersistencePort.saveReviewResult(id, review, review.modelName) }
                 ReviewRequestStatus.DONE
             } else {
                 ReviewRequestStatus.FAILED
