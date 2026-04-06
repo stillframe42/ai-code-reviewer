@@ -69,4 +69,17 @@ class LlmMetricsTest {
 
         assertThat(count).isEqualTo(300.0)
     }
+
+    @Test
+    fun `소수점 이하 마이크로달러는 반올림된다`() {
+        // 0.0000015 USD → 1.5 마이크로달러 → 반올림 → 2
+        metrics.recordCost("claude-haiku-4-5-20251001", BigDecimal("0.0000015"))
+
+        val count = registry.get("llm.cost.total")
+            .tag("model", "claude-haiku-4-5-20251001")
+            .counter()
+            .count()
+
+        assertThat(count).isEqualTo(2.0)
+    }
 }

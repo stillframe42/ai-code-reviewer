@@ -3,6 +3,7 @@ package stillframe42.aicodereviewer.common.metrics
 import io.micrometer.core.instrument.Counter
 import io.micrometer.core.instrument.MeterRegistry
 import java.math.BigDecimal
+import java.math.RoundingMode
 import org.springframework.stereotype.Component
 
 @Component
@@ -22,7 +23,9 @@ class LlmMetrics(private val meterRegistry: MeterRegistry) {
     }
 
     fun recordCost(model: String, costUsd: BigDecimal) {
-        val costMicro = costUsd.multiply(BigDecimal(1_000_000)).toLong()
+        val costMicro = costUsd.multiply(BigDecimal(1_000_000))
+            .setScale(0, RoundingMode.HALF_UP)
+            .toLong()
         Counter.builder("llm.cost.total")
             .tag("model", model)
             .register(meterRegistry)
