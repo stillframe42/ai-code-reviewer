@@ -21,8 +21,7 @@ class ReviewMetricsTest {
 
     @Test
     fun `리뷰 성공 시 review_requests_total DONE 카운터가 증가한다`() {
-        val sample = metrics.startTimer()
-        metrics.recordReview(sample, "owner/repo", "DONE")
+        metrics.recordReview("owner/repo", "DONE", 100_000_000L)
 
         val count = registry.get("review.requests.total")
             .tag("repo", "owner/repo")
@@ -35,8 +34,7 @@ class ReviewMetricsTest {
 
     @Test
     fun `리뷰 실패 시 review_requests_total FAILED 카운터가 증가한다`() {
-        val sample = metrics.startTimer()
-        metrics.recordReview(sample, "owner/repo", "FAILED")
+        metrics.recordReview("owner/repo", "FAILED", 100_000_000L)
 
         val count = registry.get("review.requests.total")
             .tag("repo", "owner/repo")
@@ -49,8 +47,7 @@ class ReviewMetricsTest {
 
     @Test
     fun `review_duration 타이머가 기록된다`() {
-        val sample = metrics.startTimer()
-        metrics.recordReview(sample, "owner/repo", "DONE")
+        metrics.recordReview("owner/repo", "DONE", 100_000_000L)
 
         val timer = registry.get("review.duration")
             .tag("repo", "owner/repo")

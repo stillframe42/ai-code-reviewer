@@ -1,9 +1,10 @@
 package stillframe42.aicodereviewer.github.application
 
 import kotlinx.coroutines.CancellationException
+import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
 import stillframe42.aicodereviewer.common.Logging
-import stillframe42.aicodereviewer.common.metrics.ReviewMetrics
+import stillframe42.aicodereviewer.common.metrics.event.ReviewCompletedEvent
 import stillframe42.aicodereviewer.core.AiProvider
 import stillframe42.aicodereviewer.github.domain.model.PrReview
 import stillframe42.aicodereviewer.github.domain.model.PrReviewEvent
@@ -31,7 +32,7 @@ class DefaultGitHubWebhookService(
     private val processedEventPort: ProcessedEventPort,
     private val diffPositionResolver: DiffPositionResolver,
     private val reviewPersistencePort: ReviewPersistencePort,
-    private val reviewMetrics: ReviewMetrics,
+    private val eventPublisher: ApplicationEventPublisher,
 ) : GitHubWebhookUseCase, Logging {
 
     // diff position 매핑 + 포맷팅이 완료된 PR 코멘트 구성용 출력
@@ -77,8 +78,8 @@ class DefaultGitHubWebhookService(
             return
         }
 
-        // diff 확인 후 타이머 시작 — 의미 있는 리뷰 플로우 전체 시간을 측정한다
-        val timerSample = reviewMetrics.startTimer()
+        // diff 확인 후 시작 시각 기록 — 의미 있는 리뷰 플로우 전체 시간을 측정한다
+        val startNanos = System.nanoTime()
 
         // 2단계: 리뷰 요청 저장 (PENDING) — 저장 실패가 리뷰 흐름을 중단시키지 않도록 격리
         val reviewRequestId = runOrWarn("리뷰 요청 저장 실패 (리뷰는 계속 진행)") {
@@ -152,12 +153,16 @@ class DefaultGitHubWebhookService(
             installationId = event.installationId,
         )
 
-        // 메트릭 기록 — postPrReview 완료 시점 (Webhook 수신 ~ GitHub 코멘트 등록까지 전체 시간)
+        // 리뷰 완료 이벤트 발행 — 메트릭 기록은 MetricsEventListener가 담당
         val status = if (review != null) "DONE" else "FAILED"
-        reviewMetrics.recordReview(timerSample, event.repositoryFullName, status)
-        if (review != null) {
-            reviewMetrics.recordIssues(review.issues)
-        }
+        eventPublisher.publishEvent(
+            ReviewCompletedEvent(
+                repo = event.repositoryFullName,
+                status = status,
+                issues = review?.issues ?: emptyList(),
+                durationNanos = System.nanoTime() - startNanos,
+            )
+        )
 
         // 리뷰 실패 시 markAsProcessed 호출 안 함 — 다음 이벤트에서 재처리 허용
         if (review == null) return

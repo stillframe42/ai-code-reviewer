@@ -4,6 +4,7 @@ import io.micrometer.core.instrument.Counter
 import io.micrometer.core.instrument.DistributionSummary
 import io.micrometer.core.instrument.MeterRegistry
 import io.micrometer.core.instrument.Timer
+import java.util.concurrent.TimeUnit
 import org.springframework.stereotype.Component
 import stillframe42.aicodereviewer.review.domain.model.CodeIssue
 import stillframe42.aicodereviewer.review.domain.model.IssueSeverity
@@ -11,15 +12,12 @@ import stillframe42.aicodereviewer.review.domain.model.IssueSeverity
 @Component
 class ReviewMetrics(private val meterRegistry: MeterRegistry) {
 
-    fun startTimer(): Timer.Sample = Timer.start(meterRegistry)
-
-    fun recordReview(sample: Timer.Sample, repo: String, status: String) {
-        sample.stop(
-            Timer.builder("review.duration")
-                .tag("repo", repo)
-                .publishPercentiles(0.5, 0.95, 0.99)
-                .register(meterRegistry)
-        )
+    fun recordReview(repo: String, status: String, durationNanos: Long) {
+        Timer.builder("review.duration")
+            .tag("repo", repo)
+            .publishPercentiles(0.5, 0.95, 0.99)
+            .register(meterRegistry)
+            .record(durationNanos, TimeUnit.NANOSECONDS)
         Counter.builder("review.requests.total")
             .tag("repo", repo)
             .tag("status", status)

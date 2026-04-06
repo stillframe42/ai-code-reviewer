@@ -10,9 +10,10 @@ import org.springframework.ai.chat.client.ChatClientRequest
 import org.springframework.ai.chat.client.ChatClientResponse
 import org.springframework.ai.chat.client.advisor.api.CallAdvisor
 import org.springframework.ai.chat.client.advisor.api.CallAdvisorChain
+import org.springframework.context.ApplicationEventPublisher
 import org.springframework.core.Ordered
 import stillframe42.aicodereviewer.common.Logging
-import stillframe42.aicodereviewer.common.metrics.LlmMetrics
+import stillframe42.aicodereviewer.common.metrics.event.LlmCallCompletedEvent
 import stillframe42.aicodereviewer.config.LlmCostProperties
 import stillframe42.aicodereviewer.review.adapter.out.persistence.LlmCostLogRepository
 import stillframe42.aicodereviewer.review.adapter.out.persistence.entity.LlmCostLogEntity
@@ -22,7 +23,7 @@ import stillframe42.aicodereviewer.review.adapter.out.persistence.entity.LlmCost
 class CostTrackingAdvisor(
     private val costProperties: LlmCostProperties,
     private val costLogRepository: LlmCostLogRepository,
-    private val llmMetrics: LlmMetrics,
+    private val eventPublisher: ApplicationEventPublisher,
     // CoroutineScope 주입 — 테스트에서 교체 가능하도록 설계
     // SupervisorJob: 개별 저장 실패가 scope를 취소하지 않도록 격리
     private val scope: CoroutineScope = CoroutineScope(Dispatchers.IO + SupervisorJob()),
@@ -64,8 +65,15 @@ class CostTrackingAdvisor(
             model, totalTokens, cost,
         )
 
-        llmMetrics.recordTokens(model, promptTokens, completionTokens)
-        llmMetrics.recordCost(model, cost)
+        // LLM 호출 완료 이벤트 발행 — 메트릭 기록은 MetricsEventListener가 담당
+        eventPublisher.publishEvent(
+            LlmCallCompletedEvent(
+                model = model,
+                promptTokens = promptTokens,
+                completionTokens = completionTokens,
+                costUsd = cost,
+            )
+        )
 
         costLogRepository.save(
             LlmCostLogEntity(
