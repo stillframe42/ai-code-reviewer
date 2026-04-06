@@ -100,4 +100,28 @@ class ReviewMetricsTest {
 
         assertThat(count).isEqualTo(1L)
     }
+
+    @Test
+    fun `캐시 히트 시 cache_hit_total 카운터가 증가한다`() {
+        metrics.recordCacheHit()
+
+        val count = registry.get("cache.hit.total")
+            .tag("type", "review")
+            .counter()
+            .count()
+
+        assertThat(count).isEqualTo(1.0)
+    }
+
+    @Test
+    fun `캐시 미스 시 cache_miss_total 카운터가 증가한다`() {
+        metrics.recordCacheMiss()
+
+        val count = registry.get("cache.miss.total")
+            .tag("type", "review")
+            .counter()
+            .count()
+
+        assertThat(count).isEqualTo(1.0)
+    }
 }

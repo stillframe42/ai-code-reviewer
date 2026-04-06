@@ -34,6 +34,20 @@ class ReviewMetrics(private val meterRegistry: MeterRegistry) {
         }
     }
 
+    fun recordCacheHit() {
+        Counter.builder("cache.hit.total")
+            .tag("type", "review")
+            .register(meterRegistry)
+            .increment()
+    }
+
+    fun recordCacheMiss() {
+        Counter.builder("cache.miss.total")
+            .tag("type", "review")
+            .register(meterRegistry)
+            .increment()
+    }
+
     // IssueSeverity를 메트릭 태그 레벨로 변환
     private fun IssueSeverity.toMetricTag(): String = when (this) {
         IssueSeverity.CRITICAL, IssueSeverity.MAJOR -> "HIGH"
