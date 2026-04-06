@@ -7,4 +7,5 @@ data class CodeReview(
     val issues: List<CodeIssue>,
     val positives: List<String>,
     val toolCallCount: Int = 0,
+    val modelName: String? = null,  // 사용된 모델명 — DB 저장 및 비용 추적용
 )

@@ -1,5 +1,8 @@
 package stillframe42.aicodereviewer.review.application
 
+import com.github.tomakehurst.wiremock.client.WireMock.containing
+import com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor
+import com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo
 import kotlinx.coroutines.runBlocking
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
@@ -8,6 +11,7 @@ import org.springframework.beans.factory.annotation.Autowired
 import stillframe42.aicodereviewer.core.AiProvider
 import stillframe42.aicodereviewer.integration.AbstractIntegrationTest
 import stillframe42.aicodereviewer.integration.support.WireMockStubs
+import stillframe42.aicodereviewer.review.domain.model.DiffFilterOptions
 import stillframe42.aicodereviewer.review.domain.port.`in`.ReviewUseCase
 
 // DefaultReviewService 통합 테스트 — WireMock으로 AI API를 모킹합니다.
@@ -29,11 +33,8 @@ class DefaultReviewServiceTest : AbstractIntegrationTest() {
             provider = AiProvider.ANTHROPIC
         )
 
-        // 점수 범위 검증
         assertThat(result.overallScore).isBetween(1, 10)
-        // 총평 비어있지 않음 검증
         assertThat(result.summary).isNotBlank()
-        // issues, positives는 null이 아닌 리스트여야 함
         assertThat(result.issues).isNotNull
         assertThat(result.positives).isNotNull
         Unit
@@ -41,7 +42,6 @@ class DefaultReviewServiceTest : AbstractIntegrationTest() {
 
     @Test
     fun `문제가 있는 코드를 리뷰하면 이슈를 감지한다`() = runBlocking {
-        // REVIEW_WITH_ISSUES 픽스처가 이슈 1건을 포함하므로 isNotEmpty 검증 통과
         val result = reviewUseCase.reviewCode(
             code = """
                 fun divide(a: Int, b: Int): Int {
@@ -55,5 +55,49 @@ class DefaultReviewServiceTest : AbstractIntegrationTest() {
         assertThat(result.summary).isNotBlank()
         assertThat(result.issues).isNotEmpty
         Unit
+    }
+
+    @Test
+    fun `CRITICAL 패턴 파일이 포함된 diff는 sonnet 모델을 사용한다`() = runBlocking {
+        // SecurityConfig.kt → **/*Security* 패턴 매칭 → CRITICAL → test-sonnet-model
+        reviewUseCase.reviewCode(
+            code = """
+                diff --git a/src/SecurityConfig.kt b/src/SecurityConfig.kt
+                --- a/src/SecurityConfig.kt
+                +++ b/src/SecurityConfig.kt
+                @@ -1,1 +1,2 @@
+                 class SecurityConfig
+                +    // 보안 강화
+            """.trimIndent(),
+            provider = AiProvider.ANTHROPIC,
+            diffOptions = DiffFilterOptions(),
+        )
+
+        wireMock.verify(
+            postRequestedFor(urlPathEqualTo("/v1/messages"))
+                .withRequestBody(containing("\"model\":\"test-sonnet-model\""))
+        )
+    }
+
+    @Test
+    fun `일반 파일만 포함된 diff는 haiku 모델을 사용한다`() = runBlocking {
+        // MyService.kt → 패턴 미매칭 → NORMAL → test-haiku-model
+        reviewUseCase.reviewCode(
+            code = """
+                diff --git a/src/MyService.kt b/src/MyService.kt
+                --- a/src/MyService.kt
+                +++ b/src/MyService.kt
+                @@ -1,1 +1,2 @@
+                 class MyService
+                +    // 기능 추가
+            """.trimIndent(),
+            provider = AiProvider.ANTHROPIC,
+            diffOptions = DiffFilterOptions(),
+        )
+
+        wireMock.verify(
+            postRequestedFor(urlPathEqualTo("/v1/messages"))
+                .withRequestBody(containing("\"model\":\"test-haiku-model\""))
+        )
     }
 }
