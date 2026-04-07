@@ -1,7 +1,8 @@
-package stillframe42.aicodereviewer.config
+package stillframe42.aicodereviewer.review.domain.service
 
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
+import stillframe42.aicodereviewer.config.AiReviewerProperties
 import stillframe42.aicodereviewer.review.domain.model.PrImportance
 
 class AiModelSelectorTest {

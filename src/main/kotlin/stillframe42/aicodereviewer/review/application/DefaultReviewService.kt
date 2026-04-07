@@ -8,7 +8,7 @@ import kotlinx.coroutines.sync.withPermit
 import org.springframework.stereotype.Service
 import stillframe42.aicodereviewer.common.Logging
 import stillframe42.aicodereviewer.common.metrics.ReviewMetrics
-import stillframe42.aicodereviewer.config.AiModelSelector
+import stillframe42.aicodereviewer.review.domain.service.AiModelSelector
 import stillframe42.aicodereviewer.config.ReviewProperties
 import stillframe42.aicodereviewer.core.AiProvider
 import stillframe42.aicodereviewer.review.domain.model.CodeReview
