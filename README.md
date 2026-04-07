@@ -28,57 +28,17 @@
 | 비동기 | Kotlin Coroutines 1.10.2 |
 | 빌드 도구 | Gradle (Kotlin DSL) |
 | JDK | JDK 21 |
-| DB | PostgreSQL 15 (운영) / H2 (테스트) |
+| DB | PostgreSQL (운영·테스트, Testcontainers) |
 | DB 마이그레이션 | Flyway 10+ |
+| 캐시 | Redis |
+| 옵저버빌리티 | Langfuse, Micrometer |
 | 기본 모델 | claude-haiku-4-5-20251001 |
 
 ---
 
 ## 아키텍처
 
-헥사고날 아키텍처(Ports & Adapters)를 따릅니다. 도메인은 외부 시스템을 직접 참조하지 않으며, 포트 인터페이스를 통해 어댑터와 통신합니다.
-
-```
-┌────────────────────────────────────────────────────────────────────────────┐
-│  Inbound Adapters                                                          │
-│  ┌──────────────┐  ┌──────────────┐  ┌────────────────┐  ┌────────────┐    │
-│  │ChatController│  │ReviewCtrl    │  │ReviewQueryCtrl │  │WebhookCtrl │    │
-│  │POST /api/chat│  │POST /review  │  │GET  /reviews/… │  │POST /github│    │
-│  │     /stream  │  │              │  │GET  /stats     │  │    /webhook│    │
-│  └──────┬───────┘  └──────┬───────┘  └───────┬────────┘  └─────┬──────┘    │
-│  ChatUseCase      ReviewUseCase    ReviewQueryUseCase  GitHubWebhookUseCase│
-│  ┌──────▼───────┐  ┌──────▼───────┐  ┌───────▼────────┐  ┌─────▼───────┐   │
-│  │DefaultChat   │  │DefaultReview │  │DefaultReview   │  │DefaultGitHub│   │
-│  │  Service     │  │  Service     │  │  QueryService  │  │  Webhook    │   │
-│  │              │  │              │  │                │  │  Service    │   │
-│  └──────┬───────┘  └──┬────────┬──┘  └───────┬────────┘  └─────┬───────┘   │
-│  AiChatPort       AiReview   Review       ReviewQuery     GitHubApiPort    │           
-│                     Port   Persist.Port   ReviewUseCase        │           │
-│  ┌──────▼────────────▼────────▼──────────────▼─────────────────▼────────┐  │
-│  │             Outbound Adapters                                        │  │
-│  │  SpringAiChatAdapter  SpringAiReviewAdapter  ReviewPersistenceAdapter│  │
-│  │  ReviewQueryAdapter   GitHubApiAdapter       ProcessedEventAdapter   │  │
-│  └──────────────────────────────────────────────────────────────────────┘  │
-│                    │                │                 │                    │
-│              Spring AI          GitHub API       PostgreSQL                │
-│        (Anthropic / OpenAI)                                                │
-└────────────────────────────────────────────────────────────────────────────┘
-```
-
-### 계층 역할
-
-| 계층 | 역할 | 주요 클래스 |
-|------|------|------------|
-| `domain/model` | 순수 도메인 모델 (외부 의존 없음) | `CodeReview`, `CodeIssue`, `DiffFilterOptions`, `PullRequestEvent` |
-| `domain/port/in` | 인바운드 포트 — UseCase 인터페이스 | `ChatUseCase`, `ReviewUseCase`, `ReviewQueryUseCase`, `GitHubWebhookUseCase` |
-| `domain/port/out` | 아웃바운드 포트 — 외부 시스템 추상화 | `AiChatPort`, `AiReviewPort`, `ReviewPersistencePort`, `GitHubApiPort`, `ProcessedEventPort` |
-| `domain/service` | 순수 도메인 로직 | `DiffPreprocessor`, `FileExtensionClassifier`, `DiffPositionResolver` |
-| `application` | UseCase 구현체 — 포트 조합 | `DefaultChatService`, `DefaultReviewService`, `DefaultReviewQueryService`, `DefaultGitHubWebhookService` |
-| `adapter/in/web` | HTTP 컨트롤러 | `ChatController`, `ReviewController`, `ReviewQueryController`, `WebhookController` |
-| `adapter/out/ai` | AI API 클라이언트 | `SpringAiChatAdapter`, `SpringAiReviewAdapter` |
-| `adapter/out/github` | GitHub API 클라이언트 | `GitHubApiAdapter`, `GitHubAppTokenProvider` |
-| `adapter/out/persistence` | DB 영속성 어댑터 | `ReviewPersistenceAdapter`, `ReviewQueryAdapter`, `ProcessedEventAdapter` |
-| `adapter/out/formatter` | 포맷팅 어댑터 | `MarkdownReviewCommentFormatter` |
+자세한 아키텍처 다이어그램은 [docs/architecture.md](docs/architecture.md)를 참조하세요.
 
 ---
 
@@ -94,7 +54,7 @@
 ### 1. 저장소 클론
 
 ```bash
-git clone https://github.com/your-org/ai-code-reviewer.git
+git clone https://github.com/stillframe42/ai-code-reviewer.git
 cd ai-code-reviewer
 ```
 
@@ -356,7 +316,12 @@ curl http://localhost:8080/api/reviews/stats
     "READABILITY": 48,
     "ARCHITECTURE": 33
   },
-  "averageToolCallCount": 2.4
+  "averageToolCallCount": 2.4,
+  "costByModel": {
+    "claude-haiku-4-5-20251001": 0.0142
+  },
+  "cacheHitRate": 0.35,
+  "estimatedSavings": 0.0051
 }
 ```
 
@@ -373,6 +338,7 @@ Flyway로 마이그레이션을 관리합니다. `src/main/resources/db/migratio
 | `review_results` | AI 리뷰 결과 (요약, 이슈 목록 JSON, 모델명) |
 | `tool_call_logs` | Tool Calling 호출 이력 (도구명, 인자, 응답 크기, 소요 시간) |
 | `review_issue_categories` | 이슈 카테고리 집계용 정규화 테이블 |
+| `llm_cost_logs` | LLM 호출별 비용 기록 (모델명, 프롬프트·완성 토큰, 추정 비용) |
 
 ---
 
@@ -404,16 +370,41 @@ src/
 │   │   ├── AiCodeReviewerApplication.kt
 │   │   ├── core/
 │   │   │   └── AiProvider.kt                  # ANTHROPIC, OPENAI 열거형
-│   │   ├── config/                             # 전역 빈 설정 (@Configuration)
+│   │   ├── config/                             # 전역 빈 설정 (@Configuration, @ConfigurationProperties)
+│   │   │   ├── AdvisorConfig.kt               # Spring AI Advisor 빈 조립
 │   │   │   ├── ChatClientConfig.kt
 │   │   │   ├── ReviewConfig.kt
-│   │   │   └── GitHubConfig.kt
-│   │   ├── common/                             # 공통 컴포넌트
+│   │   │   ├── GitHubConfig.kt
+│   │   │   ├── JacksonConfig.kt
+│   │   │   ├── RedisConfig.kt
+│   │   │   ├── LangfuseObservationConfig.kt
+│   │   │   ├── ToolObservationConfig.kt
+│   │   │   ├── AiReviewerProperties.kt        # @ConfigurationProperties
+│   │   │   ├── GitHubProperties.kt
+│   │   │   ├── LangfuseProperties.kt
+│   │   │   ├── LlmCostProperties.kt
+│   │   │   └── ReviewProperties.kt
+│   │   ├── common/                             # 기능 횡단 공통 컴포넌트
 │   │   │   ├── GlobalExceptionHandler.kt
 │   │   │   ├── AiPromptBuilder.kt
 │   │   │   ├── TokenEstimator.kt
-│   │   │   ├── JwtSigner.kt
-│   │   │   └── RsaKeyLoader.kt
+│   │   │   ├── Logging.kt                     # Logger 위임 인터페이스
+│   │   │   ├── advisor/                       # Spring AI Advisor 구현체
+│   │   │   │   ├── CostTrackingAdvisor.kt
+│   │   │   │   ├── LoggingAdvisor.kt
+│   │   │   │   └── RetryAdvisor.kt
+│   │   │   ├── cache/
+│   │   │   │   └── AbstractRedisCacheAdapter.kt
+│   │   │   ├── langfuse/                      # Langfuse 옵저버빌리티
+│   │   │   │   ├── LangfuseClient.kt
+│   │   │   │   ├── LangfuseObservationHandler.kt
+│   │   │   │   └── ...
+│   │   │   ├── metrics/                       # Micrometer 메트릭
+│   │   │   │   ├── LlmMetrics.kt
+│   │   │   │   ├── ReviewMetrics.kt
+│   │   │   │   └── ...
+│   │   │   └── port/
+│   │   │       └── CostLogPort.kt             # Advisor → persistence 역방향 의존 제거용 포트
 │   │   ├── chat/                               # 채팅 기능
 │   │   │   ├── domain/port/in/ChatUseCase.kt
 │   │   │   ├── domain/port/out/AiChatPort.kt
@@ -426,13 +417,18 @@ src/
 │   │   │   │   ├── model/                      # CodeReview, CodeIssue, DiffFilterOptions 등
 │   │   │   │   ├── service/
 │   │   │   │   │   ├── DiffPreprocessor.kt
-│   │   │   │   │   └── FileExtensionClassifier.kt
+│   │   │   │   │   ├── FileExtensionClassifier.kt
+│   │   │   │   │   ├── AiModelSelector.kt     # PrImportance → 모델명 선택 도메인 서비스
+│   │   │   │   │   └── PrImportanceAnalyzer.kt
 │   │   │   │   └── port/
 │   │   │   │       ├── in/ReviewUseCase.kt
 │   │   │   │       ├── in/ReviewQueryUseCase.kt
+│   │   │   │       ├── in/ReviewQueryResult.kt # UseCase 반환 결과 타입 (port/in에 위치)
 │   │   │   │       ├── out/AiReviewPort.kt
 │   │   │   │       ├── out/ReviewPersistencePort.kt
-│   │   │   │       └── out/ReviewQueryPort.kt
+│   │   │   │       ├── out/ReviewQueryPort.kt
+│   │   │   │       ├── out/ReviewCacheStore.kt
+│   │   │   │       └── out/ReviewCacheStatsStore.kt
 │   │   │   ├── application/
 │   │   │   │   ├── DefaultReviewService.kt
 │   │   │   │   └── DefaultReviewQueryService.kt
@@ -440,7 +436,13 @@ src/
 │   │   │       ├── in/web/ReviewController.kt
 │   │   │       ├── in/web/ReviewQueryController.kt
 │   │   │       ├── out/ai/SpringAiReviewAdapter.kt
-│   │   │       └── out/persistence/ReviewPersistenceAdapter.kt
+│   │   │       ├── out/cache/                 # Redis 캐시 어댑터
+│   │   │       │   ├── RedisReviewCacheAdapter.kt
+│   │   │       │   └── RedisReviewCacheStatsAdapter.kt
+│   │   │       └── out/persistence/
+│   │   │           ├── ReviewPersistenceAdapter.kt
+│   │   │           ├── ReviewQueryAdapter.kt
+│   │   │           └── CostLogAdapter.kt      # CostLogPort 구현체
 │   │   └── github/                             # GitHub Webhook & API 통합
 │   │       ├── domain/
 │   │       │   ├── model/                      # PullRequestEvent, PrFile 등
@@ -452,8 +454,14 @@ src/
 │   │       └── adapter/
 │   │           ├── in/web/WebhookController.kt
 │   │           ├── in/web/HmacSignatureVerifier.kt
-│   │           ├── out/github/GitHubApiAdapter.kt
-│   │           ├── out/github/GitHubAppTokenProvider.kt
+│   │           ├── out/github/
+│   │           │   ├── GitHubApiAdapter.kt
+│   │           │   ├── GitHubAppTokenProvider.kt
+│   │           │   ├── GitHubAppJwtGenerator.kt
+│   │           │   ├── JwtSigner.kt           # RS256 JWT 서명 (GitHub App 전용)
+│   │           │   ├── RsaKeyLoader.kt        # PEM → PrivateKey 변환 (GitHub App 전용)
+│   │           │   ├── client/GitHubHttpClient.kt
+│   │           │   └── ratelimit/             # GitHub API Rate Limit 관리
 │   │           ├── out/formatter/MarkdownReviewCommentFormatter.kt
 │   │           └── out/persistence/ProcessedEventAdapter.kt
 │   └── resources/
@@ -463,9 +471,10 @@ src/
 │       ├── application-github.yml              # GitHub App 설정
 │       ├── application-secret.yml              # API 키 (gitignore)
 │       ├── db/migration/                       # Flyway 마이그레이션
-│       │   ├── V1__create_processed_event.sql
+│       │   ├── V1__create_processed_event_table.sql
 │       │   ├── V2__create_review_tables.sql
-│       │   └── V3__add_tool_call_count.sql
+│       │   ├── V3__add_tool_call_count_and_issue_categories.sql
+│       │   └── V4__create_llm_cost_logs.sql
 │       └── prompts/
 │           ├── review-system-v1.st ~ v8.st     # 리뷰 시스템 프롬프트 버전별
 │           ├── review-user.st
