@@ -1,4 +1,4 @@
-package stillframe42.aicodereviewer.common
+package stillframe42.aicodereviewer.github.adapter.out.github
 
 import io.jsonwebtoken.Jwts
 import org.assertj.core.api.Assertions.assertThat

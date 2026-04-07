@@ -1,4 +1,4 @@
-package stillframe42.aicodereviewer.common
+package stillframe42.aicodereviewer.github.adapter.out.github
 
 import org.springframework.stereotype.Component
 import java.io.File
@@ -7,8 +7,7 @@ import java.security.PrivateKey
 import java.security.spec.PKCS8EncodedKeySpec
 import java.util.Base64
 
-// RSA Private Key 로더 — PEM 파일 경로를 받아 PrivateKey를 반환하는 공통 유틸
-// GitHub App 외에도 RSA 키가 필요한 모든 곳에서 재사용 가능하다
+// RSA Private Key 로더 — GitHub App PEM 파일을 읽어 PrivateKey를 반환한다
 @Component
 class RsaKeyLoader {
 

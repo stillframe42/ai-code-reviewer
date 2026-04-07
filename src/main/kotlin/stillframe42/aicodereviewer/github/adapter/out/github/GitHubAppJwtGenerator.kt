@@ -1,8 +1,6 @@
 package stillframe42.aicodereviewer.github.adapter.out.github
 
 import org.springframework.stereotype.Component
-import stillframe42.aicodereviewer.common.JwtSigner
-import stillframe42.aicodereviewer.common.RsaKeyLoader
 import stillframe42.aicodereviewer.config.GitHubProperties
 import java.security.PrivateKey
 

@@ -1,4 +1,4 @@
-package stillframe42.aicodereviewer.common
+package stillframe42.aicodereviewer.github.adapter.out.github
 
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
