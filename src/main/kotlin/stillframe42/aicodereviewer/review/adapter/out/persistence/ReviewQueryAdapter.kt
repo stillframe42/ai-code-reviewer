@@ -2,7 +2,9 @@ package stillframe42.aicodereviewer.review.adapter.out.persistence
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import org.springframework.data.domain.Page
 import org.springframework.data.domain.PageRequest
+import org.springframework.data.domain.Pageable
 import org.springframework.stereotype.Component
 import stillframe42.aicodereviewer.review.domain.model.IssueCategory
 import stillframe42.aicodereviewer.review.domain.port.out.LlmCostSummary
@@ -49,36 +51,34 @@ class ReviewQueryAdapter(
     }
 
     override suspend fun countByCategory(): Map<IssueCategory, Long> = withContext(Dispatchers.IO) {
-        // chunk 단위로 읽어 애플리케이션에서 집계 — GROUP BY 풀스캔 대신 I/O 분산
-        generateSequence(reviewIssueCategoryRepository.findAllBy(PageRequest.of(0, 1000))) { prev ->
-            if (prev.hasNext()) reviewIssueCategoryRepository.findAllBy(prev.nextPageable()) else null
-        }
-            .flatten()
+        chunkedSequence { reviewIssueCategoryRepository.findAllBy(it) }
             .groupingBy { it.category }
             .fold(0L) { acc, _ -> acc + 1L }
             .let { counts -> IssueCategory.entries.associateWith { counts[it] ?: 0L } }
     }
 
     override suspend fun averageToolCallCount(): Double = withContext(Dispatchers.IO) {
-        // chunk 단위로 읽어 애플리케이션에서 평균 계산 — AVG 집계 쿼리 대신 I/O 분산
-        generateSequence(reviewResultRepository.findAllBy(PageRequest.of(0, 1000))) { prev ->
-            if (prev.hasNext()) reviewResultRepository.findAllBy(prev.nextPageable()) else null
-        }
-            .flatten()
+        chunkedSequence { reviewResultRepository.findAllBy(it) }
             .map { it.toolCallCount.toLong() }
             .fold(0L to 0L) { (sum, count), v -> (sum + v) to (count + 1L) }
             .let { (sum, count) -> if (count == 0L) 0.0 else sum.toDouble() / count }
     }
 
     override suspend fun sumCostByModel(): Map<String, BigDecimal> = withContext(Dispatchers.IO) {
-        llmCostLogRepository.sumCostGroupByModel()
-            .associate { row -> (row[0] as String) to (row[1] as? BigDecimal ?: BigDecimal(row[1].toString())) }
+        chunkedSequence { llmCostLogRepository.findAllBy(it) }
+            .groupingBy { it.modelName }
+            .fold(BigDecimal.ZERO) { acc, entity -> acc + entity.estimatedCostUsd }
     }
 
     override suspend fun totalLlmCostSummary(): LlmCostSummary = withContext(Dispatchers.IO) {
-        LlmCostSummary(
-            totalCost = llmCostLogRepository.sumTotalCost() ?: BigDecimal.ZERO,
-            totalCalls = llmCostLogRepository.count(),
-        )
+        chunkedSequence { llmCostLogRepository.findAllBy(it) }
+            .fold(BigDecimal.ZERO to 0L) { (sum, count), entity -> (sum + entity.estimatedCostUsd) to (count + 1L) }
+            .let { (totalCost, totalCalls) -> LlmCostSummary(totalCost = totalCost, totalCalls = totalCalls) }
     }
+
+    // 청크(1000건) 단위로 전체 레코드를 순회하는 Sequence — 집계 쿼리 대신 I/O 분산
+    private fun <T : Any> chunkedSequence(fetch: (Pageable) -> Page<T>): Sequence<T> =
+        generateSequence(fetch(PageRequest.of(0, 1000))) { prev ->
+            if (prev.hasNext()) fetch(prev.nextPageable()) else null
+        }.flatten()
 }
