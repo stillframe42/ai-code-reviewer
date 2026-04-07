@@ -7,7 +7,7 @@ import org.springframework.context.annotation.Configuration
 import stillframe42.aicodereviewer.common.advisor.CostTrackingAdvisor
 import stillframe42.aicodereviewer.common.advisor.LoggingAdvisor
 import stillframe42.aicodereviewer.common.advisor.RetryAdvisor
-import stillframe42.aicodereviewer.review.adapter.out.persistence.LlmCostLogRepository
+import stillframe42.aicodereviewer.common.port.CostLogPort
 
 // Advisor 빈 등록 — 모든 어드바이저를 여기서 중앙 관리
 @Configuration
@@ -23,7 +23,7 @@ class AdvisorConfig {
     @Bean
     fun costTrackingAdvisor(
         costProperties: LlmCostProperties,
-        costLogRepository: LlmCostLogRepository,
+        costLogPort: CostLogPort,
         eventPublisher: ApplicationEventPublisher,
-    ): CostTrackingAdvisor = CostTrackingAdvisor(costProperties, costLogRepository, eventPublisher)
+    ): CostTrackingAdvisor = CostTrackingAdvisor(costProperties, costLogPort, eventPublisher)
 }

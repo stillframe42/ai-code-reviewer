@@ -7,9 +7,9 @@ import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Pageable
 import org.springframework.stereotype.Component
 import stillframe42.aicodereviewer.review.domain.model.IssueCategory
+import stillframe42.aicodereviewer.review.domain.port.`in`.ReviewSummaryResult
 import stillframe42.aicodereviewer.review.domain.port.out.LlmCostSummary
 import stillframe42.aicodereviewer.review.domain.port.out.ReviewQueryPort
-import stillframe42.aicodereviewer.review.domain.port.out.ReviewSummaryResult
 import java.math.BigDecimal
 
 // ReviewQueryPort 구현체 — JPA Repository로 리뷰 통계/조회를 처리한다

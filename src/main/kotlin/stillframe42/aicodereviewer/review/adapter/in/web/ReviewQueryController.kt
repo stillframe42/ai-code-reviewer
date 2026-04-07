@@ -8,8 +8,8 @@ import org.springframework.web.bind.annotation.RestController
 import stillframe42.aicodereviewer.review.adapter.`in`.web.dto.ReviewStatsResponse
 import stillframe42.aicodereviewer.review.adapter.`in`.web.dto.ReviewSummaryResponse
 import stillframe42.aicodereviewer.review.domain.port.`in`.ReviewQueryUseCase
-import stillframe42.aicodereviewer.review.domain.port.out.ReviewStatsResult
-import stillframe42.aicodereviewer.review.domain.port.out.ReviewSummaryResult
+import stillframe42.aicodereviewer.review.domain.port.`in`.ReviewStatsResult
+import stillframe42.aicodereviewer.review.domain.port.`in`.ReviewSummaryResult
 
 @RestController
 @RequestMapping("/api/reviews")

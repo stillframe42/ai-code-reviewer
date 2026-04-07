@@ -3,7 +3,7 @@ package stillframe42.aicodereviewer.review.adapter.out.persistence
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.springframework.stereotype.Component
-import tools.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.databind.ObjectMapper
 import org.springframework.transaction.support.TransactionTemplate
 import stillframe42.aicodereviewer.review.adapter.out.persistence.entity.ReviewIssueCategoryEntity
 import stillframe42.aicodereviewer.review.adapter.out.persistence.entity.ReviewRequestEntity

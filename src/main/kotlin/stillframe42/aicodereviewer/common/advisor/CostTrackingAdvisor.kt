@@ -14,15 +14,15 @@ import org.springframework.context.ApplicationEventPublisher
 import org.springframework.core.Ordered
 import stillframe42.aicodereviewer.common.Logging
 import stillframe42.aicodereviewer.common.metrics.event.LlmCallCompletedEvent
+import stillframe42.aicodereviewer.common.port.CostLogEntry
+import stillframe42.aicodereviewer.common.port.CostLogPort
 import stillframe42.aicodereviewer.config.LlmCostProperties
-import stillframe42.aicodereviewer.review.adapter.out.persistence.LlmCostLogRepository
-import stillframe42.aicodereviewer.review.adapter.out.persistence.entity.LlmCostLogEntity
 
 // AI 호출 비용을 계산하여 DB에 비동기로 기록하는 어드바이저
 // StreamAdvisor는 구현하지 않는다 — usage 메타데이터는 전체 응답 완료 후에만 확인 가능하다
 class CostTrackingAdvisor(
     private val costProperties: LlmCostProperties,
-    private val costLogRepository: LlmCostLogRepository,
+    private val costLogPort: CostLogPort,
     private val eventPublisher: ApplicationEventPublisher,
     // CoroutineScope 주입 — 테스트에서 교체 가능하도록 설계
     // SupervisorJob: 개별 저장 실패가 scope를 취소하지 않도록 격리
@@ -75,8 +75,8 @@ class CostTrackingAdvisor(
             )
         )
 
-        costLogRepository.save(
-            LlmCostLogEntity(
+        costLogPort.save(
+            CostLogEntry(
                 modelName = model,
                 promptTokens = promptTokens,
                 completionTokens = completionTokens,

@@ -4,10 +4,10 @@ import java.math.BigDecimal
 import java.math.RoundingMode
 import org.springframework.stereotype.Service
 import stillframe42.aicodereviewer.review.domain.port.`in`.ReviewQueryUseCase
+import stillframe42.aicodereviewer.review.domain.port.`in`.ReviewStatsResult
+import stillframe42.aicodereviewer.review.domain.port.`in`.ReviewSummaryResult
 import stillframe42.aicodereviewer.review.domain.port.out.ReviewCacheStatsStore
 import stillframe42.aicodereviewer.review.domain.port.out.ReviewQueryPort
-import stillframe42.aicodereviewer.review.domain.port.out.ReviewStatsResult
-import stillframe42.aicodereviewer.review.domain.port.out.ReviewSummaryResult
 
 // 리뷰 조회 유스케이스 구현 — ReviewQueryPort와 ReviewCacheStatsStore를 조합하여 통계를 반환한다
 @Service
