@@ -44,6 +44,7 @@ dependencies {
     // Spring AI
     implementation("org.springframework.ai:spring-ai-starter-model-anthropic")
     implementation("org.springframework.ai:spring-ai-starter-model-openai")
+    implementation("org.springframework.ai:spring-ai-starter-vector-store-pgvector")  // pgvector VectorStore
 
     // GitHub App JWT 인증
     implementation("io.jsonwebtoken:jjwt-api:0.12.6")
