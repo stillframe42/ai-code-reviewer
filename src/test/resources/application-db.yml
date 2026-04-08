@@ -10,3 +10,6 @@ spring:
       ddl-auto: create-drop
   flyway:
     enabled: false              # 테스트에서는 Flyway 비활성화, JPA create-drop 사용
+  autoconfigure:
+    exclude:
+      - org.springframework.ai.vectorstore.pgvector.autoconfigure.PgVectorStoreAutoConfiguration

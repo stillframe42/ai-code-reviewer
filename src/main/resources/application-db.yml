@@ -10,3 +10,10 @@ spring:
     database-platform: org.hibernate.dialect.PostgreSQLDialect
   flyway:
     enabled: true
+  ai:
+    vectorstore:
+      pgvector:
+        initialize-schema: false   # 스키마는 Flyway V5 마이그레이션이 관리
+        index-type: HNSW
+        distance-type: COSINE_DISTANCE
+        dimensions: 1536
