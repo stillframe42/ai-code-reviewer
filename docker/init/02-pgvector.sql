@@ -1,0 +1,17 @@
+-- docker/init/02-pgvector.sql
+-- pgvector 확장 활성화 및 코드 컨벤션 임베딩 테이블 초기화
+CREATE EXTENSION IF NOT EXISTS vector;
+
+CREATE TABLE IF NOT EXISTS code_conventions (
+    id         BIGSERIAL PRIMARY KEY,
+    content    TEXT        NOT NULL,
+    metadata   JSONB,
+    embedding  vector(1536),    -- OpenAI text-embedding-3-small 차원
+    created_at TIMESTAMP   DEFAULT NOW()
+);
+
+-- IVFFlat 인덱스: 코사인 유사도 기반 ANN 검색
+CREATE INDEX IF NOT EXISTS idx_code_conventions_embedding
+    ON code_conventions
+    USING ivfflat (embedding vector_cosine_ops)
+    WITH (lists = 100);

@@ -1,8 +1,6 @@
 services:
   postgres:
-    # pgvector 사용 시 이미지를 아래로 교체:
-    # image: pgvector/pgvector:pg15
-    image: postgres:15
+    image: pgvector/pgvector:pg16
     container_name: aireviewer-postgres
     environment:
       POSTGRES_DB: aireviewer
