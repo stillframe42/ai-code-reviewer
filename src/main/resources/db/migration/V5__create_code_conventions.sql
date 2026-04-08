@@ -1,5 +1,6 @@
 -- 코드 컨벤션 임베딩 테이블 — pgvector 기반 유사도 검색용
--- vector 확장은 docker/init/02-pgvector.sql에서 사전 활성화됨
+-- Testcontainers 환경에서는 init SQL이 실행되지 않으므로 여기서도 확장을 활성화한다
+CREATE EXTENSION IF NOT EXISTS vector;
 CREATE TABLE code_conventions (
     id         BIGSERIAL PRIMARY KEY,
     content    TEXT        NOT NULL,

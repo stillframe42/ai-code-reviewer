@@ -25,7 +25,7 @@ abstract class AbstractIntegrationTest {
         // Singleton — JVM당 컨테이너/서버 1개만 기동
         // also { it.start() }: 클래스 로드 시점에 즉시 기동 → @DynamicPropertySource 호출 전 준비 완료
         val postgres: PostgreSQLContainer =
-            PostgreSQLContainer("postgres:16-alpine").also { it.start() }
+            PostgreSQLContainer("pgvector/pgvector:pg16").also { it.start() }
 
         val wireMock: WireMockServer =
             WireMockServer(options().dynamicPort()).also { it.start() }
