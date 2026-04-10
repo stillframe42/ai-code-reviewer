@@ -6,14 +6,14 @@ import org.springframework.context.event.EventListener
 import org.springframework.stereotype.Service
 import stillframe42.aicodereviewer.common.Logging
 import stillframe42.aicodereviewer.config.RagProperties
-import stillframe42.aicodereviewer.rag.adapter.out.ai.DocumentPreprocessor
+import stillframe42.aicodereviewer.rag.adapter.out.ai.MarkdownHeaderSplitter
 import stillframe42.aicodereviewer.rag.domain.port.`in`.ConventionIndexUseCase
 import stillframe42.aicodereviewer.rag.domain.port.out.ConventionVectorPort
 
 @Service
 class DefaultConventionIndexService(
     private val vectorPort: ConventionVectorPort,
-    private val preprocessor: DocumentPreprocessor,
+    private val splitter: MarkdownHeaderSplitter,
     private val ragProperties: RagProperties,
 ) : ConventionIndexUseCase, Logging {
 
@@ -43,7 +43,7 @@ class DefaultConventionIndexService(
 
     private fun doIndex() {
         logger.info("컨벤션 문서 인덱싱을 시작합니다.")
-        val documents = preprocessor.prepare()
+        val documents = splitter.prepare()
         vectorPort.save(documents)
         logger.info("컨벤션 문서 인덱싱 완료. 총 {}건 저장.", documents.size)
     }

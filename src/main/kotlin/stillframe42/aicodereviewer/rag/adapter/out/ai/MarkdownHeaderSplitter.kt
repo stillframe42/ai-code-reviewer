@@ -2,10 +2,12 @@ package stillframe42.aicodereviewer.rag.adapter.out.ai
 
 import org.springframework.ai.document.Document
 import org.springframework.core.io.ClassPathResource
+import org.springframework.stereotype.Component
 
 // 마크다운 문서를 ## / ### 헤더 기준으로 분리하여 Document 리스트를 반환한다.
 // 코드 블록(```) 내 ## 는 헤더로 인식하지 않는다.
 // 헤더 이전 intro 내용 및 빈 섹션은 Document를 생성하지 않는다.
+@Component
 class MarkdownHeaderSplitter {
 
 
