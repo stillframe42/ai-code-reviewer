@@ -97,8 +97,9 @@ class OpenAiEmbeddingBatchTransformer : ResponseDefinitionTransformerV2 {
 
     private val objectMapper = ObjectMapper()
 
-    // zero vector 1536차원 — 실제 임베딩 품질 검증이 아닌 저장 흐름 확인 목적
-    private val zeroVector = (1..1536).map { 0.0f }
+    // non-zero vector 1536차원 — zero vector는 pgvector cosine 검색에서 0건을 반환하므로 0.1f로 설정
+    // 실제 임베딩 품질 검증이 아닌 저장 및 검색 흐름 확인 목적
+    private val zeroVector = (1..1536).map { 0.1f }
 
     override fun getName(): String = "openai-embedding-batch"
 

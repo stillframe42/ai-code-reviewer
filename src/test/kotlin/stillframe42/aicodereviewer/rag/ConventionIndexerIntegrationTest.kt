@@ -107,6 +107,7 @@ class ConventionIndexerIntegrationTest : AbstractIntegrationTest() {
         val results = vectorPort.search("Kotlin null safety", topK = 3)
 
         // then
+        assertThat(results.size).isGreaterThan(0)
         assertThat(results.size).isLessThanOrEqualTo(3)
     }
 
