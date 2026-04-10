@@ -90,11 +90,8 @@ tasks.withType<KotlinCompile> {
     }
 }
 
+// 모든 테스트 태스크 공통 설정 (JUnit 플랫폼 설정 제외)
 tasks.withType<Test> {
-    useJUnitPlatform {
-        excludeTags("experiment")   // 일반 테스트 실행 시 실험 테스트 제외
-    }
-
     // 테스트 stdout(println) 콘솔에 출력
     testLogging {
         showStandardStreams = true
@@ -105,4 +102,22 @@ tasks.withType<Test> {
 
     // ANTHROPIC_API_KEY 변경 시 Gradle 캐시 무효화 (up-to-date 방지)
     inputs.property("anthropicApiKey", System.getenv("ANTHROPIC_API_KEY") ?: "")
+}
+
+// 기본 테스트: experiment 태그 제외
+tasks.test {
+    useJUnitPlatform {
+        excludeTags("experiment")
+    }
+}
+
+// 청킹 전략 실험 테스트 전용 태스크 — 실제 OpenAI API 키(sk-*) 필요
+// 실행: ./gradlew experimentTest
+tasks.register<Test>("experimentTest") {
+    description = "청킹 전략 실험 테스트 실행 (실제 OpenAI API 사용)"
+    group = "verification"
+
+    useJUnitPlatform {
+        includeTags("experiment")
+    }
 }

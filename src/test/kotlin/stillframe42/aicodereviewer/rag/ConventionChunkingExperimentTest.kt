@@ -15,8 +15,6 @@ import org.springframework.test.context.ActiveProfiles
 import org.springframework.test.context.DynamicPropertyRegistry
 import org.springframework.test.context.DynamicPropertySource
 import org.testcontainers.containers.GenericContainer
-import org.testcontainers.junit.jupiter.Container
-import org.testcontainers.junit.jupiter.Testcontainers
 import org.testcontainers.postgresql.PostgreSQLContainer
 import stillframe42.aicodereviewer.rag.adapter.out.ai.DocumentPreprocessor
 import stillframe42.aicodereviewer.rag.domain.port.out.ConventionVectorPort
@@ -26,25 +24,22 @@ import java.io.File
 // 실행 조건:
 //   - application-secret.yml에 실제 openai.api-key(sk-*)가 있어야 함
 //   - CI에서는 openai.api-key=test-dummy-key이므로 @BeforeAll에서 자동 스킵됨
-// 실행 방법: ./gradlew test --tests "*.ConventionChunkingExperimentTest"
+// 실행 방법: ./gradlew experimentTest
 @Tag("experiment")
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
 @ActiveProfiles("integration-test")
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-@Testcontainers
 class ConventionChunkingExperimentTest {
 
     companion object {
-        @Container
-        @JvmStatic
+        // also { it.start() }: 클래스 로드 시점에 즉시 기동 → @DynamicPropertySource 호출 전 준비 완료
         val postgres: PostgreSQLContainer =
-            PostgreSQLContainer("pgvector/pgvector:pg16")
+            PostgreSQLContainer("pgvector/pgvector:pg16").also { it.start() }
 
-        @Container
-        @JvmStatic
         val redis: GenericContainer<*> =
             GenericContainer("redis:7-alpine")
                 .withExposedPorts(6379)
+                .also { it.start() }
 
         @JvmStatic
         @DynamicPropertySource
