@@ -117,6 +117,10 @@ tasks.register<Test>("experimentTest") {
     description = "청킹 전략 실험 테스트 실행 (실제 OpenAI API 사용)"
     group = "verification"
 
+    // 커스텀 Test 태스크는 기본 test 태스크의 클래스패스를 명시적으로 지정해야 한다
+    testClassesDirs = sourceSets["test"].output.classesDirs
+    classpath = sourceSets["test"].runtimeClasspath
+
     useJUnitPlatform {
         includeTags("experiment")
     }
