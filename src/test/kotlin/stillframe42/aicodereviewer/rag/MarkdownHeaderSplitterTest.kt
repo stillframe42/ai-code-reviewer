@@ -115,4 +115,11 @@ class MarkdownHeaderSplitterTest {
         assertThat(docs[0].metadata["source"]).isEqualTo("test.md")
         assertThat(docs[0].metadata["category"]).isEqualTo("TEST")
     }
+
+    @Test
+    fun `architecture-guide에 N+1 쿼리 방지 섹션이 포함된다`() {
+        val docs = splitter.prepare()
+        val entityGraphDoc = docs.find { it.text?.contains("@EntityGraph") == true }
+        assertThat(entityGraphDoc).isNotNull()
+    }
 }

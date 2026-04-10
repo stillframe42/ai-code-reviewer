@@ -355,3 +355,116 @@ class DefaultReviewService : ReviewUseCase {
     private lateinit var aiReviewPort: AiReviewPort
 }
 ```
+
+---
+
+## 9. N+1 쿼리 방지 및 DB 성능 패턴
+
+### 9.1 헥사고날 아키텍처에서 쿼리 최적화 책임
+
+쿼리 최적화는 인프라 세부사항이므로 `adapter/out/persistence` 계층의 책임이다.
+
+- **Application 계층**: "무엇을 조회할지" 요청 — 포트 인터페이스 호출
+- **Adapter 계층**: "어떻게 효율적으로 조회할지" 결정 — fetch 전략, 인덱스 활용
+- Domain/Application 계층은 JPA, JPQL 등 구현 세부사항을 알아서는 안 된다
+
+```kotlin
+// ✅ Application은 포트만 호출 — 쿼리 최적화에 무관심
+class DefaultReviewService(private val reviewPersistencePort: ReviewPersistencePort) {
+    suspend fun findReviews(repoName: String) =
+        reviewPersistencePort.findAllByRepo(repoName)  // 어떻게 로딩하는지 모름
+}
+
+// ✅ Adapter에서 fetch 전략 결정 — N+1 방지
+@Component
+class ReviewPersistenceAdapter(private val repository: ReviewRequestRepository) : ReviewPersistencePort {
+    override suspend fun findAllByRepo(repoName: String) =
+        repository.findAllByRepoFullNameWithFiles(repoName)  // fetch join 적용
+}
+```
+
+### 9.2 N+1 쿼리 방지 패턴
+
+**원인:** JPA 지연 로딩(LAZY) 설정 + 컬렉션 루프 조합
+
+```kotlin
+// ❌ N+1 발생 — review 1건 조회 후 issues를 N번 추가 조회
+val reviews = reviewRepository.findAll()       // 1번 쿼리
+reviews.forEach { it.issues.size }             // N번 추가 쿼리 발생
+```
+
+**해결책 1 — `@EntityGraph`: 단순 연관 관계 즉시 로딩**
+
+```kotlin
+// ✅ @EntityGraph로 fetch join 명시
+@EntityGraph(attributePaths = ["issues"])
+fun findAllByRepoFullName(repoFullName: String): List<ReviewRequestEntity>
+```
+
+**해결책 2 — JPQL `fetch join`: 복잡한 조건이 있을 때**
+
+```kotlin
+// ✅ fetch join으로 연관 엔티티 한 번에 로딩
+@Query("""
+    SELECT r FROM ReviewRequestEntity r
+    LEFT JOIN FETCH r.issues
+    WHERE r.repoFullName = :repoFullName
+""")
+fun findAllByRepoFullNameWithIssues(@Param("repoFullName") repoFullName: String): List<ReviewRequestEntity>
+```
+
+**해결책 3 — `@BatchSize`: 컬렉션을 IN 쿼리로 일괄 로딩**
+
+```kotlin
+// ✅ @BatchSize로 N+1을 N/100 + 1로 감소
+@Entity
+class ReviewRequestEntity {
+    @BatchSize(size = 100)
+    @OneToMany(mappedBy = "review", fetch = FetchType.LAZY)
+    val issues: MutableList<CodeIssueEntity> = mutableListOf()
+}
+```
+
+**전략 선택 기준:**
+
+| 상황 | 권장 전략 |
+|------|----------|
+| 단순 연관 엔티티 조회 | `@EntityGraph` |
+| WHERE 조건이 복잡하거나 다중 조인 | JPQL `fetch join` |
+| 컬렉션이 크고 전체 로딩이 불필요 | `@BatchSize` |
+
+### 9.3 페이지네이션 패턴
+
+```kotlin
+// ✅ 페이지네이션 기본 패턴 — 기본 정렬 필수 (정렬 없으면 결과가 비결정적)
+val pageable = PageRequest.of(0, 20, Sort.by("createdAt").descending())
+val page = reviewRepository.findAllByRepoFullName(repoFullName, pageable)
+```
+
+**count 쿼리 분리 — fetch join 시 필수:**
+
+```kotlin
+// ✅ fetch join 쿼리와 count 쿼리 분리 (count에서 fetch join 제거)
+@Query(
+    value = """
+        SELECT r FROM ReviewRequestEntity r
+        LEFT JOIN FETCH r.issues
+        WHERE r.repoFullName = :repoFullName
+    """,
+    countQuery = """
+        SELECT count(r) FROM ReviewRequestEntity r
+        WHERE r.repoFullName = :repoFullName
+    """,
+)
+fun findPageByRepoFullName(
+    @Param("repoFullName") repoFullName: String,
+    pageable: Pageable,
+): Page<ReviewRequestEntity>
+```
+
+**`Page` vs `Slice` 선택 기준:**
+
+| 타입 | count 쿼리 | 사용 시점 |
+|------|-----------|---------|
+| `Page<T>` | 실행함 (전체 건수 포함) | 전체 페이지 수가 필요한 UI |
+| `Slice<T>` | 실행 안 함 | "더 보기" 방식, 전체 건수 불필요 |
