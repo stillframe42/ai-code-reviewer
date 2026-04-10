@@ -21,14 +21,16 @@ class DocumentPreprocessor(
         "conventions/security-checklist.md" to "SECURITY",
     )
 
+    // 수평선(---)으로 Document 분리하고 코드 예제를 포함하는 마크다운 읽기 설정
+    private val markdownConfig = MarkdownDocumentReaderConfig.builder()
+        .withHorizontalRuleCreateDocument(true)
+        .withIncludeCodeBlock(true)
+        .build()
+
     fun prepare(): List<Document> {
         val rawDocuments = conventionFiles.flatMap { (path, category) ->
             val fileName = path.substringAfterLast("/")
-            val config = MarkdownDocumentReaderConfig.builder()
-                .withHorizontalRuleCreateDocument(true)  // 수평선(---)으로 Document 분리
-                .withIncludeCodeBlock(true)               // 코드 예제 포함
-                .build()
-            MarkdownDocumentReader(ClassPathResource(path), config).get()
+            MarkdownDocumentReader(ClassPathResource(path), markdownConfig).get()
                 .map { doc -> injectMetadata(doc, fileName, category) }
         }
         return textSplitter.apply(rawDocuments)
