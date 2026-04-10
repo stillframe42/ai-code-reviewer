@@ -41,7 +41,7 @@ class DefaultConventionIndexService(
         doIndex()
     }
 
-    private fun doIndex() {
+    private suspend fun doIndex() {
         logger.info("컨벤션 문서 인덱싱을 시작합니다.")
         val documents = splitter.prepare()
         vectorPort.save(documents)
