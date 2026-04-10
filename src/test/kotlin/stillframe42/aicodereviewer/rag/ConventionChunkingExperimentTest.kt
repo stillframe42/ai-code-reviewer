@@ -151,13 +151,14 @@ class ConventionChunkingExperimentTest {
     @Test
     fun `TokenTextSplitter(512, overlap=50) 실험`() {
         // 1. OverlappingTokenSplitter 직접 생성 (Spring Bean 아님)
+        // overlap=50토큰 ≈ overlapChars=200자 (50 × 4자/token 근사)
         val splitter = OverlappingTokenSplitter(chunkSize = 512, overlapChars = 200)
 
         // 2. 재인덱싱 (실제 OpenAI /v1/embeddings 호출)
         vectorPort.deleteAll()
         val docs = splitter.prepare()
         vectorPort.save(docs)
-        println("=== overlap=50: ${docs.size}개 청크 인덱싱 완료 ===")
+        println("=== OverlappingTokenSplitter(chunkSize=512, overlapChars=200): ${docs.size}개 청크 인덱싱 완료 ===")
 
         // 3~4. 10개 질문 검색 + 자동 채점 + chunking-experiment.md 업데이트
         runQueriesAndRecord("512-overlap", docs.size)
