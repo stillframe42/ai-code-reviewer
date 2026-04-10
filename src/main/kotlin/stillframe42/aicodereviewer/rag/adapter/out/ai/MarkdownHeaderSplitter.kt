@@ -3,19 +3,19 @@ package stillframe42.aicodereviewer.rag.adapter.out.ai
 import org.springframework.ai.document.Document
 import org.springframework.core.io.ClassPathResource
 import org.springframework.stereotype.Component
+import stillframe42.aicodereviewer.rag.domain.port.out.DocumentPreparerPort
 
 // 마크다운 문서를 ## / ### 헤더 기준으로 분리하여 Document 리스트를 반환한다.
 // 코드 블록(```) 내 ## 는 헤더로 인식하지 않는다.
 // 헤더 이전 intro 내용 및 빈 섹션은 Document를 생성하지 않는다.
 @Component
-class MarkdownHeaderSplitter {
-
+class MarkdownHeaderSplitter : DocumentPreparerPort {
 
     // 모든 컨벤션 파일을 헤더 기준으로 분리하여 Document 리스트 반환
-    fun prepare(): List<Document> =
+    override fun prepare(): List<Document> =
         conventionFiles.flatMap { (path, category) ->
             val fileName = path.substringAfterLast("/")
-            val text = ClassPathResource(path).inputStream.bufferedReader().readText()
+            val text = ClassPathResource(path).inputStream.use { it.bufferedReader().readText() }
             split(
                 text,
                 mapOf("source" to fileName, "category" to category, "version" to "1.0", "language" to "kotlin"),

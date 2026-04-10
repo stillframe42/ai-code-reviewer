@@ -6,14 +6,14 @@ import org.springframework.context.event.EventListener
 import org.springframework.stereotype.Service
 import stillframe42.aicodereviewer.common.Logging
 import stillframe42.aicodereviewer.config.RagProperties
-import stillframe42.aicodereviewer.rag.adapter.out.ai.MarkdownHeaderSplitter
 import stillframe42.aicodereviewer.rag.domain.port.`in`.ConventionIndexUseCase
 import stillframe42.aicodereviewer.rag.domain.port.out.ConventionVectorPort
+import stillframe42.aicodereviewer.rag.domain.port.out.DocumentPreparerPort
 
 @Service
 class DefaultConventionIndexService(
     private val vectorPort: ConventionVectorPort,
-    private val splitter: MarkdownHeaderSplitter,
+    private val splitter: DocumentPreparerPort,
     private val ragProperties: RagProperties,
 ) : ConventionIndexUseCase, Logging {
 
