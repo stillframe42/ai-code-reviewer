@@ -3,11 +3,11 @@
 
 app:
   rag:
-    chunk-size: 512
+    chunk-size: 512          # 토큰 기준 청크 크기. 코드 예제 포함 섹션을 하나의 청크로 유지
     min-chunk-size-chars: 100
     min-chunk-length-to-embed: 50
     max-num-chunks: 10000
-    keep-separator: true
+    keep-separator: true     # 마크다운 섹션 구분자(--)를 청크 경계로 보존
     auto-index: true
   review:
     diff:

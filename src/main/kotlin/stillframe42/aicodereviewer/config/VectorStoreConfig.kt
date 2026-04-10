@@ -1,12 +1,10 @@
 package stillframe42.aicodereviewer.config
 
 import org.springframework.ai.transformer.splitter.TokenTextSplitter
-import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 
 @Configuration
-@EnableConfigurationProperties(RagProperties::class)
 class VectorStoreConfig(private val ragProperties: RagProperties) {
 
     @Bean
