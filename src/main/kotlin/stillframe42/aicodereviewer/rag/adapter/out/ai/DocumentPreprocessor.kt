@@ -40,7 +40,7 @@ class DocumentPreprocessor(
     // doc.metadata가 불변일 수 있으므로 새 Map을 합성하여 새 Document를 생성한다.
     private fun injectMetadata(doc: Document, fileName: String, category: String): Document =
         Document(
-            doc.getText(),
+            doc.text,
             doc.metadata + mapOf(
                 "source" to fileName,
                 "category" to category,
