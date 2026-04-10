@@ -187,7 +187,7 @@ class ConventionChunkingExperimentTest {
                 .call()
                 .content()
                 .orEmpty()
-            val score = Regex(""""score"\s*:\s*(\d)""").find(content)?.groupValues?.get(1)?.toInt() ?: -1
+            val score = Regex(""""score"\s*:\s*(-?\d+)""").find(content)?.groupValues?.get(1)?.toInt() ?: -1
             val note = Regex(""""note"\s*:\s*"([^"]+)"""").find(content)?.groupValues?.get(1) ?: "파싱 실패"
             score to note
         }.getOrElse { -1 to "채점 오류: ${it.message?.take(50)}" }

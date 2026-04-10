@@ -40,9 +40,12 @@ class MarkdownHeaderSplitter {
             val content = buffer.joinToString("\n").trim()
             buffer.clear()
             if (content.isBlank()) return
+            // 로컬 변수로 캡처하여 스마트 캐스트 적용 (로컬 함수는 외부 var를 스마트 캐스트 불가)
+            val h2 = currentH2
+            val h3 = currentH3
             val (sectionHeader, depth) = when {
-                currentH3 != null -> "${currentH2 ?: ""} > $currentH3" to "h3"
-                currentH2 != null -> currentH2!! to "h2"
+                h3 != null -> "${h2.orEmpty()} > $h3" to "h3"
+                h2 != null -> h2 to "h2"
                 else -> return // 첫 ## 헤더 이전 내용 무시
             }
             documents += Document(
