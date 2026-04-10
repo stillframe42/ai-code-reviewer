@@ -172,6 +172,51 @@ class ReviewRequestEntity(
 )
 ```
 
+### 3.3 명시해야 하는 경우 vs 명시하지 않아도 되는 경우
+
+**명시 필요:** 생성자 파라미터에 Java 어노테이션을 붙이는 경우
+
+```kotlin
+// ✅ @param: 명시 필요 — 생성자 파라미터 + Java 어노테이션
+@Component
+class MyService(
+    @param:Value("${app.timeout}")       // ← @param: 필수
+    private val timeout: Long,
+    @param:Qualifier("primaryDb")        // ← @param: 필수
+    private val dataSource: DataSource,
+)
+
+// ✅ @field: 명시 필요 — data class 프로퍼티 + 직렬화 어노테이션
+data class RequestDto(
+    @field:JsonProperty("user_id")       // ← @field: 필수
+    val userId: Long,
+)
+```
+
+**명시 불필요:** Kotlin 어노테이션 또는 클래스/함수 레벨 어노테이션
+
+```kotlin
+// ✅ 명시 불필요 — 클래스 레벨 어노테이션
+@Service                         // 클래스에 적용 → target 명확
+@Transactional                   // 클래스/함수에 적용 → target 명확
+class ReviewService
+
+// ✅ 명시 불필요 — Kotlin 자체 어노테이션
+data class Config(
+    @Suppress("UNUSED")          // Kotlin 어노테이션 → target 추론 가능
+    val unusedField: String,
+)
+```
+
+**판단 기준 요약:**
+
+| 어노테이션 위치 | Java 어노테이션? | use-site target |
+|--------------|---------------|----------------|
+| 생성자 파라미터 | Yes | `@param:` 필수 |
+| data class 프로퍼티 (직렬화) | Yes | `@field:` 또는 `@get:` |
+| 클래스/함수 레벨 | 무관 | 불필요 |
+| Kotlin 어노테이션 | No | 불필요 |
+
 ---
 
 ## 4. Null 안전성

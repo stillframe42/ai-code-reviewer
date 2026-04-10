@@ -175,4 +175,16 @@ class MarkdownHeaderSplitterTest {
             .withFailMessage("suspend fun vs Flow 구분 기준이 kotlin-style.md 청크에 없음")
             .isTrue()
     }
+
+    @Test
+    fun `kotlin-style에 use-site target 명시 규칙이 포함된다`() {
+        val docs = splitter.prepare()
+        val kotlinDocs = docs.filter { it.metadata["source"] == "kotlin-style.md" }
+        assertThat(kotlinDocs.any {
+            val text = it.text ?: ""
+            text.contains("@param:") && text.contains("명시 필요")
+        })
+            .withFailMessage("use-site target 명시 규칙이 kotlin-style.md 청크에 없음")
+            .isTrue()
+    }
 }
