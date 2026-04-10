@@ -1,11 +1,11 @@
 package stillframe42.aicodereviewer.rag.application
 
 import kotlinx.coroutines.runBlocking
-import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.context.event.ApplicationReadyEvent
 import org.springframework.context.event.EventListener
 import org.springframework.stereotype.Service
 import stillframe42.aicodereviewer.common.Logging
+import stillframe42.aicodereviewer.config.RagProperties
 import stillframe42.aicodereviewer.rag.adapter.out.ai.DocumentPreprocessor
 import stillframe42.aicodereviewer.rag.domain.port.`in`.ConventionIndexUseCase
 import stillframe42.aicodereviewer.rag.domain.port.out.ConventionVectorPort
@@ -14,16 +14,14 @@ import stillframe42.aicodereviewer.rag.domain.port.out.ConventionVectorPort
 class DefaultConventionIndexService(
     private val vectorPort: ConventionVectorPort,
     private val preprocessor: DocumentPreprocessor,
-    // app.rag.auto-index=false로 설정하면 테스트 환경에서 자동 인덱싱 비활성화
-    @param:Value("\${app.rag.auto-index:true}")
-    private val autoIndex: Boolean,
+    private val ragProperties: RagProperties,
 ) : ConventionIndexUseCase, Logging {
 
     // 앱 기동 완료 시점에 자동 인덱싱을 시도한다.
-    // autoIndex=false이면 스킵 (테스트 환경).
+    // ragProperties.autoIndex=false이면 스킵 (테스트 환경).
     @EventListener(ApplicationReadyEvent::class)
     fun onApplicationReady() {
-        if (!autoIndex) return
+        if (!ragProperties.autoIndex) return
         runBlocking { index() }
     }
 
