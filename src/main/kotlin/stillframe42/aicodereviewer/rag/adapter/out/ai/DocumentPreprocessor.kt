@@ -5,11 +5,9 @@ import org.springframework.ai.reader.markdown.MarkdownDocumentReader
 import org.springframework.ai.reader.markdown.config.MarkdownDocumentReaderConfig
 import org.springframework.ai.transformer.splitter.TokenTextSplitter
 import org.springframework.core.io.ClassPathResource
-import org.springframework.stereotype.Component
 
 // classpath:conventions/ 하위 마크다운 파일을 읽어 메타데이터를 주입하고 청킹한다.
 // 파일명 기반으로 category를 결정하며, 모든 청크에 source/category/version/language를 추가한다.
-@Component
 class DocumentPreprocessor(
     private val textSplitter: TokenTextSplitter,
 ) {
