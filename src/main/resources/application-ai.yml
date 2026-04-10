@@ -51,3 +51,6 @@ spring:
       chat:
         options:
           max-tokens: 4096
+      embedding:
+        options:
+          model: text-embedding-3-small
