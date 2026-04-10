@@ -24,6 +24,7 @@ import org.testcontainers.postgresql.PostgreSQLContainer
 import org.springframework.ai.openai.OpenAiChatOptions
 import stillframe42.aicodereviewer.rag.adapter.out.ai.DocumentPreprocessor
 import stillframe42.aicodereviewer.rag.adapter.out.ai.MarkdownHeaderSplitter
+import stillframe42.aicodereviewer.rag.adapter.out.ai.OverlappingTokenSplitter
 import stillframe42.aicodereviewer.rag.domain.port.out.ConventionVectorPort
 import java.io.File
 
@@ -147,6 +148,21 @@ class ConventionChunkingExperimentTest {
         runQueriesAndRecord("header", docs.size)
     }
 
+    @Test
+    fun `TokenTextSplitter(512, overlap=50) 실험`() {
+        // 1. OverlappingTokenSplitter 직접 생성 (Spring Bean 아님)
+        val splitter = OverlappingTokenSplitter(chunkSize = 512, overlapChars = 200)
+
+        // 2. 재인덱싱 (실제 OpenAI /v1/embeddings 호출)
+        vectorPort.deleteAll()
+        val docs = splitter.prepare()
+        vectorPort.save(docs)
+        println("=== overlap=50: ${docs.size}개 청크 인덱싱 완료 ===")
+
+        // 3~4. 10개 질문 검색 + 자동 채점 + chunking-experiment.md 업데이트
+        runQueriesAndRecord("512-overlap", docs.size)
+    }
+
     // 10개 테스트 질문을 검색하고 자동 채점 후 chunking-experiment.md에 기록한다.
     private fun runQueriesAndRecord(strategy: String, totalChunks: Int) {
         val results = TEST_QUERIES.map { query ->
@@ -202,7 +218,7 @@ class ConventionChunkingExperimentTest {
 
     // chunking-experiment.md의 해당 섹션을 찾아 총 청크 수, 검색 결과 요약, 점수, 비고를 기록한다.
     private fun updateExperimentMarkdown(
-        strategy: String,   // "256" | "512" | "1024" | "header"
+        strategy: String,   // "256" | "512" | "1024" | "header" | "512-overlap"
         totalChunks: Int,
         results: List<Triple<String, List<Document>, Pair<Int, String>>>,
     ) {
@@ -211,6 +227,7 @@ class ConventionChunkingExperimentTest {
             "512" -> "1-B"
             "1024" -> "1-C"
             "header" -> "2"
+            "512-overlap" -> "3"
             else -> error("알 수 없는 전략: $strategy")
         }
         val projectRoot = File(System.getProperty("user.dir"))
