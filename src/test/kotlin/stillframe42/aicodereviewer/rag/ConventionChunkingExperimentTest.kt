@@ -26,7 +26,7 @@ import java.io.File
 // 실행 조건:
 //   - application-secret.yml에 실제 openai.api-key(sk-*)가 있어야 함
 //   - CI에서는 openai.api-key=test-dummy-key이므로 @BeforeAll에서 자동 스킵됨
-// 실행 방법: ./gradlew test --tests "*.ConventionChunkingExperimentTest" -Pexperiment
+// 실행 방법: ./gradlew test --tests "*.ConventionChunkingExperimentTest"
 @Tag("experiment")
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
 @ActiveProfiles("integration-test")
@@ -128,7 +128,9 @@ class ConventionChunkingExperimentTest {
             512 -> "1-B"
             else -> "1-C"
         }
-        val file = File("plans/202604-1w/chunking-experiment.md")
+        val projectRoot = File(System.getProperty("user.dir"))
+        val file = projectRoot.resolve("plans/202604-1w/chunking-experiment.md")
+        require(file.exists()) { "chunking-experiment.md 파일을 찾을 수 없습니다: ${file.absolutePath}" }
         val content = file.readText()
 
         val sectionStart = content.indexOf("### $section:")
@@ -144,7 +146,7 @@ class ConventionChunkingExperimentTest {
 
         // 각 질문 행 업데이트 (검색된 상위 3개 청크 앞 80자 요약)
         TEST_QUERIES.forEachIndexed { index, _ ->
-            val queryNum = if (index < 9) "Q${index + 1}" else "Q${index + 1}"
+            val queryNum = "Q${index + 1}"
             val docs = results[index].second
             val summary = if (docs.isEmpty()) "결과 없음"
             else docs.joinToString(" ; ") { it.text.orEmpty().take(80).replace("\n", " ").trimEnd() + "..." }
