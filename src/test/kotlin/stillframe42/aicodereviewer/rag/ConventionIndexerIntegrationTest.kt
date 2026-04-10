@@ -11,6 +11,7 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.jdbc.core.JdbcTemplate
 import stillframe42.aicodereviewer.integration.AbstractIntegrationTest
 import stillframe42.aicodereviewer.rag.domain.port.`in`.ConventionIndexUseCase
+import stillframe42.aicodereviewer.rag.domain.port.out.ConventionVectorPort
 
 // ConventionIndexer 통합 테스트
 // AbstractIntegrationTest 상속 → Testcontainers PostgreSQL(pgvector) + WireMock 재사용
@@ -22,6 +23,9 @@ class ConventionIndexerIntegrationTest : AbstractIntegrationTest() {
 
     @Autowired
     private lateinit var jdbcTemplate: JdbcTemplate
+
+    @Autowired
+    private lateinit var vectorPort: ConventionVectorPort
 
     @BeforeEach
     fun cleanAndStubEmbedding() {
@@ -92,6 +96,18 @@ class ConventionIndexerIntegrationTest : AbstractIntegrationTest() {
             .uri("/internal/conventions/reindex")
             .exchange()
             .expectStatus().isOk
+    }
+
+    @Test
+    fun `search() 호출 시 topK 이하의 결과가 반환된다`() {
+        // given: 인덱싱 (BeforeEach에서 WireMock 스텁 이미 설정됨)
+        runBlocking { conventionIndexUseCase.index() }
+
+        // when
+        val results = vectorPort.search("Kotlin null safety", topK = 3)
+
+        // then
+        assertThat(results.size).isLessThanOrEqualTo(3)
     }
 
     private fun countRows(): Long =

@@ -7,4 +7,6 @@ interface ConventionVectorPort {
     fun save(documents: List<Document>)
     fun isEmpty(): Boolean
     fun deleteAll()
+    // 쿼리 텍스트를 임베딩하여 cosine 유사도 기반으로 상위 topK 청크를 반환한다
+    fun search(query: String, topK: Int = 5): List<Document>
 }

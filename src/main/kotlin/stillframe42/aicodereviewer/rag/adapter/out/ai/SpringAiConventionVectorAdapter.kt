@@ -1,6 +1,7 @@
 package stillframe42.aicodereviewer.rag.adapter.out.ai
 
 import org.springframework.ai.document.Document
+import org.springframework.ai.vectorstore.SearchRequest
 import org.springframework.ai.vectorstore.VectorStore
 import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.stereotype.Component
@@ -27,4 +28,13 @@ class SpringAiConventionVectorAdapter(
     override fun deleteAll() {
         jdbcTemplate.execute("DELETE FROM vector_store")
     }
+
+    // query를 임베딩(OpenAI API 호출)하여 pgvector cosine 유사도 검색 수행
+    override fun search(query: String, topK: Int): List<Document> =
+        vectorStore.similaritySearch(
+            SearchRequest.builder()
+                .query(query)
+                .topK(topK)
+                .build()
+        )
 }
