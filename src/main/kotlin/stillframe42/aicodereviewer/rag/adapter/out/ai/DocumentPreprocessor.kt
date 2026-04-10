@@ -13,13 +13,15 @@ import org.springframework.stereotype.Component
 class DocumentPreprocessor(
     private val textSplitter: TokenTextSplitter,
 ) {
-    // 파일 경로 → 카테고리 매핑
-    private val conventionFiles = mapOf(
-        "conventions/kotlin-style.md" to "STYLE",
-        "conventions/architecture-guide.md" to "ARCH",
-        "conventions/api-design.md" to "API",
-        "conventions/security-checklist.md" to "SECURITY",
-    )
+    companion object {
+        // 파일 경로 → 카테고리 매핑 (MarkdownHeaderSplitter, OverlappingTokenSplitter에서 공유)
+        val conventionFiles = mapOf(
+            "conventions/kotlin-style.md" to "STYLE",
+            "conventions/architecture-guide.md" to "ARCH",
+            "conventions/api-design.md" to "API",
+            "conventions/security-checklist.md" to "SECURITY",
+        )
+    }
 
     // 수평선(---)으로 Document 분리하고 코드 예제를 포함하는 마크다운 읽기 설정
     private val markdownConfig = MarkdownDocumentReaderConfig.builder()

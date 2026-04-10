@@ -8,13 +8,7 @@ import org.springframework.core.io.ClassPathResource
 // 헤더 이전 intro 내용 및 빈 섹션은 Document를 생성하지 않는다.
 class MarkdownHeaderSplitter {
 
-    // DocumentPreprocessor와 동일한 파일 목록 — Phase 5에서 통합 예정
-    private val conventionFiles = mapOf(
-        "conventions/kotlin-style.md" to "STYLE",
-        "conventions/architecture-guide.md" to "ARCH",
-        "conventions/api-design.md" to "API",
-        "conventions/security-checklist.md" to "SECURITY",
-    )
+    private val conventionFiles = DocumentPreprocessor.conventionFiles
 
     // 모든 컨벤션 파일을 헤더 기준으로 분리하여 Document 리스트 반환
     fun prepare(): List<Document> =
