@@ -284,7 +284,31 @@ fun observeReviewProgress(requestId: Long): Flow<ReviewStatus>
 fun streamChatResponse(message: String): Flux<String>
 ```
 
-### 5.3 Controller에서 suspend fun 사용
+### 5.3 suspend fun vs Flow<T> 선택 기준
+
+단일 응답과 스트리밍 중 어떤 것을 사용할지 판단하는 구분 기준:
+
+| 반환 형태 | 사용 타입 | 예시 |
+|---------|---------|------|
+| 값 1개 (완료 후 반환) | `suspend fun` | DB 조회, HTTP 요청 |
+| 값 N개 (순차 방출) | `Flow<T>` | 스트리밍 AI 응답, 이벤트 스트림 |
+| 값 없음 | `suspend fun` (Unit 반환) | 저장, 삭제 |
+
+```kotlin
+// ✅ 단일 값 — suspend fun
+suspend fun getReview(id: Long): ReviewResponse         // 1개 반환
+suspend fun saveReview(request: ReviewRequest): Long    // ID 1개 반환
+suspend fun deleteReview(id: Long)                      // 반환값 없음
+
+// ✅ 스트리밍 — Flow<T>
+fun streamChatTokens(prompt: String): Flow<String>      // 토큰을 순차 방출
+fun watchReviewStatus(id: Long): Flow<ReviewStatus>     // 상태 변화 구독
+
+// ❌ 잘못된 사용 — 스트리밍인데 전체 수집 후 반환
+suspend fun streamChatTokens(prompt: String): List<String>  // 스트리밍 효과 없음
+```
+
+### 5.4 Controller에서 suspend fun 사용
 
 Spring MVC + `kotlinx-coroutines-reactor` 브릿지를 통해 Controller에서 직접 suspend fun을 사용할 수 있다.
 
@@ -305,7 +329,7 @@ fun requestReview(@RequestBody request: ReviewRequest): ReviewResponse {
 }
 ```
 
-### 5.4 Duration 사용 규칙
+### 5.5 Duration 사용 규칙
 
 시간 인자를 받는 코루틴 함수는 `Duration` 오버로드를 사용한다.
 

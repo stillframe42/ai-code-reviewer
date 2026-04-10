@@ -163,4 +163,16 @@ class MarkdownHeaderSplitterTest {
             .withFailMessage("MDC 패턴이 security-checklist.md 청크에 없음")
             .isTrue()
     }
+
+    @Test
+    fun `kotlin-style에 코루틴 단일 응답과 스트리밍 구분 기준이 포함된다`() {
+        val docs = splitter.prepare()
+        val kotlinDocs = docs.filter { it.metadata["source"] == "kotlin-style.md" }
+        assertThat(kotlinDocs.any {
+            val text = it.text ?: ""
+            text.contains("suspend fun") && text.contains("Flow") && text.contains("구분 기준")
+        })
+            .withFailMessage("suspend fun vs Flow 구분 기준이 kotlin-style.md 청크에 없음")
+            .isTrue()
+    }
 }
