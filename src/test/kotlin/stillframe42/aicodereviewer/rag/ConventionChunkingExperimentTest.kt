@@ -21,6 +21,7 @@ import org.springframework.test.context.DynamicPropertyRegistry
 import org.springframework.test.context.DynamicPropertySource
 import org.testcontainers.containers.GenericContainer
 import org.testcontainers.postgresql.PostgreSQLContainer
+import org.springframework.ai.openai.OpenAiChatOptions
 import stillframe42.aicodereviewer.rag.adapter.out.ai.DocumentPreprocessor
 import stillframe42.aicodereviewer.rag.adapter.out.ai.MarkdownHeaderSplitter
 import stillframe42.aicodereviewer.rag.domain.port.out.ConventionVectorPort
@@ -180,7 +181,12 @@ class ConventionChunkingExperimentTest {
         """.trimIndent()
 
         return runCatching {
-            val content = chatClient.prompt().user(prompt).call().content().orEmpty()
+            val content = chatClient.prompt()
+                .options(OpenAiChatOptions.builder().model("gpt-4o-mini").build())
+                .user(prompt)
+                .call()
+                .content()
+                .orEmpty()
             val score = Regex(""""score"\s*:\s*(\d)""").find(content)?.groupValues?.get(1)?.toInt() ?: -1
             val note = Regex(""""note"\s*:\s*"([^"]+)"""").find(content)?.groupValues?.get(1) ?: "파싱 실패"
             score to note
