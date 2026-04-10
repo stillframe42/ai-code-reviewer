@@ -93,6 +93,33 @@ jdbcTemplate.query(query, ...)
 Runtime.getRuntime().exec("git clone $userInput")
 ```
 
+```kotlin
+// ✅ Log Injection 방어 — 사용자 입력의 개행 문자 제거
+fun sanitizeForLog(input: String): String =
+    input.replace("\n", "\\n").replace("\r", "\\r")
+
+logger.info("PR 요청: ${sanitizeForLog(userInput)}")
+
+// ❌ Log Injection — 사용자 입력이 로그를 오염시킴
+logger.info("PR 요청: $userInput")  // userInput에 개행이 있으면 로그 위조 가능
+
+// ✅ XSS 방어 — HTML 출력 시 이스케이프
+import org.springframework.web.util.HtmlUtils
+val safeOutput = HtmlUtils.htmlEscape(userInput)
+
+// ❌ XSS — HTML에 사용자 입력 그대로 삽입
+"<div>$userInput</div>"
+```
+
+**Injection 공격 방어 전략 요약:**
+
+| Injection 유형 | 방어 방법 |
+|---------------|---------|
+| SQL Injection | JPA 파라미터 바인딩, `@Query` + `@Param` |
+| Command Injection | 셸 명령에 외부 입력 사용 금지 |
+| Log Injection | 개행 문자(`\n`, `\r`) 이스케이프 후 로깅 |
+| XSS | `HtmlUtils.htmlEscape()`, Content-Type 헤더 명시 |
+
 **체크 항목:**
 - [ ] 모든 DB 쿼리에 파라미터 바인딩 사용
 - [ ] 동적 쿼리 생성 시 입력값 검증

@@ -139,4 +139,16 @@ class MarkdownHeaderSplitterTest {
             .withFailMessage("OpenAPI 3.1 null 타입 표현이 api-design.md 청크에 없음")
             .isTrue()
     }
+
+    @Test
+    fun `security-checklist A03에 Log Injection 방어 패턴이 포함된다`() {
+        val docs = splitter.prepare()
+        val secDocs = docs.filter { it.metadata["source"] == "security-checklist.md" }
+        assertThat(secDocs.any { it.text?.contains("Log Injection") == true })
+            .withFailMessage("Log Injection 패턴이 security-checklist.md 청크에 없음")
+            .isTrue()
+        assertThat(secDocs.any { it.text?.contains("HtmlUtils") == true })
+            .withFailMessage("XSS 방어 패턴(HtmlUtils)이 security-checklist.md 청크에 없음")
+            .isTrue()
+    }
 }
