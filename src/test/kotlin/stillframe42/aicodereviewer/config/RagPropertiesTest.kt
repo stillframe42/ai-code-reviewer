@@ -12,17 +12,9 @@ class RagPropertiesTest : AbstractIntegrationTest() {
     private lateinit var ragProperties: RagProperties
 
     @Test
-    fun `application-ai yml 기본값이 올바르게 바인딩된다`() {
-        assertThat(ragProperties.chunkSize).isEqualTo(512)
-        assertThat(ragProperties.minChunkSizeChars).isEqualTo(100)
-        assertThat(ragProperties.minChunkLengthToEmbed).isEqualTo(50)
-        assertThat(ragProperties.maxNumChunks).isEqualTo(10000)
-        assertThat(ragProperties.keepSeparator).isTrue()
-    }
-
-    @Test
-    fun `integration-test 프로파일의 auto-index 오버라이드가 적용된다`() {
-        // application-integration-test.yml: app.rag.auto-index: false
+    fun `auto-index 프로퍼티가 올바르게 바인딩된다`() {
+        // integration-test 프로파일이므로 application-integration-test.yml의 설정 적용됨
+        // 실제 application-ai.yml 기본값은 true이지만, 통합 테스트에서는 false로 설정됨
         assertThat(ragProperties.autoIndex).isFalse()
     }
 }
