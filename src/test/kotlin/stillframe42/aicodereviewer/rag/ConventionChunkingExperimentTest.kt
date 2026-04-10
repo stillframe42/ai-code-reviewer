@@ -9,8 +9,10 @@ import org.junit.jupiter.params.provider.ValueSource
 import org.springframework.ai.document.Document
 import org.springframework.ai.transformer.splitter.TokenTextSplitter
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.beans.factory.config.YamlPropertiesFactoryBean
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.core.env.Environment
+import org.springframework.core.io.ClassPathResource
 import org.springframework.test.context.ActiveProfiles
 import org.springframework.test.context.DynamicPropertyRegistry
 import org.springframework.test.context.DynamicPropertySource
@@ -50,6 +52,18 @@ class ConventionChunkingExperimentTest {
             registry.add("spring.data.redis.host") { redis.host }
             registry.add("spring.data.redis.port") { redis.getMappedPort(6379).toString() }
             // spring.ai.openai.base-url 오버라이드 없음 → 실제 OpenAI API 사용
+
+            // application-integration-test.yml의 더미 키(test-dummy-key)를 실제 키로 복구한다.
+            // @DynamicPropertySource는 최고 우선순위이므로 프로파일 오버라이드를 덮어쓸 수 있다.
+            val secretResource = ClassPathResource("application-secret.yml")
+            if (secretResource.exists()) {
+                val props = YamlPropertiesFactoryBean().apply { setResources(secretResource) }.`object`
+                val realKey = props?.getProperty("openai.api-key").orEmpty()
+                if (realKey.startsWith("sk-")) {
+                    registry.add("openai.api-key") { realKey }
+                    registry.add("spring.ai.openai.api-key") { realKey }
+                }
+            }
         }
 
         // 설계 문서 4.4 참조 — 10개 테스트 질문
