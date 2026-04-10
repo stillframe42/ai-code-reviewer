@@ -159,9 +159,16 @@ class ConventionChunkingExperimentTest {
     }
 
     // 검색 결과 상위 3개 청크를 80자 요약으로 연결한 문자열 생성
+    // | 는 마크다운 테이블 구분자와 충돌하므로 \| 로 이스케이프한다
     private fun buildSummary(docs: List<Document>): String =
         if (docs.isEmpty()) "결과 없음"
-        else docs.joinToString(" ; ") { it.text.orEmpty().take(80).replace("\n", " ").trimEnd() + "..." }
+        else docs.joinToString(" ; ") {
+            it.text.orEmpty()
+                .replace("|", "\\|")
+                .take(80)
+                .replace("\n", " ")
+                .trimEnd() + "..."
+        }
 
     // OpenAI Chat API로 검색 결과 관련성을 0~3점으로 자동 채점한다.
     // 파싱 실패 시 score=-1, note="채점 실패"를 반환하여 실험을 중단하지 않는다.
