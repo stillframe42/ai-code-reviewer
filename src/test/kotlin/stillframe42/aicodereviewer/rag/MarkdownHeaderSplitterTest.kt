@@ -151,4 +151,16 @@ class MarkdownHeaderSplitterTest {
             .withFailMessage("XSS 방어 패턴(HtmlUtils)이 security-checklist.md 청크에 없음")
             .isTrue()
     }
+
+    @Test
+    fun `security-checklist에 로깅 PII 마스킹 섹션이 포함된다`() {
+        val docs = splitter.prepare()
+        val secDocs = docs.filter { it.metadata["source"] == "security-checklist.md" }
+        assertThat(secDocs.any { it.text?.contains("maskEmail") == true })
+            .withFailMessage("maskEmail 패턴이 security-checklist.md 청크에 없음")
+            .isTrue()
+        assertThat(secDocs.any { it.text?.contains("MDC") == true })
+            .withFailMessage("MDC 패턴이 security-checklist.md 청크에 없음")
+            .isTrue()
+    }
 }

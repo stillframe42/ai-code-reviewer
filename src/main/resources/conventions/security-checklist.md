@@ -421,3 +421,58 @@ secrets/
 *.pem
 *.key
 ```
+
+---
+
+## 3. 로깅 보안 패턴
+
+### 3.1 개인정보(PII) 마스킹
+
+로그에 개인정보가 출력되지 않도록 마스킹 또는 제외 처리한다.
+
+```kotlin
+// ✅ toString()에서 민감 필드 제외
+data class UserInfo(
+    val userId: Long,
+    val email: String,
+    val phoneNumber: String,
+) {
+    override fun toString(): String = "UserInfo(userId=$userId)"  // 이메일/전화번호 제외
+}
+
+// ✅ 필요한 경우 마스킹 처리
+fun String.maskEmail(): String {
+    val atIndex = indexOf('@')
+    if (atIndex <= 1) return "***"
+    return "${first()}***${substring(atIndex)}"  // "h***@example.com"
+}
+
+fun String.maskPhone(): String =
+    replace(Regex("(\\d{3})-?(\\d{3,4})-?(\\d{4})"), "$1-****-$3")  // "010-****-5678"
+
+// ❌ 개인정보 그대로 로깅 — 절대 금지
+logger.info("사용자 로그인: email=$email, phone=$phoneNumber")
+```
+
+### 3.2 MDC 활용 시 민감 정보 제외
+
+SLF4J MDC(Mapped Diagnostic Context)에 추적용 ID는 포함하되 민감 데이터는 제외한다.
+
+```kotlin
+// ✅ 요청 추적용 ID만 MDC에 등록
+MDC.put("requestId", requestId)
+MDC.put("userId", userId.toString())  // 식별자 OK
+
+// ❌ MDC에 민감 데이터 등록 — 모든 로그에 노출됨
+MDC.put("userEmail", email)      // 개인정보 금지
+MDC.put("authToken", token)      // 인증 정보 금지
+```
+
+### 3.3 로그 레벨별 개인정보 정책
+
+| 레벨 | 허용 | 금지 |
+|------|------|------|
+| `ERROR` | 예외 메시지, 스택 트레이스 | 사용자 입력값, PII |
+| `WARN` | 비정상 상황 설명 | 사용자 데이터 |
+| `INFO` | 이벤트 발생 사실, 식별자 ID | 이메일, 전화번호, 토큰 |
+| `DEBUG` | 내부 상태 (운영 환경 비활성화) | 비밀번호, 카드번호 |
