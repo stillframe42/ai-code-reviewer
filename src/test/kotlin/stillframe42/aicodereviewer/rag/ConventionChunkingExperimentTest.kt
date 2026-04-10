@@ -3,12 +3,15 @@ package stillframe42.aicodereviewer.rag
 import org.junit.jupiter.api.Assumptions.assumeTrue
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Tag
+import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
+import org.springframework.ai.chat.client.ChatClient
 import org.springframework.ai.document.Document
 import org.springframework.ai.transformer.splitter.TokenTextSplitter
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.beans.factory.config.YamlPropertiesFactoryBean
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.core.env.Environment
@@ -19,6 +22,7 @@ import org.springframework.test.context.DynamicPropertySource
 import org.testcontainers.containers.GenericContainer
 import org.testcontainers.postgresql.PostgreSQLContainer
 import stillframe42.aicodereviewer.rag.adapter.out.ai.DocumentPreprocessor
+import stillframe42.aicodereviewer.rag.adapter.out.ai.MarkdownHeaderSplitter
 import stillframe42.aicodereviewer.rag.domain.port.out.ConventionVectorPort
 import java.io.File
 
@@ -87,6 +91,12 @@ class ConventionChunkingExperimentTest {
     @Autowired
     private lateinit var environment: Environment
 
+    // OpenAI ChatClient — 자동 채점에 사용 (실험 테스트는 실제 OpenAI API 키를 복구하므로 OpenAI 전용 빈 주입)
+    // @field:Qualifier: lateinit var 필드에 Java 어노테이션을 적용할 때 backing field를 명시적으로 타겟팅
+    @Autowired
+    @field:Qualifier("openAiChatClient")
+    private lateinit var chatClient: ChatClient
+
     // 실제 OpenAI API 키(sk-*)가 없으면 전체 테스트 클래스를 스킵한다.
     // CI: openai.api-key=test-dummy-key → 스킵
     // 로컬: application-secret.yml의 실제 키 → 통과
@@ -117,25 +127,85 @@ class ConventionChunkingExperimentTest {
         vectorPort.save(docs)
         println("=== chunkSize=$chunkSize: ${docs.size}개 청크 인덱싱 완료 ===")
 
-        // 3. 10개 질문 검색 (실제 OpenAI /v1/embeddings 호출)
-        val results = TEST_QUERIES.map { query -> query to vectorPort.search(query, topK = 3) }
+        // 3. 10개 질문 검색 + 자동 채점 (실제 OpenAI /v1/embeddings 및 Chat API 호출)
+        val results = TEST_QUERIES.map { query ->
+            val searchResult = vectorPort.search(query, topK = 3)
+            val summary = buildSummary(searchResult)
+            val (score, note) = autoScore(query, summary)
+            Triple(query, searchResult, score to note)
+        }
 
         // 4. chunking-experiment.md 해당 섹션에 결과 기록
-        updateExperimentMarkdown(chunkSize, docs.size, results)
+        updateExperimentMarkdown(chunkSize.toString(), docs.size, results)
         println("chunking-experiment.md 업데이트 완료")
     }
 
-    // chunking-experiment.md의 해당 섹션(1-A/1-B/1-C)을 찾아 총 청크 수와 검색 결과 요약을 기록한다.
-    // 점수(0~3) 열은 사용자가 직접 채점하므로 공백으로 유지한다.
+    @Test
+    fun `MarkdownHeaderSplitter 실험`() {
+        // 1. MarkdownHeaderSplitter 직접 생성 (Spring Bean 아님)
+        val splitter = MarkdownHeaderSplitter()
+
+        // 2. 재인덱싱 (실제 OpenAI /v1/embeddings 호출)
+        vectorPort.deleteAll()
+        val docs = splitter.prepare()
+        vectorPort.save(docs)
+        println("=== MarkdownHeaderSplitter: ${docs.size}개 청크 인덱싱 완료 ===")
+
+        // 3. 10개 질문 검색 + 자동 채점
+        val results = TEST_QUERIES.map { query ->
+            val searchResult = vectorPort.search(query, topK = 3)
+            val summary = buildSummary(searchResult)
+            val (score, note) = autoScore(query, summary)
+            Triple(query, searchResult, score to note)
+        }
+
+        // 4. chunking-experiment.md 실험 2 섹션에 결과 기록
+        updateExperimentMarkdown("header", docs.size, results)
+        println("chunking-experiment.md 업데이트 완료")
+    }
+
+    // 검색 결과 상위 3개 청크를 80자 요약으로 연결한 문자열 생성
+    private fun buildSummary(docs: List<Document>): String =
+        if (docs.isEmpty()) "결과 없음"
+        else docs.joinToString(" ; ") { it.text.orEmpty().take(80).replace("\n", " ").trimEnd() + "..." }
+
+    // OpenAI Chat API로 검색 결과 관련성을 0~3점으로 자동 채점한다.
+    // 파싱 실패 시 score=-1, note="채점 실패"를 반환하여 실험을 중단하지 않는다.
+    private fun autoScore(query: String, summary: String): Pair<Int, String> {
+        val prompt = """
+            질문: $query
+            검색된 상위 청크 요약: $summary
+
+            아래 기준으로 관련성을 0~3점으로 채점하고, 한 문장 한국어 비고를 작성하라.
+            반드시 JSON만 응답하라: {"score": N, "note": "..."}
+
+            채점 기준:
+            3: 질문과 직접 관련된 내용이 검색 상위 결과에 포함됨
+            2: 관련 내용이 검색되었으나 핵심 설명이 일부 누락됨
+            1: 약간 관련 있는 내용이 검색되었으나 답변에 활용하기 어려움
+            0: 무관한 내용이 검색되거나 관련 결과 없음
+        """.trimIndent()
+
+        return runCatching {
+            val content = chatClient.prompt().user(prompt).call().content().orEmpty()
+            val score = Regex(""""score"\s*:\s*(\d)""").find(content)?.groupValues?.get(1)?.toInt() ?: -1
+            val note = Regex(""""note"\s*:\s*"([^"]+)"""").find(content)?.groupValues?.get(1) ?: "파싱 실패"
+            score to note
+        }.getOrElse { -1 to "채점 오류: ${it.message?.take(50)}" }
+    }
+
+    // chunking-experiment.md의 해당 섹션을 찾아 총 청크 수, 검색 결과 요약, 점수, 비고를 기록한다.
     private fun updateExperimentMarkdown(
-        chunkSize: Int,
+        strategy: String,   // "256" | "512" | "1024" | "header"
         totalChunks: Int,
-        results: List<Pair<String, List<Document>>>,
+        results: List<Triple<String, List<Document>, Pair<Int, String>>>,
     ) {
-        val section = when (chunkSize) {
-            256 -> "1-A"
-            512 -> "1-B"
-            else -> "1-C"
+        val section = when (strategy) {
+            "256" -> "1-A"
+            "512" -> "1-B"
+            "1024" -> "1-C"
+            "header" -> "2"
+            else -> error("알 수 없는 전략: $strategy")
         }
         val projectRoot = File(System.getProperty("user.dir"))
         val file = projectRoot.resolve("plans/202604-1w/chunking-experiment.md")
@@ -147,19 +217,34 @@ class ConventionChunkingExperimentTest {
         val sectionEnd = content.indexOf("\n---", sectionStart).takeIf { it >= 0 } ?: content.length
         var sectionContent = content.substring(sectionStart, sectionEnd)
 
-        // 총 청크 수 업데이트 (기존 값 덮어쓰기)
+        // 총 청크 수 업데이트
         sectionContent = sectionContent.replace(
             Regex("- \\*\\*총 청크 수\\*\\*: .*"),
             "- **총 청크 수**: $totalChunks",
         )
 
-        // 각 질문 행 업데이트 (검색된 상위 3개 청크 앞 80자 요약)
+        // 각 질문 행 업데이트 (검색 결과 요약 + 점수 + 비고)
         TEST_QUERIES.forEachIndexed { index, _ ->
             val queryNum = "Q${index + 1}"
-            val docs = results[index].second
-            val summary = if (docs.isEmpty()) "결과 없음"
-            else docs.joinToString(" ; ") { it.text.orEmpty().take(80).replace("\n", " ").trimEnd() + "..." }
-            sectionContent = sectionContent.replace("| $queryNum | | | |", "| $queryNum | $summary | | |")
+            val (_, docs, scoreNote) = results[index]
+            val (score, note) = scoreNote
+            val summary = buildSummary(docs)
+            val scoreStr = if (score >= 0) score.toString() else "?"
+            sectionContent = sectionContent.replace(
+                "| $queryNum | | | |",
+                "| $queryNum | $summary | $scoreStr | $note |",
+            )
+        }
+
+        // 평균 점수 계산 및 업데이트
+        val validScores = results.map { it.third.first }.filter { it >= 0 }
+        if (validScores.isNotEmpty()) {
+            val avg = validScores.average()
+            val avgStr = "**%.1f**".format(avg)
+            sectionContent = sectionContent.replace(
+                "| **평균** | | | |",
+                "| **평균** | | $avgStr | |",
+            )
         }
 
         file.writeText(content.substring(0, sectionStart) + sectionContent + content.substring(sectionEnd))
