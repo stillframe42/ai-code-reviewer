@@ -94,6 +94,8 @@ Runtime.getRuntime().exec("git clone $userInput")
 ```
 
 ```kotlin
+import org.springframework.web.util.HtmlUtils
+
 // ✅ Log Injection 방어 — 사용자 입력의 개행 문자 제거
 fun sanitizeForLog(input: String): String =
     input.replace("\n", "\\n").replace("\r", "\\r")
@@ -104,7 +106,6 @@ logger.info("PR 요청: ${sanitizeForLog(userInput)}")
 logger.info("PR 요청: $userInput")  // userInput에 개행이 있으면 로그 위조 가능
 
 // ✅ XSS 방어 — HTML 출력 시 이스케이프
-import org.springframework.web.util.HtmlUtils
 val safeOutput = HtmlUtils.htmlEscape(userInput)
 
 // ❌ XSS — HTML에 사용자 입력 그대로 삽입
