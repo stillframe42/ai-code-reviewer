@@ -1,0 +1,30 @@
+package stillframe42.aicodereviewer.rag.adapter.out.ai
+
+import org.springframework.ai.document.Document
+import org.springframework.ai.vectorstore.VectorStore
+import org.springframework.jdbc.core.JdbcTemplate
+import org.springframework.stereotype.Component
+import stillframe42.aicodereviewer.rag.domain.port.out.ConventionVectorPort
+
+// Spring AI VectorStore를 ConventionVectorPort로 감싸는 아웃바운드 어댑터
+// isEmpty()와 deleteAll()은 VectorStore API가 지원하지 않으므로 JdbcTemplate을 직접 사용한다.
+@Component
+class SpringAiConventionVectorAdapter(
+    private val vectorStore: VectorStore,
+    private val jdbcTemplate: JdbcTemplate,
+) : ConventionVectorPort {
+
+    override fun save(documents: List<Document>) {
+        vectorStore.add(documents)
+    }
+
+    override fun isEmpty(): Boolean =
+        (jdbcTemplate.queryForObject(
+            "SELECT count(*) FROM vector_store",
+            Long::class.java,
+        ) ?: 0L) == 0L
+
+    override fun deleteAll() {
+        jdbcTemplate.execute("DELETE FROM vector_store")
+    }
+}
