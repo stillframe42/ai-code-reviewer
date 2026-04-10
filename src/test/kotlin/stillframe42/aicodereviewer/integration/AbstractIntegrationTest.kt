@@ -1,7 +1,12 @@
 package stillframe42.aicodereviewer.integration
 
+import com.fasterxml.jackson.databind.ObjectMapper
 import com.github.tomakehurst.wiremock.WireMockServer
+import com.github.tomakehurst.wiremock.client.ResponseDefinitionBuilder
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration.options
+import com.github.tomakehurst.wiremock.extension.ResponseDefinitionTransformerV2
+import com.github.tomakehurst.wiremock.http.ResponseDefinition
+import com.github.tomakehurst.wiremock.stubbing.ServeEvent
 import org.junit.jupiter.api.BeforeEach
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
@@ -28,7 +33,12 @@ abstract class AbstractIntegrationTest {
             PostgreSQLContainer("pgvector/pgvector:pg16").also { it.start() }
 
         val wireMock: WireMockServer =
-            WireMockServer(options().dynamicPort()).also { it.start() }
+            WireMockServer(
+                options()
+                    .dynamicPort()
+                    // OpenAI 임베딩 배치 요청에서 input 수에 맞는 동적 응답 생성을 위한 커스텀 transformer 등록
+                    .extensions(OpenAiEmbeddingBatchTransformer()),
+            ).also { it.start() }
 
         val redis: GenericContainer<*> =
             GenericContainer("redis:7-alpine")
@@ -75,6 +85,45 @@ abstract class AbstractIntegrationTest {
             .block()
         client = RestTestClient.bindToServer()
             .baseUrl("http://localhost:$port")
+            .build()
+    }
+}
+
+// OpenAI /v1/embeddings 응답을 동적으로 생성하는 WireMock transformer
+// Spring AI PgVectorStore는 여러 문서를 배치로 묶어 단일 API 요청에 전송하고,
+// 응답의 data 배열에 input 배열과 동일한 수의 임베딩이 있어야 한다.
+// WireMock 스텁에서 'openai-embedding-batch' transformer를 지정하면 자동으로 적용된다.
+class OpenAiEmbeddingBatchTransformer : ResponseDefinitionTransformerV2 {
+
+    private val objectMapper = ObjectMapper()
+
+    // zero vector 1536차원 — 실제 임베딩 품질 검증이 아닌 저장 흐름 확인 목적
+    private val zeroVector = (1..1536).map { 0.0f }
+
+    override fun getName(): String = "openai-embedding-batch"
+
+    // transformer는 명시적으로 지정된 stub에만 적용 (global=false와 동일)
+    override fun applyGlobally(): Boolean = false
+
+    override fun transform(serveEvent: ServeEvent): ResponseDefinition {
+        val requestBody = serveEvent.request.bodyAsString
+        val inputCount = runCatching {
+            val tree = objectMapper.readTree(requestBody)
+            val inputNode = tree.get("input")
+            if (inputNode != null && inputNode.isArray) inputNode.size() else 1
+        }.getOrDefault(1)
+
+        val embeddingArray = (0 until inputCount).joinToString(",") { index ->
+            val vectorStr = zeroVector.joinToString(",")
+            """{"object":"embedding","embedding":[$vectorStr],"index":$index}"""
+        }
+
+        val responseJson = """{"object":"list","data":[$embeddingArray],"model":"text-embedding-3-small","usage":{"prompt_tokens":$inputCount,"total_tokens":$inputCount}}"""
+
+        return ResponseDefinitionBuilder.responseDefinition()
+            .withStatus(200)
+            .withHeader("Content-Type", "application/json")
+            .withBody(responseJson)
             .build()
     }
 }
