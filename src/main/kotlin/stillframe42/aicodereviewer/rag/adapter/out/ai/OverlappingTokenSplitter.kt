@@ -6,6 +6,7 @@ import org.springframework.ai.transformer.splitter.TokenTextSplitter
 // TokenTextSplitter(512)로 기본 청크를 생성한 후 인접 청크 간 문자 단위 overlap을 후처리로 적용한다.
 // Spring AI 2.0.0-M2의 TokenTextSplitter.Builder는 overlap을 지원하지 않으므로 직접 구현한다.
 // DocumentPreprocessor와 동일한 파일 목록 — Phase 5에서 통합 예정
+// 실험 전용 클래스 — 프로덕션에서는 MarkdownHeaderSplitter(DocumentPreparerPort 구현체)를 사용한다.
 class OverlappingTokenSplitter(
     private val chunkSize: Int = 512,
     private val overlapChars: Int = 200, // ≈ 50 tokens (50 × 4자/token 근사)
