@@ -10,13 +10,6 @@ class OverlappingTokenSplitter(
     private val chunkSize: Int = 512,
     private val overlapChars: Int = 200, // ≈ 50 tokens (50 × 4자/token 근사)
 ) {
-    private val conventionFiles = mapOf(
-        "conventions/kotlin-style.md" to "STYLE",
-        "conventions/architecture-guide.md" to "ARCH",
-        "conventions/api-design.md" to "API",
-        "conventions/security-checklist.md" to "SECURITY",
-    )
-
     // 모든 컨벤션 파일을 TokenTextSplitter(chunkSize) + overlap 후처리로 분리하여 Document 리스트 반환
     fun prepare(): List<Document> {
         val splitter = TokenTextSplitter.builder()
