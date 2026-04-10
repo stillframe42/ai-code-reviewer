@@ -348,6 +348,68 @@ fun objectMapper(): ObjectMapper = ObjectMapper().apply {
 }
 ```
 
+### 5.3 null 응답 처리 정책
+
+API 응답에서 null 필드 처리는 명시적 정책을 따른다. null을 암묵적으로 내려보내면
+클라이언트가 필드 존재 여부를 추측해야 하므로 계약을 명확히 한다.
+
+**null vs 빈 값 선택 기준:**
+
+| 상황 | 반환 값 | 이유 |
+|------|--------|------|
+| 데이터가 존재하지 않음 | `null` | 부재(absence) 표현 |
+| 데이터가 0건인 컬렉션 | `emptyList()` | 컬렉션은 null 금지 |
+| 선택적 문자열 필드 | `null` (빈 문자열 `""` 금지) | 빈 문자열과 미입력을 구분 |
+
+```kotlin
+// ✅ 컬렉션은 null 대신 빈 리스트 반환
+data class ReviewResponse(
+    val id: Long,
+    val issues: List<IssueResponse> = emptyList(),  // null 금지
+    val summary: String?,                            // 없을 수 있는 필드는 nullable
+)
+
+// ❌ 컬렉션 null 반환 — 클라이언트에서 NPE 위험
+data class ReviewResponse(
+    val issues: List<IssueResponse>?,  // null 가능성을 열어두면 안 됨
+)
+```
+
+**`@JsonInclude` 정책:**
+
+```kotlin
+// ✅ null 필드를 응답에서 제외할 때만 명시적으로 선언
+@JsonInclude(JsonInclude.Include.NON_NULL)
+data class OptionalFieldResponse(
+    val field: String?,  // null이면 JSON 키 자체가 빠짐
+)
+
+// ✅ 기본값: null 포함 직렬화 (필드 존재를 명시적으로 보장)
+data class ReviewResponse(
+    val summary: String?,  // null이어도 "summary": null 으로 직렬화
+)
+```
+
+**OpenAPI 명세에서 null 필드 표현:**
+
+```yaml
+ReviewResponse:
+  type: object
+  required:
+    - id
+    - issues
+  properties:
+    id:
+      type: integer
+    issues:
+      type: array
+      items:
+        $ref: '#/components/schemas/IssueResponse'
+    summary:
+      type: string
+      nullable: true   # null 가능 필드는 반드시 nullable: true 명시
+```
+
 ---
 
 ## 6. API 버저닝 전략

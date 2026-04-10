@@ -127,4 +127,16 @@ class MarkdownHeaderSplitterTest {
             .withFailMessage("fetch join 패턴이 architecture-guide.md 청크에 없음")
             .isTrue()
     }
+
+    @Test
+    fun `api-design에 null 응답 처리 정책 섹션이 포함된다`() {
+        val docs = splitter.prepare()
+        val apiDocs = docs.filter { it.metadata["source"] == "api-design.md" }
+        assertThat(apiDocs.any { it.text?.contains("JsonInclude") == true })
+            .withFailMessage("JsonInclude 패턴이 api-design.md 청크에 없음")
+            .isTrue()
+        assertThat(apiDocs.any { it.text?.contains("nullable: true") == true })
+            .withFailMessage("nullable: true 가 api-design.md 청크에 없음")
+            .isTrue()
+    }
 }
