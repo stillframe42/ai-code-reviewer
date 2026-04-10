@@ -127,17 +127,8 @@ class ConventionChunkingExperimentTest {
         vectorPort.save(docs)
         println("=== chunkSize=$chunkSize: ${docs.size}개 청크 인덱싱 완료 ===")
 
-        // 3. 10개 질문 검색 + 자동 채점 (실제 OpenAI /v1/embeddings 및 Chat API 호출)
-        val results = TEST_QUERIES.map { query ->
-            val searchResult = vectorPort.search(query, topK = 3)
-            val summary = buildSummary(searchResult)
-            val (score, note) = autoScore(query, summary)
-            Triple(query, searchResult, score to note)
-        }
-
-        // 4. chunking-experiment.md 해당 섹션에 결과 기록
-        updateExperimentMarkdown(chunkSize.toString(), docs.size, results)
-        println("chunking-experiment.md 업데이트 완료")
+        // 3~4. 10개 질문 검색 + 자동 채점 + chunking-experiment.md 업데이트
+        runQueriesAndRecord(chunkSize.toString(), docs.size)
     }
 
     @Test
@@ -151,16 +142,18 @@ class ConventionChunkingExperimentTest {
         vectorPort.save(docs)
         println("=== MarkdownHeaderSplitter: ${docs.size}개 청크 인덱싱 완료 ===")
 
-        // 3. 10개 질문 검색 + 자동 채점
+        // 3~4. 10개 질문 검색 + 자동 채점 + chunking-experiment.md 업데이트
+        runQueriesAndRecord("header", docs.size)
+    }
+
+    // 10개 테스트 질문을 검색하고 자동 채점 후 chunking-experiment.md에 기록한다.
+    private fun runQueriesAndRecord(strategy: String, totalChunks: Int) {
         val results = TEST_QUERIES.map { query ->
             val searchResult = vectorPort.search(query, topK = 3)
-            val summary = buildSummary(searchResult)
-            val (score, note) = autoScore(query, summary)
+            val (score, note) = autoScore(query, buildSummary(searchResult))
             Triple(query, searchResult, score to note)
         }
-
-        // 4. chunking-experiment.md 실험 2 섹션에 결과 기록
-        updateExperimentMarkdown("header", docs.size, results)
+        updateExperimentMarkdown(strategy, totalChunks, results)
         println("chunking-experiment.md 업데이트 완료")
     }
 
