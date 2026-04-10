@@ -135,8 +135,8 @@ class MarkdownHeaderSplitterTest {
         assertThat(apiDocs.any { it.text?.contains("JsonInclude") == true })
             .withFailMessage("JsonInclude 패턴이 api-design.md 청크에 없음")
             .isTrue()
-        assertThat(apiDocs.any { it.text?.contains("nullable: true") == true })
-            .withFailMessage("nullable: true 가 api-design.md 청크에 없음")
+        assertThat(apiDocs.any { it.text?.contains("\"string\", \"null\"") == true })
+            .withFailMessage("OpenAPI 3.1 null 타입 표현이 api-design.md 청크에 없음")
             .isTrue()
     }
 }

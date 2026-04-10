@@ -406,8 +406,7 @@ ReviewResponse:
       items:
         $ref: '#/components/schemas/IssueResponse'
     summary:
-      type: string
-      nullable: true   # null 가능 필드는 반드시 nullable: true 명시
+      type: ["string", "null"]   # OpenAPI 3.1: null 허용 필드는 type 배열로 표현
 ```
 
 ---
