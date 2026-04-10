@@ -416,7 +416,8 @@ fun findAllByRepoFullNameWithIssues(@Param("repoFullName") repoFullName: String)
 **해결책 3 — `@BatchSize`: 컬렉션을 IN 쿼리로 일괄 로딩**
 
 ```kotlin
-// ✅ @BatchSize로 N+1을 N/100 + 1로 감소
+// ✅ adapter/out/persistence — JPA 엔티티 (도메인 모델 아님)
+// @BatchSize로 N+1을 N/100 + 1로 감소
 @Entity
 class ReviewRequestEntity {
     @BatchSize(size = 100)

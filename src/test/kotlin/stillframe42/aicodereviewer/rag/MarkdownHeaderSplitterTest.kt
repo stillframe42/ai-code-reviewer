@@ -119,7 +119,12 @@ class MarkdownHeaderSplitterTest {
     @Test
     fun `architecture-guide에 N+1 쿼리 방지 섹션이 포함된다`() {
         val docs = splitter.prepare()
-        val entityGraphDoc = docs.find { it.text?.contains("@EntityGraph") == true }
-        assertThat(entityGraphDoc).isNotNull()
+        val archDocs = docs.filter { it.metadata["source"] == "architecture-guide.md" }
+        assertThat(archDocs.any { it.text?.contains("@EntityGraph") == true })
+            .withFailMessage("@EntityGraph 패턴이 architecture-guide.md 청크에 없음")
+            .isTrue()
+        assertThat(archDocs.any { it.text?.contains("fetch join") == true })
+            .withFailMessage("fetch join 패턴이 architecture-guide.md 청크에 없음")
+            .isTrue()
     }
 }
