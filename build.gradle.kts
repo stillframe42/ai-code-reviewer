@@ -91,7 +91,9 @@ tasks.withType<KotlinCompile> {
 }
 
 tasks.withType<Test> {
-    useJUnitPlatform()
+    useJUnitPlatform {
+        excludeTags("experiment")   // 일반 테스트 실행 시 실험 테스트 제외
+    }
 
     // 테스트 stdout(println) 콘솔에 출력
     testLogging {
