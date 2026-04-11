@@ -31,12 +31,13 @@ class SpringAiConventionVectorAdapter(
 
     // query를 임베딩(OpenAI API 호출)하여 pgvector cosine 유사도 검색 수행
     // category가 지정되면 metadata JSONB 필터를 적용하여 해당 카테고리 문서만 검색한다
-    override fun search(query: String, topK: Int, category: String?, similarityThreshold: Double): List<Document> {
-        val builder = SearchRequest.builder()
-            .query(query)
-            .topK(topK)
-            .similarityThreshold(similarityThreshold)
-        category?.let { builder.filterExpression("category == '$it'") }
-        return vectorStore.similaritySearch(builder.build())
-    }
+    override fun search(query: String, topK: Int, category: String?, similarityThreshold: Double): List<Document> =
+        vectorStore.similaritySearch(
+            SearchRequest.builder()
+                .query(query)
+                .topK(topK)
+                .similarityThreshold(similarityThreshold)
+                .apply { category?.let { filterExpression("category == '$it'") } }
+                .build()
+        )
 }

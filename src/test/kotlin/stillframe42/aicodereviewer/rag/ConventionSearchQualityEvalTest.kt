@@ -141,16 +141,15 @@ class ConventionSearchQualityEvalTest : Logging {
     // 질문과 검색 결과를 Claude에게 전달하여 관련성 점수와 원인을 구조화된 타입으로 반환받는다.
     // BeanOutputConverter가 QualityEvalResult의 JSON 스키마를 프롬프트에 자동으로 추가한다.
     private fun evaluateWithClaude(query: String, docs: List<Document>): QualityEvalResult {
-        val docsText = if (docs.isEmpty()) {
-            "검색 결과 없음"
-        } else {
-            docs.mapIndexed { i, doc ->
+        val docsText = docs.takeIf { it.isNotEmpty() }
+            ?.mapIndexed { i, doc ->
                 buildString {
                     append("${i + 1}. [${doc.metadata["category"]}] ${doc.metadata["source"]} > \"${doc.metadata["section_header"]}\"")
                     append("\n   ${doc.text?.take(300) ?: ""}")
                 }
-            }.joinToString("\n\n")
-        }
+            }
+            ?.joinToString("\n\n")
+            ?: "검색 결과 없음"
 
         return chatClient.prompt()
             .user(
