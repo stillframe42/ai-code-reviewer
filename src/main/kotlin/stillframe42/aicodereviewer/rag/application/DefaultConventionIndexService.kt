@@ -2,7 +2,6 @@ package stillframe42.aicodereviewer.rag.application
 
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
-import org.springframework.boot.ApplicationArguments
 import org.springframework.boot.context.event.ApplicationReadyEvent
 import org.springframework.context.event.EventListener
 import org.springframework.stereotype.Service
@@ -20,7 +19,6 @@ class DefaultConventionIndexService(
     private val vectorPort: ConventionVectorPort,
     private val splitter: DocumentPreparerPort,
     private val ragProperties: RagProperties,
-    private val applicationArguments: ApplicationArguments,
 ) : ConventionIndexUseCase, Logging {
 
     companion object {
@@ -29,12 +27,11 @@ class DefaultConventionIndexService(
     }
 
     // 앱 기동 완료 시점에 자동 인덱싱을 시도한다.
-    // ragProperties.autoIndex=false이면 스킵 (테스트 환경).
-    // --index-conventions CLI 옵션이 있으면 스킵 — ConventionIndexingRunner가 처리함.
+    // ragProperties.autoIndex=false이면 스킵.
+    // CLI 모드(--index-conventions)에서는 main()이 app.rag.auto-index=false로 설정하여 스킵됨.
     @EventListener(ApplicationReadyEvent::class)
     fun onApplicationReady() {
         if (!ragProperties.autoIndex) return
-        if (applicationArguments.containsOption("index-conventions")) return
         runBlocking { index() }
     }
 
