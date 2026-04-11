@@ -111,6 +111,39 @@ class ConventionIndexerIntegrationTest : AbstractIntegrationTest() {
         assertThat(results.size).isLessThanOrEqualTo(3)
     }
 
+    @Test
+    fun `임베딩 API 429 응답 시 재시도하여 성공한다`() {
+        // 첫 번째 임베딩 요청: 429 Rate Limit
+        wireMock.stubFor(
+            post(urlPathEqualTo("/v1/embeddings"))
+                .inScenario("rate-limit-retry")
+                .whenScenarioStateIs(com.github.tomakehurst.wiremock.stubbing.Scenario.STARTED)
+                .willReturn(
+                    aResponse()
+                        .withStatus(429)
+                        .withHeader("Content-Type", "application/json")
+                        .withBody("""{"error":{"message":"Rate limit exceeded","type":"requests","code":"rate_limit_exceeded"}}""")
+                )
+                .willSetStateTo("retry")
+        )
+        // 두 번째 임베딩 요청: 200 성공
+        wireMock.stubFor(
+            post(urlPathEqualTo("/v1/embeddings"))
+                .inScenario("rate-limit-retry")
+                .whenScenarioStateIs("retry")
+                .willReturn(
+                    aResponse()
+                        .withStatus(200)
+                        .withHeader("Content-Type", "application/json")
+                        .withTransformers("openai-embedding-batch")
+                )
+        )
+
+        runBlocking { conventionIndexUseCase.index() }
+
+        assertThat(countRows()).isGreaterThan(0)
+    }
+
     private fun countRows(): Long =
         jdbcTemplate.queryForObject("SELECT count(*) FROM vector_store", Long::class.java) ?: 0L
 }
