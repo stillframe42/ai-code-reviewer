@@ -33,10 +33,10 @@ import java.io.File
 class EmbeddingLargeModelExperimentTest {
 
     companion object {
-        val postgres: PostgreSQLContainer =
+        private val postgres: PostgreSQLContainer =
             PostgreSQLContainer("pgvector/pgvector:pg16").also { it.start() }
 
-        val redis: GenericContainer<*> =
+        private val redis: GenericContainer<*> =
             GenericContainer("redis:7-alpine")
                 .withExposedPorts(6379)
                 .also { it.start() }
@@ -69,7 +69,7 @@ class EmbeddingLargeModelExperimentTest {
             }
         }
 
-        val TEST_QUERIES = listOf(
+        private val TEST_QUERIES = listOf(
             "Kotlin data class를 Entity로 쓰면 안 되는 이유는?",
             "Spring에서 @Transactional 범위는 어떻게 잡아야 해?",
             "API 응답에 null을 그대로 내려도 되나?",
