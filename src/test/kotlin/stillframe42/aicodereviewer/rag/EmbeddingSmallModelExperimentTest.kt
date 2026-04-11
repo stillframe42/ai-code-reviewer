@@ -63,18 +63,6 @@ class EmbeddingSmallModelExperimentTest {
             }
         }
 
-        private val TEST_QUERIES = listOf(
-            "Kotlin data class를 Entity로 쓰면 안 되는 이유는?",
-            "Spring에서 @Transactional 범위는 어떻게 잡아야 해?",
-            "API 응답에 null을 그대로 내려도 되나?",
-            "로깅할 때 개인정보는 어떻게 처리해?",
-            "N+1 쿼리 문제 해결 방법은?",
-            "Kotlin에서 null 안전성을 처리하는 패턴은?",
-            "헥사고날 아키텍처에서 의존성 방향 규칙은?",
-            "OWASP Top 10에서 Injection 공격을 방어하는 방법은?",
-            "코루틴에서 단일 응답과 스트리밍을 어떻게 구분하나?",
-            "use-site target을 명시해야 하는 경우는?",
-        )
     }
 
     @Autowired
@@ -110,7 +98,7 @@ class EmbeddingSmallModelExperimentTest {
     private data class QueryResult(val summary: String, val score: Int, val note: String, val elapsedMs: Long)
 
     private fun runQueriesAndRecord(model: String) {
-        val results = TEST_QUERIES.map { query ->
+        val results = ConventionTestQueries.QUERIES.map { query ->
             val start = System.currentTimeMillis()
             val docs = vectorPort.search(query, topK = 3)
             val elapsed = System.currentTimeMillis() - start

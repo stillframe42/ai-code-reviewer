@@ -69,19 +69,6 @@ class ConventionChunkingExperimentUpdateTest {
             }
         }
 
-        // 원본 실험과 동일한 10개 테스트 질문
-        val TEST_QUERIES = listOf(
-            "Kotlin data class를 Entity로 쓰면 안 되는 이유는?",
-            "Spring에서 @Transactional 범위는 어떻게 잡아야 해?",
-            "API 응답에 null을 그대로 내려도 되나?",
-            "로깅할 때 개인정보는 어떻게 처리해?",
-            "N+1 쿼리 문제 해결 방법은?",
-            "Kotlin에서 null 안전성을 처리하는 패턴은?",
-            "헥사고날 아키텍처에서 의존성 방향 규칙은?",
-            "OWASP Top 10에서 Injection 공격을 방어하는 방법은?",
-            "코루틴에서 단일 응답과 스트리밍을 어떻게 구분하나?",
-            "use-site target을 명시해야 하는 경우는?",
-        )
 
         // 원본 실험 점수 — 비교 요약 테이블 업데이트에 사용
         val ORIGINAL_SCORES = mapOf(
@@ -158,7 +145,7 @@ class ConventionChunkingExperimentUpdateTest {
 
     // 10개 테스트 질문을 검색하고 자동 채점 후 chunking-experiment-update.md에 기록한다.
     private fun runQueriesAndRecord(strategy: String, totalChunks: Int) {
-        val results = TEST_QUERIES.map { query ->
+        val results = ConventionTestQueries.QUERIES.map { query ->
             val searchResult = vectorPort.search(query, topK = 3)
             val (score, note) = autoScore(query, buildSummary(searchResult))
             Triple(query, searchResult, score to note)
@@ -243,7 +230,7 @@ class ConventionChunkingExperimentUpdateTest {
         )
 
         // 각 질문 행 업데이트
-        TEST_QUERIES.forEachIndexed { index, _ ->
+        ConventionTestQueries.QUERIES.forEachIndexed { index, _ ->
             val queryNum = "Q${index + 1}"
             val (_, docs, scoreNote) = results[index]
             val (score, note) = scoreNote

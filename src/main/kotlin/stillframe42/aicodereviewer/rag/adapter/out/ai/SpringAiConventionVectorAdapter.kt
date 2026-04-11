@@ -5,6 +5,7 @@ import org.springframework.ai.vectorstore.SearchRequest
 import org.springframework.ai.vectorstore.VectorStore
 import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.stereotype.Component
+import stillframe42.aicodereviewer.rag.domain.model.ConventionCategory
 import stillframe42.aicodereviewer.rag.domain.port.out.ConventionVectorPort
 
 // Spring AI VectorStore를 ConventionVectorPort로 감싸는 아웃바운드 어댑터
@@ -31,13 +32,13 @@ class SpringAiConventionVectorAdapter(
 
     // query를 임베딩(OpenAI API 호출)하여 pgvector cosine 유사도 검색 수행
     // category가 지정되면 metadata JSONB 필터를 적용하여 해당 카테고리 문서만 검색한다
-    override fun search(query: String, topK: Int, category: String?, similarityThreshold: Double): List<Document> =
+    override fun search(query: String, topK: Int, category: ConventionCategory?, similarityThreshold: Double): List<Document> =
         vectorStore.similaritySearch(
             SearchRequest.builder()
                 .query(query)
                 .topK(topK)
                 .similarityThreshold(similarityThreshold)
-                .apply { category?.let { filterExpression("category == '$it'") } }
+                .apply { category?.let { filterExpression("category == '${it.name}'") } }
                 .build()
         )
 }
