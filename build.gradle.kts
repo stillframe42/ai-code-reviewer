@@ -104,10 +104,10 @@ tasks.withType<Test> {
     inputs.property("anthropicApiKey", System.getenv("ANTHROPIC_API_KEY") ?: "")
 }
 
-// 기본 테스트: experiment 태그 제외
+// 기본 테스트: experiment, quality-eval 태그 제외
 tasks.test {
     useJUnitPlatform {
-        excludeTags("experiment")
+        excludeTags("experiment", "quality-eval")
     }
 }
 
@@ -123,5 +123,20 @@ tasks.register<Test>("experimentTest") {
 
     useJUnitPlatform {
         includeTags("experiment")
+    }
+}
+
+// 컨벤션 검색 품질 평가 태스크 — 실제 OpenAI(임베딩) + Anthropic(평가) API 키 필요
+// application-secret.yml의 API 키를 사용하므로 별도 인수 불필요
+// 실행: ./gradlew qualityEvalTest
+tasks.register<Test>("qualityEvalTest") {
+    description = "컨벤션 검색 품질 평가 실행 (실제 OpenAI + Anthropic API 사용, 결과를 마크다운으로 저장)"
+    group = "verification"
+
+    testClassesDirs = sourceSets["test"].output.classesDirs
+    classpath = sourceSets["test"].runtimeClasspath
+
+    useJUnitPlatform {
+        includeTags("quality-eval")
     }
 }
