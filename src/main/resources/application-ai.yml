@@ -4,6 +4,7 @@
 app:
   rag:
     auto-index: true
+    retry-base-delay: PT2S   # Exponential Backoff 기본 대기 시간 (2초)
   review:
     diff:
       # 추가 제외 glob 패턴 목록 (빈 목록 = 추가 제외 없음)

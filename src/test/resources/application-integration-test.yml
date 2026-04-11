@@ -63,3 +63,4 @@ app:
         - "build.gradle.kts"
   rag:
     auto-index: false
+    retry-base-delay: PT0.1S   # 통합 테스트에서 재시도 대기 시간 단축 (100ms)
