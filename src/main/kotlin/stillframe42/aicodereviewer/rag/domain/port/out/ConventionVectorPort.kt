@@ -7,6 +7,13 @@ interface ConventionVectorPort {
     fun save(documents: List<Document>)
     fun isEmpty(): Boolean
     fun deleteAll()
-    // 쿼리 텍스트를 임베딩하여 cosine 유사도 기반으로 상위 topK 청크를 반환한다
-    fun search(query: String, topK: Int = 5): List<Document>
+    // 쿼리 텍스트를 임베딩하여 cosine 유사도 기반으로 상위 topK 청크를 반환한다.
+    // category가 지정되면 metadata.category 기준으로 필터링한다 (STYLE, ARCH, SECURITY, API).
+    // similarityThreshold 미만의 유사도 문서는 제외한다 (0.0이면 필터링 없음).
+    fun search(
+        query: String,
+        topK: Int = 5,
+        category: String? = null,
+        similarityThreshold: Double = 0.7,
+    ): List<Document>
 }
