@@ -74,16 +74,28 @@ logger.info("사용자 인증: $username / $password")
 
 **위험:** SQL Injection, Command Injection 등 외부 입력이 실행 컨텍스트에 주입되는 취약점
 
-**Spring Boot 대응:**
+**Injection 공격 방어의 핵심 원칙:**
+1. **Parameterized Query (파라미터 바인딩)** — 외부 입력을 SQL/JPQL 문자열에 직접 연결하지 않고 바인딩 변수로 처리한다
+2. **Input Validation (입력값 검증)** — 외부 입력을 처리하기 전에 Bean Validation으로 형식과 범위를 검증한다
+3. **출력 인코딩** — 데이터를 출력할 컨텍스트(HTML, 로그 등)에 맞게 이스케이프한다
+
+**Spring Boot 대응 — SQL Injection 방어 (Parameterized Query):**
 
 ```kotlin
-// ✅ JPA/QueryDSL 파라미터 바인딩 사용
+// ✅ JPA 메서드명 기반 쿼리 — 파라미터 바인딩 자동 적용 (Prepared Statement)
 fun findByRepoAndPr(repoFullName: String, prNumber: Int): ReviewRequest? =
     reviewRepository.findByRepoFullNameAndPrNumber(repoFullName, prNumber)
 
-// ✅ @Query에서 파라미터 바인딩
+// ✅ @Query에서 파라미터 바인딩 — :param 형식으로 Prepared Statement 사용
 @Query("SELECT r FROM ReviewRequestEntity r WHERE r.repoFullName = :repo AND r.prNumber = :pr")
 fun findByRepoPr(@Param("repo") repo: String, @Param("pr") pr: Int): ReviewRequestEntity?
+
+// ✅ JdbcTemplate 파라미터 바인딩 — ? 플레이스홀더 사용
+jdbcTemplate.queryForObject(
+    "SELECT count(*) FROM vector_store WHERE metadata->>'source' = ?",
+    Long::class.java,
+    source,
+)
 
 // ❌ SQL 문자열 직접 조합 — SQL Injection 취약점
 val query = "SELECT * FROM reviews WHERE repo = '$repoFullName'"
@@ -92,6 +104,32 @@ jdbcTemplate.query(query, ...)
 // ❌ 셸 명령에 외부 입력 사용 — Command Injection 취약점
 Runtime.getRuntime().exec("git clone $userInput")
 ```
+
+**Spring Boot 대응 — Input Validation (입력값 검증):**
+
+```kotlin
+import jakarta.validation.constraints.Min
+import jakarta.validation.constraints.NotBlank
+import org.springframework.validation.annotation.Validated
+
+// ✅ Bean Validation으로 입력값 검증 — Injection 방어 1차 방어선
+// 형식/범위가 맞지 않는 입력은 컨트롤러 진입 전에 400으로 차단된다
+data class ReviewRequest(
+    @field:NotBlank val repoFullName: String,
+    @field:Min(1) val prNumber: Int,
+)
+
+@PostMapping("/api/review")
+suspend fun requestReview(
+    @Valid @RequestBody request: ReviewRequest,  // @Valid 누락 시 검증 미적용
+): ReviewResponse
+
+// ❌ 입력값 검증 없이 쿼리 실행
+fun search(keyword: String) =
+    jdbcTemplate.query("SELECT * FROM docs WHERE content LIKE '%$keyword%'", ...)
+```
+
+**Spring Boot 대응 — Log Injection / XSS 방어 (출력 인코딩):**
 
 ```kotlin
 import org.springframework.web.util.HtmlUtils
@@ -116,15 +154,18 @@ val safeOutput = HtmlUtils.htmlEscape(userInput)
 
 | Injection 유형 | 방어 방법 |
 |---------------|---------|
-| SQL Injection | JPA 파라미터 바인딩, `@Query` + `@Param` |
+| SQL Injection | JPA 파라미터 바인딩, `@Query` + `@Param`, JdbcTemplate `?` 플레이스홀더 |
+| JPQL Injection | `@Query` + `:param` 바인딩 (문자열 연결 금지) |
 | Command Injection | 셸 명령에 외부 입력 사용 금지 |
 | Log Injection | 개행 문자(`\n`, `\r`) 이스케이프 후 로깅 |
 | XSS | `HtmlUtils.htmlEscape()`, Content-Type 헤더 명시 |
 
 **체크 항목:**
-- [ ] 모든 DB 쿼리에 파라미터 바인딩 사용
-- [ ] 동적 쿼리 생성 시 입력값 검증
+- [ ] 모든 DB 쿼리에 파라미터 바인딩(Prepared Statement) 사용 — 문자열 직접 조합 금지
+- [ ] 모든 API 입력에 `@Valid` + Bean Validation 어노테이션 적용
+- [ ] 동적 쿼리 생성 시 외부 입력을 SQL/JPQL 문자열에 직접 포함하지 않는지 확인
 - [ ] 외부 입력으로 셸 명령 실행 금지
+- [ ] 로그 출력 전 사용자 입력의 개행 문자 제거
 
 ### A04: 안전하지 않은 설계 (Insecure Design)
 
