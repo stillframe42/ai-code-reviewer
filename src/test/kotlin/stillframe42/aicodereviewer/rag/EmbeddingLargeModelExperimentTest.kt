@@ -55,6 +55,7 @@ class EmbeddingLargeModelExperimentTest {
                 "classpath:db/migration,classpath:db/migration-large"
             }
             registry.add("spring.ai.openai.embedding.options.model") { "text-embedding-3-large" }
+            registry.add("spring.ai.openai.embedding.options.dimensions") { "3072" }
             registry.add("spring.ai.vectorstore.pgvector.dimensions") { "3072" }
 
             val secretResource = ClassPathResource("application-secret.yml")
