@@ -72,10 +72,12 @@ logger.info("사용자 인증: $username / $password")
 
 ### A03: 인젝션 (Injection)
 
+> OWASP A03 — SQL/Command/JPQL Injection 방어 패턴. PreparedStatement(파라미터 바인딩) 기반 방어가 핵심이다.
+
 **위험:** SQL Injection, Command Injection 등 외부 입력이 실행 컨텍스트에 주입되는 취약점
 
 **Injection 공격 방어의 핵심 원칙:**
-1. **Parameterized Query (파라미터 바인딩)** — 외부 입력을 SQL/JPQL 문자열에 직접 연결하지 않고 바인딩 변수로 처리한다
+1. **Parameterized Query (파라미터 바인딩)** — 외부 입력을 SQL/JPQL 문자열에 직접 연결하지 않고 바인딩 변수로 처리한다 (PreparedStatement 방식)
 2. **Input Validation (입력값 검증)** — 외부 입력을 처리하기 전에 Bean Validation으로 형식과 범위를 검증한다
 3. **출력 인코딩** — 데이터를 출력할 컨텍스트(HTML, 로그 등)에 맞게 이스케이프한다
 
