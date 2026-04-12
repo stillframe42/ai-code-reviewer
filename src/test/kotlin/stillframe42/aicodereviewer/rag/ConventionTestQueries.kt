@@ -19,4 +19,14 @@ object ConventionTestQueries {
     )
 
     val QUERIES: List<String> = LABELED.map { it.second }
+
+    // diff에서 추출한 코드 용어 형태의 쿼리 — 벡터 검색의 약점(약어/코드 식별자)을 검증하기 위한 보조 셋
+    // DAY 9 하이브리드 검색 비교 실험에서 기존 LABELED 10개와 함께 사용한다.
+    val EDGE_CASE_QUERIES: List<Pair<String, String>> = listOf(
+        "E1" to "OWASP A03 Injection",
+        "E2" to "PreparedStatement SQL",
+        "E3" to "data class Entity JPA",
+        "E4" to "JWT authentication filter",
+        "E5" to "@Transactional readOnly",
+    )
 }
