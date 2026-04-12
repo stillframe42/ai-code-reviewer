@@ -30,25 +30,6 @@ class MarkdownHeaderSplitter : DocumentPreparerPort {
         var inCodeBlock = false
         val buffer = mutableListOf<String>()
 
-        // buffer 내용을 Document로 flush. 빈 buffer나 첫 헤더 이전 내용은 무시.
-        fun flush() {
-            val content = buffer.joinToString("\n").trim()
-            buffer.clear()
-            if (content.isBlank()) return
-            // 로컬 변수로 캡처하여 스마트 캐스트 적용 (로컬 함수는 외부 var를 스마트 캐스트 불가)
-            val h2 = currentH2
-            val h3 = currentH3
-            val (sectionHeader, depth) = when {
-                h3 != null -> "${h2.orEmpty()} > $h3" to "h3"
-                h2 != null -> h2 to "h2"
-                else -> return // 첫 ## 헤더 이전 내용 무시
-            }
-            documents += Document(
-                content,
-                baseMetadata + mapOf("section_header" to sectionHeader, "depth" to depth),
-            )
-        }
-
         for (line in text.lines()) {
             // 코드 블록 진입/탈출 추적 (``` 으로 시작하는 줄)
             if (line.trimStart().startsWith("```")) {
@@ -62,18 +43,40 @@ class MarkdownHeaderSplitter : DocumentPreparerPort {
             }
             when {
                 line.startsWith("## ") -> {
-                    flush()
+                    documents.flushSection(buffer, currentH2, currentH3, baseMetadata)
                     currentH2 = line.removePrefix("## ").trim()
                     currentH3 = null
                 }
                 line.startsWith("### ") -> {
-                    flush()
+                    documents.flushSection(buffer, currentH2, currentH3, baseMetadata)
                     currentH3 = line.removePrefix("### ").trim()
                 }
                 else -> buffer += line
             }
         }
-        flush()
+        documents.flushSection(buffer, currentH2, currentH3, baseMetadata)
         return documents
     }
+}
+
+// buffer 내용을 Document로 변환하여 수신자 리스트에 추가한다.
+// 빈 buffer나 헤더가 없는(첫 헤더 이전) 내용은 무시한다.
+private fun MutableList<Document>.flushSection(
+    buffer: MutableList<String>,
+    currentH2: String?,
+    currentH3: String?,
+    baseMetadata: Map<String, Any>,
+) {
+    val content = buffer.joinToString("\n").trim()
+    buffer.clear()
+    if (content.isBlank()) return
+    val (sectionHeader, depth) = when {
+        currentH3 != null -> "${currentH2.orEmpty()} > $currentH3" to "h3"
+        currentH2 != null -> currentH2 to "h2"
+        else -> return // 첫 ## 헤더 이전 내용 무시
+    }
+    this += Document(
+        content,
+        baseMetadata + mapOf("section_header" to sectionHeader, "depth" to depth),
+    )
 }
