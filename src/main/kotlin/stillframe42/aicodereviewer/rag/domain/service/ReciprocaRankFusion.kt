@@ -12,16 +12,8 @@ fun reciprocalRankFusion(
     k: Int = 60,
 ): List<Document> {
     val scores = mutableMapOf<String, Double>()
-
-    fun addScores(results: List<Document>) {
-        results.forEachIndexed { rank, doc ->
-            doc.id?.let { id ->
-                scores[id] = (scores[id] ?: 0.0) + 1.0 / (k + rank + 1)
-            }
-        }
-    }
-    addScores(vectorResults)
-    addScores(keywordResults)
+    scores.accumulate(vectorResults, k)
+    scores.accumulate(keywordResults, k)
 
     // 동일 id가 있으면 keywordResults 버전이 남는다(Last-Wins).
     // 두 어댑터 모두 vector_store 동일 테이블에서 조회하므로 내용이 같아 순위에 영향 없음.
@@ -31,4 +23,13 @@ fun reciprocalRankFusion(
         .sortedByDescending { it.value }
         .take(topK)
         .mapNotNull { (id, _) -> allDocuments[id] }
+}
+
+// 결과 목록의 RRF 점수를 수신 맵에 누적한다.
+private fun MutableMap<String, Double>.accumulate(results: List<Document>, k: Int) {
+    results.forEachIndexed { rank, doc ->
+        doc.id.let { id ->
+            this[id] = (this[id] ?: 0.0) + 1.0 / (k + rank + 1)
+        }
+    }
 }
