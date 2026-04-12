@@ -34,7 +34,6 @@ class ConventionSearchIntegrationTest : AbstractIntegrationTest(), Logging {
     // → wireMock.resetAll() 이후 임베딩 스텁을 재등록하고, 테스트용 문서를 인덱싱한다.
     @BeforeEach
     fun stubAndIndex() {
-        jdbcTemplate.execute("DELETE FROM vector_store")
         // OpenAI 임베딩 API 스텁 — 인덱싱 및 검색 쿼리 임베딩 요청 모두 처리
         wireMock.stubFor(
             post(urlPathEqualTo("/v1/embeddings"))
@@ -50,7 +49,8 @@ class ConventionSearchIntegrationTest : AbstractIntegrationTest(), Logging {
 
     @Test
     fun `기본 검색 시 topK 이하의 결과가 반환된다`() {
-        val results = vectorPort.search("Kotlin null safety", topK = 5)
+        // WireMock 환경에서는 임베딩이 랜덤 벡터로 생성되어 유사도가 낮으므로 threshold를 0.0으로 설정한다.
+        val results = vectorPort.search("Kotlin null safety", topK = 5, similarityThreshold = 0.0)
 
         assertThat(results).isNotEmpty
         assertThat(results.size).isLessThanOrEqualTo(5)

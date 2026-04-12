@@ -26,8 +26,10 @@ class SpringAiConventionVectorAdapter(
             Long::class.java,
         ) ?: 0L) == 0L
 
+    // TRUNCATE를 사용하여 HNSW 인덱스를 완전히 초기화한다.
+    // DELETE는 dead tuple을 남겨 HNSW 그래프가 오염되고 검색 품질이 저하된다.
     override fun deleteAll() {
-        jdbcTemplate.execute("DELETE FROM vector_store")
+        jdbcTemplate.execute("TRUNCATE TABLE vector_store")
     }
 
     // query를 임베딩(OpenAI API 호출)하여 pgvector cosine 유사도 검색 수행
