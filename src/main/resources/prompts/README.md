@@ -15,6 +15,7 @@
 | v6 | review-system-v6.st | 2026-03-25 | v5 기반 + filename 필드 안내 추가 (diff position 매핑을 위한 파일 경로 반환 요청) |
 | v7 | review-system-v7.st | 2026-03-25 | v6 기반 + summary 2문장 제한, positives 최대 3개 제한 (가독성 개선) |
 | v8 | review-system-v8.st | 2026-04-01 | v7 기반 + Tool Calling 사용 지침 추가 (diff 외부 타입 참조 시 도구 호출 명시) |
+| v9 | review-system-v9.st | 2026-04-15 | v8 기반 + RAG 컨벤션 컨텍스트 주입 (`{convention_section}`) |
 
 ## 버전 전환 방법
 
@@ -29,6 +30,14 @@ app:
 ```
 
 ## 변경 이력
+
+### v9 (2026-04-15)
+
+- **변경 이유**: RAG 기반 컨벤션 컨텍스트 통합 — 리뷰 대상 파일의 카테고리(SECURITY/API/ARCH/STYLE)에 맞는 컨벤션 문서를 검색해 프롬프트에 주입하여 컨벤션 기반 피드백 품질을 높임
+- **주요 변경**:
+  - v8을 베이스로 유지
+  - 첫 줄 페르소나 변경: "AI Code Reviewer" → "시니어 백엔드 엔지니어"
+  - `{convention_section}` 플레이스홀더 추가 — `SpringAiReviewAdapter`가 RAG 검색 결과를 "[참고 컨벤션 문서]\n{내용}" 형태로 주입. 검색 결과 없으면 빈 문자열로 치환되어 기존 동작 유지
 
 ### v8 (2026-04-01)
 

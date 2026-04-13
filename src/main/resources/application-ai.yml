@@ -37,7 +37,7 @@ app:
           input-per-1k: 0.000150
           output-per-1k: 0.000600
   prompt:
-    review-system: classpath:prompts/review-system-v8.st   # v8: v7 기반 + Tool Calling 사용 지침 추가
+    review-system: classpath:prompts/review-system-v9.st   # v9: v8 기반 + RAG 컨벤션 컨텍스트 주입
     chat-system: classpath:prompts/chat-system.st
     chat-user: classpath:prompts/chat-user.st
 
