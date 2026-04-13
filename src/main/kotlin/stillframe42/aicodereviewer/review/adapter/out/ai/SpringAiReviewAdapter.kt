@@ -120,15 +120,11 @@ class SpringAiReviewAdapter(
         toolCallCounter: AtomicInteger,
         modelName: String?,
         conventionContext: String?,
-    ): ChatClient.ChatClientRequestSpec {
-        // convention_section: 문서가 있으면 헤더+내용, 없으면 빈 문자열 (v9 템플릿에 항상 주입)
-        val conventionSection = if (!conventionContext.isNullOrBlank()) {
-            "[참고 컨벤션 문서]\n$conventionContext\n"
-        } else ""
-        return promptBuilder.build(
+    ): ChatClient.ChatClientRequestSpec =
+        promptBuilder.build(
             systemPromptResource,
             userPromptResource,
-            mapOf("code" to code, "convention_section" to conventionSection),
+            buildVariables(code, conventionContext),
             provider,
         )
             .advisors(loggingAdvisor, retryAdvisor, costTrackingAdvisor)
@@ -152,6 +148,16 @@ class SpringAiReviewAdapter(
                     }
                 }
             }
+
+    // convention_section: 문서가 있으면 헤더+내용, 없으면 빈 문자열 (v9 템플릿에 항상 주입)
+    private fun buildVariables(code: String, conventionContext: String?): Map<String, Any> {
+        val conventionSection = if (!conventionContext.isNullOrBlank()) {
+            "[참고 컨벤션 문서]\n$conventionContext\n"
+        } else ""
+        return mapOf(
+            "code" to code,
+            "convention_section" to conventionSection,
+        )
     }
 
     companion object {
