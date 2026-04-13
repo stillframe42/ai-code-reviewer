@@ -52,12 +52,22 @@ class ReciprocaRankFusionTest {
     }
 
     @Test
-    fun `한쪽만 비어 있으면 나머지 결과가 그대로 반환된다`() {
+    fun `벡터 결과만 있으면 벡터 결과가 그대로 반환된다`() {
         val vectorResults = listOf(doc("A", "A"), doc("B", "B"))
 
         val result = reciprocalRankFusion(vectorResults, emptyList(), topK = 5)
 
         assertThat(result).hasSize(2)
         assertThat(result.map { it.id }).containsExactlyInAnyOrder("A", "B")
+    }
+
+    @Test
+    fun `키워드 결과만 있으면 키워드 결과가 그대로 반환된다`() {
+        val keywordResults = listOf(doc("X", "X"), doc("Y", "Y"))
+
+        val result = reciprocalRankFusion(emptyList(), keywordResults, topK = 5)
+
+        assertThat(result).hasSize(2)
+        assertThat(result.map { it.id }).containsExactlyInAnyOrder("X", "Y")
     }
 }

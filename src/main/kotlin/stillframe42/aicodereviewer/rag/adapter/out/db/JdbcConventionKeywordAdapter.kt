@@ -16,8 +16,10 @@ class JdbcConventionKeywordAdapter(
     private val objectMapper: ObjectMapper,
 ) : ConventionKeywordSearchPort {
 
-    override suspend fun search(query: String, topK: Int): List<Document> =
-        withContext(Dispatchers.IO) {
+    override suspend fun search(query: String, topK: Int): List<Document> {
+        // 빈 쿼리는 plainto_tsquery 파싱 오류 방지를 위해 조기 반환
+        if (query.isBlank()) return emptyList()
+        return withContext(Dispatchers.IO) {
             jdbcTemplate.query(
                 """
                 SELECT id::text, content, metadata::text
@@ -36,4 +38,5 @@ class JdbcConventionKeywordAdapter(
                 query, query, topK,
             )
         }
+    }
 }
