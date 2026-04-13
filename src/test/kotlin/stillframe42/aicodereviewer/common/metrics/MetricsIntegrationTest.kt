@@ -62,6 +62,8 @@ class MetricsIntegrationTest : AbstractIntegrationTest() {
         WireMockStubs.stubPrFiles(wireMock, "owner/repo", 200)
         WireMockStubs.stubAnthropicReviewWithIssues(wireMock)
         WireMockStubs.stubPostPrReview(wireMock, "owner/repo", 200, reviewId = 9200L)
+        // RAG ConventionContextService가 리뷰 플로우에서 임베딩 API를 호출하므로 스텁 등록
+        WireMockStubs.stubOpenAiEmbedding(wireMock)
     }
 
     @AfterEach

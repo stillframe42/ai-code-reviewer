@@ -24,6 +24,8 @@ class DefaultReviewServiceTest : AbstractIntegrationTest() {
     fun setUpStubs() {
         // 이슈 포함 응답으로 설정 — 이슈 감지 테스트도 커버하고 기본 테스트도 통과
         WireMockStubs.stubAnthropicReviewWithIssues(wireMock)
+        // RAG ConventionContextService가 diffOptions 존재 시 임베딩 API를 호출하므로 스텁 등록
+        WireMockStubs.stubOpenAiEmbedding(wireMock)
     }
 
     @Test

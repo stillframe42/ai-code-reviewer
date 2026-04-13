@@ -245,6 +245,20 @@ object WireMockStubs {
     fun findLangfuseIngestionRequests(server: WireMockServer): List<LoggedRequest> =
         server.findAll(postRequestedFor(urlPathEqualTo("/api/public/ingestion")))
 
+    // OpenAI 임베딩 응답 — RAG ConventionContextService가 호출하는 /v1/embeddings 스텁
+    // OpenAiEmbeddingBatchTransformer가 배치 크기에 맞는 임베딩 배열을 동적으로 생성한다.
+    fun stubOpenAiEmbedding(server: WireMockServer) {
+        server.stubFor(
+            post(urlPathEqualTo("/v1/embeddings"))
+                .willReturn(
+                    aResponse()
+                        .withStatus(200)
+                        .withHeader("Content-Type", "application/json")
+                        .withTransformers("openai-embedding-batch")
+                )
+        )
+    }
+
     // Anthropic Tool Calling 시나리오 stub — 1차: tool_use 응답, 2차: 최종 리뷰 응답
     fun stubAnthropicWithToolCall(server: WireMockServer) {
         server.stubFor(

@@ -28,6 +28,8 @@ class DefaultReviewServiceCacheTest : AbstractIntegrationTest() {
     @BeforeEach
     fun setUpCacheTest() {
         WireMockStubs.stubAnthropicReviewWithIssues(wireMock)
+        // RAG ConventionContextService가 diffOptions 존재 시 임베딩 API를 호출하므로 스텁 등록
+        WireMockStubs.stubOpenAiEmbedding(wireMock)
     }
 
     @Test

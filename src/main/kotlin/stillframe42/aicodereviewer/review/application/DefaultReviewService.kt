@@ -20,6 +20,7 @@ import stillframe42.aicodereviewer.review.domain.port.out.ReviewCacheStore
 import stillframe42.aicodereviewer.review.domain.port.out.ReviewCacheStatsStore
 import stillframe42.aicodereviewer.review.domain.service.DiffPreprocessor
 import stillframe42.aicodereviewer.review.domain.service.PrImportanceAnalyzer
+import stillframe42.aicodereviewer.rag.application.ConventionContextService
 
 // 코드 리뷰 유스케이스 구현 — AI 포트에 위임하며, 캐싱·모델 선택 등 비즈니스 로직을 조합한다.
 @Service
@@ -32,6 +33,7 @@ class DefaultReviewService(
     private val reviewCacheStore: ReviewCacheStore,
     private val reviewMetrics: ReviewMetrics,
     private val reviewCacheStatsStore: ReviewCacheStatsStore,
+    private val conventionContextService: ConventionContextService,
 ) : ReviewUseCase, Logging {
 
     override suspend fun reviewCode(
@@ -59,17 +61,19 @@ class DefaultReviewService(
         val review = if (fileDiffs.size > 1)
             reviewParallel(fileDiffs, provider, mode, modelName)
         else
-            reviewWithCache(preprocessResult.diff, provider, mode, modelName)
+            reviewWithCache(preprocessResult.diff, provider, mode, modelName,
+                filePath = preprocessResult.fileNames.singleOrNull())
 
         return review.copy(modelName = modelName)
     }
 
-    // 캐시 조회 → 히트 시 즉시 반환, 미스 시 AI 호출 후 캐시 저장
+    // 캐시 조회 → 히트 시 즉시 반환, 미스 시 RAG 호출 후 AI 호출 후 캐시 저장
     private suspend fun reviewWithCache(
         diff: String,
         provider: AiProvider,
         mode: ReviewMode,
         modelName: String?,
+        filePath: String? = null,
     ): CodeReview {
         val key = cacheKey(diff)
         val cached = reviewCacheStore.get(key)
@@ -82,7 +86,15 @@ class DefaultReviewService(
         logger.debug("캐시 미스: key={}", key)
         reviewMetrics.recordCacheMiss()
         reviewCacheStatsStore.incrementMiss()
-        return aiReviewPort.reviewCode(diff, provider, mode, reviewContext = null, modelName = modelName)
+        // 캐시 미스 시에만 RAG 호출 (캐시 히트는 이미 컨벤션 컨텍스트가 반영된 결과)
+        val conventionContext = filePath?.let {
+            conventionContextService.buildContext(
+                query = it.substringAfterLast("/"),
+                filePath = it,
+            )
+        }
+        return aiReviewPort.reviewCode(diff, provider, mode, reviewContext = null, modelName = modelName,
+            conventionContext = conventionContext)
             .also { result ->
                 // 캐시 저장 실패는 리뷰 결과 반환에 영향을 주지 않는다 (best-effort)
                 runCatching { reviewCacheStore.put(key, result) }
@@ -103,7 +115,12 @@ class DefaultReviewService(
         val semaphore = Semaphore(concurrency)
         return supervisorScope {
             fileDiffs.map { diff ->
-                async { semaphore.withPermit { reviewWithCache(diff, provider, mode, modelName) } }
+                async {
+                    semaphore.withPermit {
+                        val filePath = extractFilePath(diff)
+                        reviewWithCache(diff, provider, mode, modelName, filePath)
+                    }
+                }
             }
         }
             .mapNotNull { deferred ->
@@ -126,6 +143,16 @@ class DefaultReviewService(
             toolCallCount = reviews.sumOf { it.toolCallCount },
         )
     }
+
+    // diff 청크의 --- a/ 또는 +++ b/ 헤더에서 파일 경로를 추출한다
+    // DiffPreprocessResult.fileNames와 동일한 로직
+    private fun extractFilePath(diff: String): String? =
+        diff.lineSequence()
+            .firstOrNull { it.startsWith("--- a/") }
+            ?.removePrefix("--- a/")
+            ?: diff.lineSequence()
+                .firstOrNull { it.startsWith("+++ b/") }
+                ?.removePrefix("+++ b/")
 
     // diff 내용의 SHA-256 해시로 캐시 키 생성
     // 동일 파일 + 동일 headSha → diff 내용 동일 → 해시 동일 (의미상 repoFullName:filePath:headSha와 동등)
