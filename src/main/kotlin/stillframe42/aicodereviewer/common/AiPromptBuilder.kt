@@ -14,13 +14,13 @@ class AiPromptBuilder(private val chatClients: Map<AiProvider, ChatClient>) {
     fun build(
         systemPromptResource: Resource,
         userPromptResource: Resource,
-        userVariables: Map<String, Any>,
+        variables: Map<String, Any>,
         provider: AiProvider,
     ): ChatClient.ChatClientRequestSpec {
         val client = chatClients[provider]
             ?: throw IllegalArgumentException("지원하지 않는 AI 프로바이더입니다: $provider")
-        val systemMsg = systemPromptResource.getContentAsString(Charsets.UTF_8)
-        val userMsg = renderTemplate(userPromptResource.getContentAsString(Charsets.UTF_8), userVariables)
+        val systemMsg = renderTemplate(systemPromptResource.getContentAsString(Charsets.UTF_8), variables)
+        val userMsg = renderTemplate(userPromptResource.getContentAsString(Charsets.UTF_8), variables)
         return client.prompt()
             .system(systemMsg)
             .user(userMsg)
