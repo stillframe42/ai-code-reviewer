@@ -24,8 +24,8 @@ class JdbcConventionKeywordAdapter(
                 """
                 SELECT id::text, content, metadata::text
                 FROM vector_store
-                WHERE content_tsv @@ plainto_tsquery('english', ?)
-                ORDER BY ts_rank(content_tsv, plainto_tsquery('english', ?)) DESC
+                WHERE content_tsv @@ plainto_tsquery('simple', ?)
+                ORDER BY ts_rank(content_tsv, plainto_tsquery('simple', ?)) DESC
                 LIMIT ?
                 """.trimIndent(),
                 { rs, _ ->
