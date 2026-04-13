@@ -127,6 +127,7 @@ class HybridSearchExperimentTest {
 
         // 유효 점수(-1 제외)로 우수/열세/중립 판단
         val hybridStatus: String get() {
+            if (scores.hybrid < 0) return "중립"
             val best = maxOf(scores.vector, scores.keyword)
             return when {
                 scores.vector < 0 && scores.keyword < 0 -> "중립"
@@ -143,8 +144,8 @@ class HybridSearchExperimentTest {
         else docs.joinToString(" ; ") { doc ->
             doc.text.orEmpty()
                 .replace("|", "\\|")
-                .take(80)
                 .replace("\n", " ")
+                .take(80)
                 .trimEnd() + "..."
         }
 
