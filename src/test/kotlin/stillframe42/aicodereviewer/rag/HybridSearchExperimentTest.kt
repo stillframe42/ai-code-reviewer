@@ -313,7 +313,19 @@ class HybridSearchExperimentTest {
 
     @Test
     fun `하이브리드 검색 품질 비교 실험`() {
-        // Task 4에서 구현
-        TODO()
+        val totalChunks = jdbcTemplate.queryForObject(
+            "SELECT count(*) FROM vector_store",
+            Long::class.java,
+        ) ?: 0L
+
+        val labeledResults = ConventionTestQueries.LABELED.map { (label, query) ->
+            runExperiment(label, query)
+        }
+        val edgeCaseResults = ConventionTestQueries.EDGE_CASE_QUERIES.map { (label, query) ->
+            runExperiment(label, query)
+        }
+
+        File(REPORT_PATH).writeText(buildReport(labeledResults, edgeCaseResults, totalChunks))
+        println("실험 완료: $REPORT_PATH 저장")
     }
 }
