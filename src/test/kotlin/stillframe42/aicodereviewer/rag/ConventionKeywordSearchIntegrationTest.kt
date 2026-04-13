@@ -92,10 +92,12 @@ class ConventionKeywordSearchIntegrationTest : AbstractIntegrationTest() {
 
     @Test
     fun `category ARCH 필터 적용 시 SECURITY 문서가 포함되지 않는다`() {
+        // "Hexagonal"은 architecture-guide.md(ARCH)에 포함된 토큰 — ARCH 결과 보장
         val results = runBlocking {
-            keywordSearchPort.search("@Transactional", 10, ConventionCategory.ARCH)
+            keywordSearchPort.search("Hexagonal", 10, ConventionCategory.ARCH)
         }
 
+        assertThat(results).isNotEmpty()
         assertThat(results).allSatisfy { doc ->
             assertThat(doc.metadata["category"]).isNotEqualTo("SECURITY")
         }
