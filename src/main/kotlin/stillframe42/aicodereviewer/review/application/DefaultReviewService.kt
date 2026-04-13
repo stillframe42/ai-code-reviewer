@@ -17,10 +17,10 @@ import stillframe42.aicodereviewer.review.domain.model.ReviewMode
 import stillframe42.aicodereviewer.review.domain.port.`in`.ReviewUseCase
 import stillframe42.aicodereviewer.review.domain.port.out.AiReviewPort
 import stillframe42.aicodereviewer.review.domain.port.out.ReviewCacheStore
+import stillframe42.aicodereviewer.rag.application.ConventionContextService
 import stillframe42.aicodereviewer.review.domain.port.out.ReviewCacheStatsStore
 import stillframe42.aicodereviewer.review.domain.service.DiffPreprocessor
 import stillframe42.aicodereviewer.review.domain.service.PrImportanceAnalyzer
-import stillframe42.aicodereviewer.rag.application.ConventionContextService
 
 // 코드 리뷰 유스케이스 구현 — AI 포트에 위임하며, 캐싱·모델 선택 등 비즈니스 로직을 조합한다.
 @Service

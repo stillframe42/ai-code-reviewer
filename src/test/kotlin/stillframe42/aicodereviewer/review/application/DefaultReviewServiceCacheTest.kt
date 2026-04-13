@@ -82,6 +82,26 @@ class DefaultReviewServiceCacheTest : AbstractIntegrationTest() {
     }
 
     @Test
+    fun `캐시 히트 시 임베딩 API는 호출되지 않는다`(): Unit = runBlocking {
+        val diff = """
+            diff --git a/src/main/kotlin/CacheMissOnly.kt b/src/main/kotlin/CacheMissOnly.kt
+            --- a/src/main/kotlin/CacheMissOnly.kt
+            +++ b/src/main/kotlin/CacheMissOnly.kt
+            @@ -1,1 +1,2 @@
+             class CacheMissOnly
+            +    // RAG 캐시 미스 전용 검증
+        """.trimIndent()
+
+        // 첫 번째 호출 — 캐시 미스 → 임베딩 API 호출
+        reviewUseCase.reviewCode(code = diff, provider = AiProvider.ANTHROPIC, diffOptions = DiffFilterOptions())
+        // 두 번째 호출 — 캐시 히트 → 임베딩 API 미호출
+        reviewUseCase.reviewCode(code = diff, provider = AiProvider.ANTHROPIC, diffOptions = DiffFilterOptions())
+
+        // 임베딩 API는 캐시 미스 시 1회만 호출되어야 한다
+        wireMock.verify(exactly(1), postRequestedFor(urlPathEqualTo("/v1/embeddings")))
+    }
+
+    @Test
     fun `캐시 히트 시 Redis hit 카운터와 miss 카운터가 각각 1씩 증가한다`(): Unit = runBlocking {
         val diff = """
             diff --git a/src/Counter.kt b/src/Counter.kt
