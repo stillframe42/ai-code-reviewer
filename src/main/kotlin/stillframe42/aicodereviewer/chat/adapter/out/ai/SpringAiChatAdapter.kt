@@ -30,10 +30,10 @@ class SpringAiChatAdapter(
 ) : AiChatPort {
 
     // 지정된 AI 프로바이더에게 메시지를 전달하고 응답을 반환 (코루틴 비동기)
-    override suspend fun chat(message: String, provider: AiProvider): String =
+    override suspend fun chat(message: String, provider: AiProvider, conventionContext: String?): String =
         // Spring AI blocking HTTP 호출을 IO 디스패처에서 격리 실행
         withContext(Dispatchers.IO) {
-            promptBuilder.build(systemPromptResource, userPromptResource, mapOf("message" to message), provider)
+            promptBuilder.build(systemPromptResource, userPromptResource, buildVariables(message, conventionContext), provider)
                 .advisors(loggingAdvisor, retryAdvisor, costTrackingAdvisor)
                 .call()
                 .content()
@@ -42,10 +42,21 @@ class SpringAiChatAdapter(
 
     // Spring AI streaming 호출: Flux<String> → Flow<String> 변환 (kotlinx-coroutines-reactor)
     // RetryAdvisor, CostTrackingAdvisor는 CallAdvisor만 구현하므로 스트리밍에서는 제외
-    override fun streamChat(message: String, provider: AiProvider): Flow<String> =
-        promptBuilder.build(systemPromptResource, userPromptResource, mapOf("message" to message), provider)
+    override fun streamChat(message: String, provider: AiProvider, conventionContext: String?): Flow<String> =
+        promptBuilder.build(systemPromptResource, userPromptResource, buildVariables(message, conventionContext), provider)
             .advisors(loggingAdvisor)
             .stream()
             .content()
             .asFlow()
+
+    // convention_section: 문서가 있으면 헤더+내용, 없으면 빈 문자열
+    private fun buildVariables(message: String, conventionContext: String?): Map<String, Any> {
+        val conventionSection = if (!conventionContext.isNullOrBlank()) {
+            "[참고 컨벤션 문서]\n$conventionContext\n"
+        } else ""
+        return mapOf(
+            "message" to message,
+            "convention_section" to conventionSection,
+        )
+    }
 }
