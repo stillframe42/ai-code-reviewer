@@ -55,11 +55,13 @@ class FileCategoryMapperTest {
 
     @Test
     fun `오탐 케이스 — auth·filter·rest 포함이지만 해당 카테고리 아닌 파일은 STYLE 또는 ARCH로 매핑된다`() {
-        // AuthorService → Service로 끝나므로 ARCH (auth 오탐 방지)
+        // AuthorService → Auth 다음이 소문자이므로 SECURITY 미매칭 → Service로 ARCH
         assertThat(FileCategoryMapper.selectCategory("AuthorService.kt")).isEqualTo(ARCH)
-        // Restaurant → 어떤 패턴과도 suffix 매칭 안되므로 STYLE
+        // Restaurant → Rest 다음이 소문자이므로 API 미매칭 → STYLE
         assertThat(FileCategoryMapper.selectCategory("Restaurant.kt")).isEqualTo(STYLE)
-        // Interest → 어떤 패턴과도 suffix 매칭 안되므로 STYLE
+        // Interest → Rest 다음이 소문자이므로 API 미매칭 → STYLE
         assertThat(FileCategoryMapper.selectCategory("Interest.kt")).isEqualTo(STYLE)
+        // DataFilter → filter 포함이므로 SECURITY (의도된 동작 — 필터 클래스는 보안 필터로 취급)
+        assertThat(FileCategoryMapper.selectCategory("DataFilter.kt")).isEqualTo(SECURITY)
     }
 }
