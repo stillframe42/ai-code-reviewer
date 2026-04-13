@@ -104,10 +104,10 @@ tasks.withType<Test> {
     inputs.property("anthropicApiKey", System.getenv("ANTHROPIC_API_KEY") ?: "")
 }
 
-// 기본 테스트: experiment, quality-eval 태그 제외
+// 기본 테스트: experiment, quality-eval, hybrid-experiment 태그 제외
 tasks.test {
     useJUnitPlatform {
-        excludeTags("experiment", "quality-eval")
+        excludeTags("experiment", "quality-eval", "hybrid-experiment")
     }
 }
 
