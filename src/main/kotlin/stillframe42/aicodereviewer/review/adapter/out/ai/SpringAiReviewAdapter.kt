@@ -131,27 +131,27 @@ class SpringAiReviewAdapter(
             mapOf("code" to code, "convention_section" to conventionSection),
             provider,
         )
-        .advisors(loggingAdvisor, retryAdvisor, costTrackingAdvisor)
-        .let { spec ->
-            // modelName이 지정된 경우 ChatClient 기본 모델을 오버라이드
-            if (modelName != null)
-                spec.options(AnthropicChatOptions.builder().model(modelName).build())
-            else spec
-        }
-        .let { baseSpec ->
-            when (mode) {
-                is ReviewMode.Simple -> baseSpec
-                is ReviewMode.WithGitHubTools -> {
-                    logger.info("Tool Calling 활성화: installationId={}", mode.installationId)
-                    baseSpec
-                        .tools(gitHubTools)
-                        .toolContext(mapOf(
-                            "installationId" to mode.installationId,
-                            "toolCallCounter" to toolCallCounter,
-                        ))
+            .advisors(loggingAdvisor, retryAdvisor, costTrackingAdvisor)
+            .let { spec ->
+                // modelName이 지정된 경우 ChatClient 기본 모델을 오버라이드
+                if (modelName != null)
+                    spec.options(AnthropicChatOptions.builder().model(modelName).build())
+                else spec
+            }
+            .let { baseSpec ->
+                when (mode) {
+                    is ReviewMode.Simple -> baseSpec
+                    is ReviewMode.WithGitHubTools -> {
+                        logger.info("Tool Calling 활성화: installationId={}", mode.installationId)
+                        baseSpec
+                            .tools(gitHubTools)
+                            .toolContext(mapOf(
+                                "installationId" to mode.installationId,
+                                "toolCallCounter" to toolCallCounter,
+                            ))
+                    }
                 }
             }
-        }
     }
 
     companion object {
