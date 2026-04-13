@@ -40,6 +40,9 @@ class RagQualityComparisonIT {
         val postgres: PostgreSQLContainer = AbstractIntegrationTest.postgres
         val redis: GenericContainer<*> = AbstractIntegrationTest.redis
 
+        // 아키텍처 컨벤션 관련 키워드
+        private val CONVENTION_KEYWORDS = listOf("UseCase", "Default", "포트", "port", "헥사고날", "hexagonal", "컨벤션")
+
         @JvmStatic
         @DynamicPropertySource
         fun overrideProperties(registry: DynamicPropertyRegistry) {
@@ -269,8 +272,7 @@ index 0000000..a50932f
         val now = LocalDateTime.now()
         val fullText = review.summary +
             "\n" + review.issues.joinToString("\n") { "${it.description} ${it.suggestion}" }
-        val keywords = listOf("UseCase", "Default", "포트", "port", "헥사고날", "hexagonal", "컨벤션")
-        val countDetails = keywords.joinToString("\n") { kw ->
+        val countDetails = CONVENTION_KEYWORDS.joinToString("\n") { kw ->
             "- \"$kw\": ${fullText.split(kw, ignoreCase = true).size - 1}회"
         }
         File(filename).writeText(buildString {
@@ -304,6 +306,5 @@ index 0000000..a50932f
 
     // 지정 키워드의 총 출현 횟수를 합산하여 반환한다
     private fun countKeywords(text: String): Int =
-        listOf("UseCase", "Default", "포트", "port", "헥사고날", "hexagonal", "컨벤션")
-            .sumOf { kw -> text.split(kw, ignoreCase = true).size - 1 }
+        CONVENTION_KEYWORDS.sumOf { kw -> text.split(kw, ignoreCase = true).size - 1 }
 }
