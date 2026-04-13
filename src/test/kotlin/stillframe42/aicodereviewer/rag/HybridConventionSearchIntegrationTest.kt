@@ -11,11 +11,16 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.jdbc.core.JdbcTemplate
 import stillframe42.aicodereviewer.integration.AbstractIntegrationTest
 import stillframe42.aicodereviewer.rag.application.HybridConventionSearchService
+import stillframe42.aicodereviewer.rag.domain.model.ConventionCategory
+import stillframe42.aicodereviewer.rag.domain.port.`in`.ConventionIndexUseCase
 
 class HybridConventionSearchIntegrationTest : AbstractIntegrationTest() {
 
     @Autowired
     lateinit var hybridSearchService: HybridConventionSearchService
+
+    @Autowired
+    lateinit var conventionIndexUseCase: ConventionIndexUseCase
 
     @Autowired
     lateinit var jdbcTemplate: JdbcTemplate
@@ -39,5 +44,19 @@ class HybridConventionSearchIntegrationTest : AbstractIntegrationTest() {
         val results = runBlocking { hybridSearchService.search("OWASP injection") }
 
         assertThat(results).isEmpty()
+    }
+
+    @Test
+    fun `category SECURITY 필터 적용 시 반환 문서가 모두 SECURITY 카테고리다`() {
+        runBlocking { conventionIndexUseCase.reindex() }
+
+        val results = runBlocking {
+            hybridSearchService.search("OWASP injection", topK = 5, category = ConventionCategory.SECURITY)
+        }
+
+        assertThat(results).isNotEmpty()
+        assertThat(results).allSatisfy { doc ->
+            assertThat(doc.metadata["category"]).isEqualTo("SECURITY")
+        }
     }
 }

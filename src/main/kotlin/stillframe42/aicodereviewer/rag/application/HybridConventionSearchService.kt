@@ -25,7 +25,8 @@ class HybridConventionSearchService(
         val vectorResults = withContext(Dispatchers.IO) {
             vectorPort.search(query, candidateSize, category)
         }
-        val keywordResults = keywordPort.search(query, candidateSize)
+        // 벡터·키워드 동일한 category 범위로 검색하여 RRF 결과의 카테고리 일관성 보장
+        val keywordResults = keywordPort.search(query, candidateSize, category)
 
         return reciprocalRankFusion(vectorResults, keywordResults, topK)
     }
