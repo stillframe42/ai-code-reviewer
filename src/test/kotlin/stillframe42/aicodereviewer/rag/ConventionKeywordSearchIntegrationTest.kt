@@ -10,6 +10,7 @@ import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.jdbc.core.JdbcTemplate
 import stillframe42.aicodereviewer.integration.AbstractIntegrationTest
+import stillframe42.aicodereviewer.rag.domain.model.ConventionCategory
 import stillframe42.aicodereviewer.rag.domain.port.`in`.ConventionIndexUseCase
 import stillframe42.aicodereviewer.rag.domain.port.out.ConventionKeywordSearchPort
 
@@ -75,5 +76,28 @@ class ConventionKeywordSearchIntegrationTest : AbstractIntegrationTest() {
         val results = runBlocking { keywordSearchPort.search("OWASP injection", 1) }
 
         assertThat(results).hasSizeLessThanOrEqualTo(1)
+    }
+
+    @Test
+    fun `category SECURITY 필터 적용 시 SECURITY 문서만 반환한다`() {
+        val results = runBlocking {
+            keywordSearchPort.search("OWASP injection", 5, ConventionCategory.SECURITY)
+        }
+
+        assertThat(results).isNotEmpty()
+        assertThat(results).allSatisfy { doc ->
+            assertThat(doc.metadata["category"]).isEqualTo("SECURITY")
+        }
+    }
+
+    @Test
+    fun `category ARCH 필터 적용 시 SECURITY 문서가 포함되지 않는다`() {
+        val results = runBlocking {
+            keywordSearchPort.search("@Transactional", 10, ConventionCategory.ARCH)
+        }
+
+        assertThat(results).allSatisfy { doc ->
+            assertThat(doc.metadata["category"]).isNotEqualTo("SECURITY")
+        }
     }
 }
