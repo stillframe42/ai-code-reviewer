@@ -100,6 +100,102 @@ class HybridSearchExperimentTest {
         runBlocking { conventionIndexUseCase.reindex() }
     }
 
+    private data class ExperimentScores(val vector: Int, val keyword: Int, val hybrid: Int) {
+        // 방식 이름으로 점수를 조회한다 (평균 계산 시 사용)
+        fun scoreFor(method: String): Int = when (method) {
+            "vector" -> vector
+            "keyword" -> keyword
+            "hybrid" -> hybrid
+            else -> -1
+        }
+    }
+
+    private data class ExperimentRow(
+        val label: String,
+        val query: String,
+        val vectorSummary: String,
+        val keywordSummary: String,
+        val hybridSummary: String,
+        val scores: ExperimentScores,
+    ) {
+        // 동점 시 hybrid 우선
+        val bestMethod: String get() = when {
+            scores.hybrid >= scores.vector && scores.hybrid >= scores.keyword -> "hybrid"
+            scores.vector >= scores.keyword -> "vector"
+            else -> "keyword"
+        }
+
+        // 유효 점수(-1 제외)로 우수/열세/중립 판단
+        val hybridStatus: String get() {
+            val best = maxOf(scores.vector, scores.keyword)
+            return when {
+                scores.vector < 0 && scores.keyword < 0 -> "중립"
+                scores.hybrid > best -> "우수"
+                scores.hybrid < best -> "열세"
+                else -> "중립"
+            }
+        }
+    }
+
+    // top-3 문서를 80자 요약으로 연결한다. 마크다운 표 파이프 이스케이프 포함.
+    private fun buildSummary(docs: List<Document>): String =
+        if (docs.isEmpty()) "결과 없음"
+        else docs.joinToString(" ; ") { doc ->
+            doc.text.orEmpty()
+                .replace("|", "\\|")
+                .take(80)
+                .replace("\n", " ")
+                .trimEnd() + "..."
+        }
+
+    // 쿼리당 gpt-4o-mini 1회 호출로 3가지 방식을 동시 채점한다.
+    // 채점 실패 시 -1을 반환하며 실험 자체가 중단되지 않는다.
+    private fun autoScore(
+        query: String,
+        vectorSummary: String,
+        keywordSummary: String,
+        hybridSummary: String,
+    ): ExperimentScores {
+        val prompt = """
+            질문: $query
+
+            벡터 검색 top-3: $vectorSummary
+            키워드 검색 top-3: $keywordSummary
+            하이브리드 검색 top-3: $hybridSummary
+
+            각 방식의 관련성을 0~3점으로 채점하라.
+            3: 직접 관련 / 2: 부분 관련 / 1: 약간 관련 / 0: 무관
+            반드시 JSON만 응답: {"vector": N, "keyword": N, "hybrid": N}
+        """.trimIndent()
+
+        return runCatching {
+            val content = chatClient.prompt()
+                .options(OpenAiChatOptions.builder().model("gpt-4o-mini").build())
+                .user(prompt)
+                .call()
+                .content()
+                .orEmpty()
+            val vector = Regex(""""vector"\s*:\s*(-?\d+)""").find(content)?.groupValues?.get(1)?.toInt() ?: -1
+            val keyword = Regex(""""keyword"\s*:\s*(-?\d+)""").find(content)?.groupValues?.get(1)?.toInt() ?: -1
+            val hybrid = Regex(""""hybrid"\s*:\s*(-?\d+)""").find(content)?.groupValues?.get(1)?.toInt() ?: -1
+            ExperimentScores(vector, keyword, hybrid)
+        }.getOrElse { ExperimentScores(-1, -1, -1) }
+    }
+
+    // 단일 쿼리에 대해 3가지 검색을 실행하고 채점 결과를 반환한다.
+    // ConventionVectorPort.search()는 블로킹 함수이므로 runBlocking 불필요.
+    // keywordPort / hybridService는 suspend이므로 runBlocking으로 감싼다.
+    private fun runExperiment(label: String, query: String): ExperimentRow {
+        val vectorDocs = vectorPort.search(query, topK = 3, similarityThreshold = 0.0)
+        val keywordDocs = runBlocking { keywordPort.search(query, topK = 3) }
+        val hybridDocs = runBlocking { hybridService.search(query, topK = 3) }
+        val vectorSummary = buildSummary(vectorDocs)
+        val keywordSummary = buildSummary(keywordDocs)
+        val hybridSummary = buildSummary(hybridDocs)
+        val scores = autoScore(query, vectorSummary, keywordSummary, hybridSummary)
+        return ExperimentRow(label, query, vectorSummary, keywordSummary, hybridSummary, scores)
+    }
+
     @Test
     fun `하이브리드 검색 품질 비교 실험`() {
         // Task 4에서 구현
