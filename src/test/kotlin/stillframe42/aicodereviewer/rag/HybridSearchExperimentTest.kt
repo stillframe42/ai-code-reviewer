@@ -197,6 +197,120 @@ class HybridSearchExperimentTest {
         return ExperimentRow(label, query, vectorSummary, keywordSummary, hybridSummary, scores)
     }
 
+    // 결과 행 목록을 마크다운 표 형태로 StringBuilder에 추가한다.
+    private fun StringBuilder.appendResultTable(rows: List<ExperimentRow>) {
+        appendLine("| 질문 | 벡터 top-3 | 키워드 top-3 | 하이브리드 top-3 | 벡터 점수 | 키워드 점수 | 하이브리드 점수 | 최선 방식 |")
+        appendLine("|------|-----------|------------|----------------|---------|-----------|--------------|---------|")
+        rows.forEach { row ->
+            appendLine(
+                "| [${row.label}] ${row.query} " +
+                "| ${row.vectorSummary} " +
+                "| ${row.keywordSummary} " +
+                "| ${row.hybridSummary} " +
+                "| ${scoreStr(row.scores.vector)} " +
+                "| ${scoreStr(row.scores.keyword)} " +
+                "| ${scoreStr(row.scores.hybrid)} " +
+                "| ${row.bestMethod} |"
+            )
+        }
+        appendLine()
+    }
+
+    // 유효하지 않은 점수(-1)는 "?" 로 표기한다.
+    private fun scoreStr(score: Int): String = if (score >= 0) score.toString() else "?"
+
+    private fun buildReport(
+        labeledResults: List<ExperimentRow>,
+        edgeCaseResults: List<ExperimentRow>,
+        totalChunks: Long,
+    ): String = buildString {
+        appendLine("# 하이브리드 검색 품질 비교 실험")
+        appendLine()
+        appendLine("- **생성일**: ${LocalDate.now()}")
+        appendLine("- **총 인덱싱 청크 수**: ${totalChunks}개")
+        appendLine()
+        appendLine("---")
+        appendLine()
+
+        // LABELED 결과 표
+        appendLine("## 자연어 쿼리 비교 (LABELED, Q1–Q10)")
+        appendLine()
+        appendResultTable(labeledResults)
+
+        // EDGE_CASE 결과 표
+        appendLine("## 엣지 케이스 쿼리 비교 (EDGE_CASE, E1–E5)")
+        appendLine()
+        appendLine("> 코드 식별자·약어 형태 — 벡터 검색의 약점을 키워드/하이브리드가 보완하는지 검증")
+        appendLine()
+        appendResultTable(edgeCaseResults)
+
+        // 방식별 평균 점수
+        appendLine("## 방식별 평균 점수")
+        appendLine()
+        appendLine("| 방식 | LABELED 평균 | EDGE_CASE 평균 | 전체 평균 |")
+        appendLine("|------|------------|--------------|---------|")
+        listOf("vector", "keyword", "hybrid").forEach { method ->
+            val labeledAvg = labeledResults.map { it.scores.scoreFor(method) }.filter { it >= 0 }.average()
+            val edgeAvg = edgeCaseResults.map { it.scores.scoreFor(method) }.filter { it >= 0 }.average()
+            val totalAvg = (labeledResults + edgeCaseResults).map { it.scores.scoreFor(method) }.filter { it >= 0 }.average()
+            val fmt: (Double) -> String = { if (it.isNaN()) "—" else "%.1f".format(it) }
+            appendLine("| $method | ${fmt(labeledAvg)} | ${fmt(edgeAvg)} | ${fmt(totalAvg)} |")
+        }
+        appendLine()
+
+        // 우수/열세 케이스
+        val allResults = labeledResults + edgeCaseResults
+        val superior = allResults.filter { it.hybridStatus == "우수" }
+        val inferior = allResults.filter { it.hybridStatus == "열세" }
+
+        appendLine("## 하이브리드 우수 케이스 (${superior.size}건)")
+        appendLine()
+        if (superior.isEmpty()) {
+            appendLine("없음")
+        } else {
+            superior.forEach { row ->
+                appendLine(
+                    "- **[${row.label}]** ${row.query} " +
+                    "— 벡터 ${scoreStr(row.scores.vector)} / 키워드 ${scoreStr(row.scores.keyword)} / 하이브리드 ${scoreStr(row.scores.hybrid)}"
+                )
+            }
+        }
+        appendLine()
+
+        appendLine("## 하이브리드 열세 케이스 (${inferior.size}건)")
+        appendLine()
+        if (inferior.isEmpty()) {
+            appendLine("없음")
+        } else {
+            inferior.forEach { row ->
+                appendLine(
+                    "- **[${row.label}]** ${row.query} " +
+                    "— 벡터 ${scoreStr(row.scores.vector)} / 키워드 ${scoreStr(row.scores.keyword)} / 하이브리드 ${scoreStr(row.scores.hybrid)}"
+                )
+            }
+        }
+        appendLine()
+
+        // 엣지 케이스 분석
+        appendLine("## 엣지 케이스 분석 — 벡터 약점 보완 여부")
+        appendLine()
+        appendLine("| 레이블 | 질문 | 벡터 점수 | 키워드 점수 | 하이브리드 점수 | 보완 여부 |")
+        appendLine("|--------|------|---------|-----------|--------------|---------|")
+        edgeCaseResults.forEach { row ->
+            val compensated = if (
+                (row.scores.keyword >= 0 && row.scores.keyword > row.scores.vector) ||
+                (row.scores.hybrid >= 0 && row.scores.hybrid > row.scores.vector)
+            ) "✅ 보완됨" else "❌ 미보완"
+            appendLine(
+                "| ${row.label} | ${row.query} " +
+                "| ${scoreStr(row.scores.vector)} " +
+                "| ${scoreStr(row.scores.keyword)} " +
+                "| ${scoreStr(row.scores.hybrid)} " +
+                "| $compensated |"
+            )
+        }
+    }
+
     @Test
     fun `하이브리드 검색 품질 비교 실험`() {
         // Task 4에서 구현
