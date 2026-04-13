@@ -19,6 +19,8 @@ class DefaultChatServiceTest : AbstractIntegrationTest() {
 
     @BeforeEach
     fun setUpStubs() {
+        // RAG 컨벤션 컨텍스트 조회 시 OpenAI 임베딩 API 호출 — 스텁 필수
+        WireMockStubs.stubOpenAiEmbedding(wireMock)
         // WireMock은 LIFO 순서로 매칭 — 나중에 등록된 스텁이 먼저 검사된다
         // 스트리밍 스텁을 나중에 등록해야 stream=true 요청에 우선 매칭된다
         WireMockStubs.stubAnthropicChat(wireMock)
