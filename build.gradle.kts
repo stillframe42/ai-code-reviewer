@@ -140,3 +140,17 @@ tasks.register<Test>("qualityEvalTest") {
         includeTags("quality-eval")
     }
 }
+
+// 하이브리드 검색 품질 비교 실험 태스크 — 실제 OpenAI API 키(sk-*) 필요
+// 실행: ./gradlew hybridExperimentTest
+tasks.register<Test>("hybridExperimentTest") {
+    description = "하이브리드 검색 품질 비교 실험 실행 (실제 OpenAI API 사용, 결과를 마크다운으로 저장)"
+    group = "verification"
+
+    testClassesDirs = sourceSets["test"].output.classesDirs
+    classpath = sourceSets["test"].runtimeClasspath
+
+    useJUnitPlatform {
+        includeTags("hybrid-experiment")
+    }
+}
