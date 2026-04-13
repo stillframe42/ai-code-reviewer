@@ -12,6 +12,7 @@ interface AiReviewPort {
         provider: AiProvider,
         mode: ReviewMode = ReviewMode.Simple,
         reviewContext: ReviewContext? = null,
-        modelName: String? = null,  // null이면 ChatClient 기본 모델 사용, Phase 2에서 AiModelSelector가 값을 제공
+        modelName: String? = null,
+        conventionContext: String? = null,   // RAG로 조회한 컨벤션 문서 컨텍스트
     ): CodeReview
 }

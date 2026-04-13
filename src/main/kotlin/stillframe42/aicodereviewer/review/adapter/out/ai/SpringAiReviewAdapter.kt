@@ -11,6 +11,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 import org.springframework.ai.anthropic.AnthropicChatOptions
+import org.springframework.ai.chat.client.ChatClient
 import org.springframework.ai.converter.BeanOutputConverter
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.core.io.Resource
@@ -64,6 +65,7 @@ class SpringAiReviewAdapter(
         mode: ReviewMode,
         reviewContext: ReviewContext?,
         modelName: String?,
+        conventionContext: String?,
     ): CodeReview {
         val timeout = when (mode) {
             is ReviewMode.Simple -> SIMPLE_TIMEOUT
@@ -80,7 +82,7 @@ class SpringAiReviewAdapter(
                     ReviewObservationContextHolder.asElement(reviewContext) +
                     LangfuseTraceContextHolder.asElement(traceId),
             ) {
-                val rawText = buildRequestSpec(code, provider, mode, toolCallCounter, modelName)
+                val rawText = buildRequestSpec(code, provider, mode, toolCallCounter, modelName, conventionContext)
                     .call()
                     .content()
                     ?: throw IllegalStateException("AI로부터 빈 응답을 받았습니다")
@@ -117,7 +119,18 @@ class SpringAiReviewAdapter(
         mode: ReviewMode,
         toolCallCounter: AtomicInteger,
         modelName: String?,
-    ) = promptBuilder.build(systemPromptResource, userPromptResource, mapOf("code" to code), provider)
+        conventionContext: String?,
+    ): ChatClient.ChatClientRequestSpec {
+        // convention_section: 문서가 있으면 헤더+내용, 없으면 빈 문자열 (v9 템플릿에 항상 주입)
+        val conventionSection = if (!conventionContext.isNullOrBlank()) {
+            "[참고 컨벤션 문서]\n$conventionContext\n"
+        } else ""
+        return promptBuilder.build(
+            systemPromptResource,
+            userPromptResource,
+            mapOf("code" to code, "convention_section" to conventionSection),
+            provider,
+        )
         .advisors(loggingAdvisor, retryAdvisor, costTrackingAdvisor)
         .let { spec ->
             // modelName이 지정된 경우 ChatClient 기본 모델을 오버라이드
@@ -139,6 +152,7 @@ class SpringAiReviewAdapter(
                 }
             }
         }
+    }
 
     companion object {
         // ReviewMode에 따라 전체 타임아웃을 분기한다
