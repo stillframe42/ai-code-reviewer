@@ -79,9 +79,10 @@ class ConventionContextServiceIntegrationTest : AbstractIntegrationTest() {
                 filePath = "src/main/kotlin/stillframe42/SecurityConfig.kt",
             )
         }
-        // 2개 이상 문서가 반환된 경우 --- 구분자 포함
-        if (context.contains("---")) {
-            assertThat(context).contains("---")
+        // 구분자로 분리된 각 파트는 빈 문자열이 아니어야 한다
+        val parts = context.split("\n\n---\n\n")
+        assertThat(parts).allSatisfy { part ->
+            assertThat(part).isNotBlank()
         }
     }
 }
