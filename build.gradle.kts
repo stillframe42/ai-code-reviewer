@@ -111,46 +111,20 @@ tasks.test {
     }
 }
 
-// 청킹 전략 실험 테스트 전용 태스크 — 실제 OpenAI API 키(sk-*) 필요
-// 실행: ./gradlew experimentTest
-tasks.register<Test>("experimentTest") {
-    description = "청킹 전략 실험 테스트 실행 (실제 OpenAI API 사용)"
-    group = "verification"
-
-    // 커스텀 Test 태스크는 기본 test 태스크의 클래스패스를 명시적으로 지정해야 한다
-    testClassesDirs = sourceSets["test"].output.classesDirs
-    classpath = sourceSets["test"].runtimeClasspath
-
-    useJUnitPlatform {
-        includeTags("experiment")
+// 커스텀 Test 태스크는 기본 test 태스크의 클래스패스를 명시적으로 지정해야 한다
+fun registerExperimentTask(name: String, tag: String, description: String) {
+    tasks.register<Test>(name) {
+        this.description = description
+        group = "verification"
+        testClassesDirs = sourceSets["test"].output.classesDirs
+        classpath = sourceSets["test"].runtimeClasspath
+        useJUnitPlatform { includeTags(tag) }
     }
 }
 
-// 컨벤션 검색 품질 평가 태스크 — 실제 OpenAI(임베딩) + Anthropic(평가) API 키 필요
-// application-secret.yml의 API 키를 사용하므로 별도 인수 불필요
-// 실행: ./gradlew qualityEvalTest
-tasks.register<Test>("qualityEvalTest") {
-    description = "컨벤션 검색 품질 평가 실행 (실제 OpenAI + Anthropic API 사용, 결과를 마크다운으로 저장)"
-    group = "verification"
-
-    testClassesDirs = sourceSets["test"].output.classesDirs
-    classpath = sourceSets["test"].runtimeClasspath
-
-    useJUnitPlatform {
-        includeTags("quality-eval")
-    }
-}
-
-// 하이브리드 검색 품질 비교 실험 태스크 — 실제 OpenAI API 키(sk-*) 필요
-// 실행: ./gradlew hybridExperimentTest
-tasks.register<Test>("hybridExperimentTest") {
-    description = "하이브리드 검색 품질 비교 실험 실행 (실제 OpenAI API 사용, 결과를 마크다운으로 저장)"
-    group = "verification"
-
-    testClassesDirs = sourceSets["test"].output.classesDirs
-    classpath = sourceSets["test"].runtimeClasspath
-
-    useJUnitPlatform {
-        includeTags("hybrid-experiment")
-    }
-}
+// 실행: ./gradlew experimentTest      — 실제 OpenAI API 키(sk-*) 필요
+// 실행: ./gradlew qualityEvalTest     — 실제 OpenAI(임베딩) + Anthropic(평가) API 키 필요
+// 실행: ./gradlew hybridExperimentTest — 실제 OpenAI API 키(sk-*) 필요
+registerExperimentTask("experimentTest",       "experiment",        "청킹 전략 실험 테스트 실행 (실제 OpenAI API 사용)")
+registerExperimentTask("qualityEvalTest",      "quality-eval",      "컨벤션 검색 품질 평가 실행 (실제 OpenAI + Anthropic API 사용, 결과를 마크다운으로 저장)")
+registerExperimentTask("hybridExperimentTest", "hybrid-experiment", "하이브리드 검색 품질 비교 실험 실행 (실제 OpenAI API 사용, 결과를 마크다운으로 저장)")
