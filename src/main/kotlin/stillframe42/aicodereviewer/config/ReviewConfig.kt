@@ -4,5 +4,10 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Configuration
 
 @Configuration
-@EnableConfigurationProperties(ReviewProperties::class, AiReviewerProperties::class, RagProperties::class)
+@EnableConfigurationProperties(
+    ReviewProperties::class,
+    AiReviewerProperties::class,
+    RagProperties::class,
+    RagCompressionProperties::class,
+)
 class ReviewConfig
