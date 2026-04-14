@@ -58,4 +58,60 @@ class RagContextMeasurementReportTest {
             .hasMessageContaining("test")
             .hasMessageContaining("0건")
     }
+
+    @Test
+    fun `formatBaselineReport는 메타데이터 요약 상세 정성관찰 Phase4표 5개 섹션을 포함한다`() {
+        val query = RagContextMeasurementIT.SampleQuery(
+            "arch-1", "OrderService.kt", "src/main/.../OrderService.kt", ARCH,
+        )
+        val measurement = RagContextMeasurementIT.QueryMeasurement(
+            query = query,
+            chunks = listOf(
+                RagContextMeasurementIT.ChunkMeasurement(1, 100, 400, "architecture-guide.md", "샘플 청크 텍스트"),
+            ),
+            totalTokens = 100,
+            joinedTokens = 100,
+        )
+        val report = RagContextMeasurementIT.formatBaselineReport(listOf(measurement))
+
+        assertThat(report).contains("# RAG 컨텍스트 압축 실험")
+        assertThat(report).contains("## 메타데이터")
+        assertThat(report).contains("## 요약 통계")
+        assertThat(report).contains("## 쿼리별 상세")
+        assertThat(report).contains("### arch-1")
+        assertThat(report).contains("샘플 청크 텍스트")
+        assertThat(report).contains("architecture-guide.md")
+        assertThat(report).contains("## 정성 관찰")
+        assertThat(report).contains("## Phase 4 비교용 베이스라인 표")
+        assertThat(report).contains("| arch-1 |")
+    }
+
+    @Test
+    fun `formatBaselineReport 요약 통계가 카테고리별 평균을 포함한다`() {
+        val measurements = listOf(
+            makeMeasurement("arch-1", "OrderService.kt", "OrderService.kt", ARCH, joined = 200),
+            makeMeasurement("arch-2", "Foo.kt", "Foo.kt", ARCH, joined = 400),
+        )
+        val report = RagContextMeasurementIT.formatBaselineReport(measurements)
+
+        assertThat(report).contains("ARCH")
+        // 평균이 (200 + 400) / 2 = 300 으로 계산되어야 함
+        assertThat(report).contains("300")
+    }
+
+    private fun makeMeasurement(
+        id: String,
+        queryText: String,
+        filePath: String,
+        category: stillframe42.aicodereviewer.rag.domain.model.ConventionCategory,
+        joined: Int,
+    ): RagContextMeasurementIT.QueryMeasurement {
+        val query = RagContextMeasurementIT.SampleQuery(id, queryText, filePath, category)
+        return RagContextMeasurementIT.QueryMeasurement(
+            query = query,
+            chunks = listOf(RagContextMeasurementIT.ChunkMeasurement(1, joined, joined * 4, "src.md", "내용")),
+            totalTokens = joined,
+            joinedTokens = joined,
+        )
+    }
 }
