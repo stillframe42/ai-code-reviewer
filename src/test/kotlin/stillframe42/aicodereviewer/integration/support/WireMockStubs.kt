@@ -275,4 +275,41 @@ object WireMockStubs {
                 .willReturn(okJson(AnthropicResponseFixtures.REVIEW_SUCCESS))
         )
     }
+
+    // OpenAI 채팅 응답 stub — LlmContextCompressorAdapter 단위 테스트용
+    // body 인자로 응답 본문 텍스트를 지정 (기본값: "compressed text")
+    fun stubOpenAiChatResponse(server: WireMockServer, body: String = "compressed text") {
+        val escapedBody = body.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n")
+        server.stubFor(
+            post(urlPathEqualTo("/v1/chat/completions"))
+                .willReturn(
+                    okJson(
+                        """
+                        {
+                          "id": "chatcmpl-test",
+                          "object": "chat.completion",
+                          "created": 1700000000,
+                          "model": "gpt-4o-mini",
+                          "choices": [
+                            {
+                              "index": 0,
+                              "message": {"role": "assistant", "content": "$escapedBody"},
+                              "finish_reason": "stop"
+                            }
+                          ],
+                          "usage": {"prompt_tokens": 50, "completion_tokens": 20, "total_tokens": 70}
+                        }
+                        """.trimIndent()
+                    )
+                )
+        )
+    }
+
+    // OpenAI 채팅 500 오류 stub — fail-open 경로 검증용
+    fun stubOpenAiChatError(server: WireMockServer) {
+        server.stubFor(
+            post(urlPathEqualTo("/v1/chat/completions"))
+                .willReturn(aResponse().withStatus(500).withBody("Internal Server Error"))
+        )
+    }
 }
