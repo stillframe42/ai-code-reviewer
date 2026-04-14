@@ -19,6 +19,7 @@ import stillframe42.aicodereviewer.rag.domain.model.ConventionCategory.API
 import stillframe42.aicodereviewer.rag.domain.model.ConventionCategory.ARCH
 import stillframe42.aicodereviewer.rag.domain.model.ConventionCategory.SECURITY
 import stillframe42.aicodereviewer.rag.domain.model.ConventionCategory.STYLE
+import java.time.LocalDateTime
 
 // RAG 컨텍스트 베이스라인 측정 — 컨텍스트 압축(tasks_20260416.md Phase 2~5) 전 baseline 수집
 // 일반 빌드에서는 자동 스킵. 수동 실행:
@@ -117,7 +118,7 @@ class RagContextMeasurementIT {
 
         private fun StringBuilder.appendMetadata() {
             appendLine("## 메타데이터")
-            appendLine("- 측정 일시: ${java.time.LocalDateTime.now()}")
+            appendLine("- 측정 일시: ${LocalDateTime.now()}")
             appendLine("- 토큰 카운터: JTokkitTokenCountEstimator (cl100k_base)")
             appendLine("- top-K: 5")
             appendLine("- 압축 목표: 30% 이상 토큰 절감 (Phase 4에서 검증)")

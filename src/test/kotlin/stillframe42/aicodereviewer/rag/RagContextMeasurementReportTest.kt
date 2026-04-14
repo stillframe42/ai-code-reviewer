@@ -4,6 +4,7 @@ import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
 import org.springframework.ai.document.Document
+import stillframe42.aicodereviewer.rag.domain.model.ConventionCategory
 import stillframe42.aicodereviewer.rag.domain.model.ConventionCategory.ARCH
 import stillframe42.aicodereviewer.rag.domain.service.FileCategoryMapper
 
@@ -103,7 +104,7 @@ class RagContextMeasurementReportTest {
         id: String,
         queryText: String,
         filePath: String,
-        category: stillframe42.aicodereviewer.rag.domain.model.ConventionCategory,
+        category: ConventionCategory,
         joined: Int,
     ): RagContextMeasurementIT.QueryMeasurement {
         val query = RagContextMeasurementIT.SampleQuery(id, queryText, filePath, category)
