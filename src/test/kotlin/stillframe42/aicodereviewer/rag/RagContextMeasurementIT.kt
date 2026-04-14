@@ -64,7 +64,7 @@ class RagContextMeasurementIT {
         // application-secret.yml에서 OpenAI API 키를 읽어 반환
         // (Anthropic 키는 본 측정에서 불필요 — 임베딩만 사용)
         internal fun readSecrets(): Map<String, String> = runCatching {
-            val file = java.io.File("src/main/resources/application-secret.yml")
+            val file = File("src/main/resources/application-secret.yml")
             check(file.exists()) { "application-secret.yml 파일을 찾을 수 없습니다" }
             @Suppress("UNCHECKED_CAST")
             val map = Yaml().load<Map<String, Any>>(file.inputStream())
