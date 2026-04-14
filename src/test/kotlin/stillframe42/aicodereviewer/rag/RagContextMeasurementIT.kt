@@ -207,10 +207,9 @@ class RagContextMeasurementIT {
         }
 
         // 검색된 Document 리스트로부터 청크별 + 종합 측정값 계산
+        // 빈 List는 빈 측정 결과(totalTokens=0, joinedTokens=0)를 반환한다 —
+        // Phase 4 비교 테스트에서 압축 후 모든 청크가 제외되는 케이스를 지원하기 위함.
         internal fun measureChunks(query: SampleQuery, docs: List<Document>): QueryMeasurement {
-            require(docs.isNotEmpty()) {
-                "${query.id}: 검색 결과가 0건입니다 — vector_store 또는 카테고리 매핑 확인"
-            }
             val chunks = docs.mapIndexed { idx, doc ->
                 val text = doc.text ?: ""
                 ChunkMeasurement(
@@ -226,7 +225,7 @@ class RagContextMeasurementIT {
                 query = query,
                 chunks = chunks,
                 totalTokens = chunks.sumOf { it.tokens },
-                joinedTokens = countTokens(joined),
+                joinedTokens = if (docs.isEmpty()) 0 else countTokens(joined),
             )
         }
     }
@@ -287,6 +286,9 @@ class RagContextMeasurementIT {
                 topK = 5,
                 category = query.expectedCategory,
             )
+            check(docs.isNotEmpty()) {
+                "${query.id}: 검색 결과가 0건입니다 — vector_store 또는 카테고리 매핑 확인"
+            }
             measureChunks(query, docs)
         }
 
