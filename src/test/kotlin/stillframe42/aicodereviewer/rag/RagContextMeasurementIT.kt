@@ -3,6 +3,9 @@ package stillframe42.aicodereviewer.rag
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable
+import org.springframework.ai.document.Document
+import org.springframework.ai.tokenizer.JTokkitTokenCountEstimator
+import org.springframework.ai.tokenizer.TokenCountEstimator
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.test.context.ActiveProfiles
 import org.springframework.test.context.DynamicPropertyRegistry
@@ -11,6 +14,11 @@ import org.testcontainers.containers.GenericContainer
 import org.testcontainers.postgresql.PostgreSQLContainer
 import org.yaml.snakeyaml.Yaml
 import stillframe42.aicodereviewer.integration.AbstractIntegrationTest
+import stillframe42.aicodereviewer.rag.domain.model.ConventionCategory
+import stillframe42.aicodereviewer.rag.domain.model.ConventionCategory.API
+import stillframe42.aicodereviewer.rag.domain.model.ConventionCategory.ARCH
+import stillframe42.aicodereviewer.rag.domain.model.ConventionCategory.SECURITY
+import stillframe42.aicodereviewer.rag.domain.model.ConventionCategory.STYLE
 
 // RAG 컨텍스트 베이스라인 측정 — 컨텍스트 압축(tasks_20260416.md Phase 2~5) 전 baseline 수집
 // 일반 빌드에서는 자동 스킵. 수동 실행:
@@ -59,7 +67,65 @@ class RagContextMeasurementIT {
             System.err.println("[RagContextMeasurementIT] application-secret.yml 로드 실패: ${e.message}")
             emptyMap()
         }
+
+        // 측정 대상 쿼리 — 카테고리당 2개씩, FileCategoryMapper와 정확히 일치하도록 선정
+        // 카테고리 매핑 우선순위: SECURITY > API > ARCH > STYLE
+        val SAMPLE_QUERIES: List<SampleQuery> = listOf(
+            // ARCH (헥사고날 아키텍처, 트랜잭션, N+1)
+            SampleQuery("arch-1", "OrderService.kt",
+                "src/main/kotlin/stillframe42/codereviewertester/order/application/OrderService.kt", ARCH),
+            SampleQuery("arch-2", "ReviewRequestRepository.kt",
+                "src/main/kotlin/stillframe42/aicodereviewer/review/adapter/out/persistence/ReviewRequestRepository.kt", ARCH),
+
+            // API (Controller, REST)
+            SampleQuery("api-1", "OrderController.kt",
+                "src/main/kotlin/stillframe42/codereviewertester/order/adapter/web/OrderController.kt", API),
+            SampleQuery("api-2", "ChatController.kt",
+                "src/main/kotlin/stillframe42/aicodereviewer/chat/adapter/in/web/ChatController.kt", API),
+
+            // STYLE (Kotlin 컨벤션) — 키워드 미매칭 파일명
+            SampleQuery("style-1", "DiffPreprocessor.kt",
+                "src/main/kotlin/stillframe42/aicodereviewer/review/domain/service/DiffPreprocessor.kt", STYLE),
+            SampleQuery("style-2", "ReviewMode.kt",
+                "src/main/kotlin/stillframe42/aicodereviewer/review/domain/model/ReviewMode.kt", STYLE),
+
+            // SECURITY (인증, JWT)
+            SampleQuery("sec-1", "JwtAuthenticationFilter.kt",
+                "src/main/kotlin/stillframe42/aicodereviewer/security/JwtAuthenticationFilter.kt", SECURITY),
+            SampleQuery("sec-2", "SecurityConfig.kt",
+                "src/main/kotlin/stillframe42/aicodereviewer/config/SecurityConfig.kt", SECURITY),
+        )
+
+        private val tokenEstimator: TokenCountEstimator = JTokkitTokenCountEstimator()
+
+        // 텍스트의 토큰 수를 반환 (cl100k_base 기준 — Spring AI 기본 인코딩)
+        internal fun countTokens(text: String): Int = tokenEstimator.estimate(text)
     }
+
+    // 측정 대상 단일 쿼리 (카테고리, 파일 경로, 검색 텍스트)
+    data class SampleQuery(
+        val id: String,
+        val queryText: String,
+        val filePath: String,
+        val expectedCategory: ConventionCategory,
+    )
+
+    // 청크 단위 측정 결과
+    data class ChunkMeasurement(
+        val rank: Int,
+        val tokens: Int,
+        val chars: Int,
+        val sourceFile: String?,
+        val text: String,
+    )
+
+    // 쿼리별 종합 측정 결과
+    data class QueryMeasurement(
+        val query: SampleQuery,
+        val chunks: List<ChunkMeasurement>,
+        val totalTokens: Int,    // 청크 토큰 합계 (구분자 제외)
+        val joinedTokens: Int,   // join("\n\n---\n\n") 후 실제 프롬프트 주입 형태 토큰 수
+    )
 
     @Test
     fun `스켈레톤 컴파일 검증 placeholder`() = runBlocking {
