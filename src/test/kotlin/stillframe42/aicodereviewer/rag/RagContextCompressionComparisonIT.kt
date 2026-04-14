@@ -68,10 +68,10 @@ class RagContextCompressionComparisonIT {
     }
 
     // 압축 전/후 비교 결과
-    data class ComparisonResult(
-        val query: RagContextMeasurementIT.SampleQuery,
-        val rawMeasurement: RagContextMeasurementIT.QueryMeasurement,
-        val compressedMeasurement: RagContextMeasurementIT.QueryMeasurement,
+    internal data class ComparisonResult(
+        val query: SampleQuery,
+        val rawMeasurement: QueryMeasurement,
+        val compressedMeasurement: QueryMeasurement,
     ) {
         val reductionRate: Double
             get() = if (rawMeasurement.joinedTokens == 0) 0.0
@@ -102,7 +102,7 @@ class RagContextCompressionComparisonIT {
         conventionIndexUseCase.reindex()
 
         // 2. 8개 쿼리에 대해 raw + compressed 동시 측정
-        val comparisons = RagContextMeasurementIT.SAMPLE_QUERIES.map { query ->
+        val comparisons = SAMPLE_QUERIES.map { query ->
             val actualCategory = FileCategoryMapper.selectCategory(query.filePath)
             check(actualCategory == query.expectedCategory) {
                 "${query.id}: 카테고리 매핑 불일치 — 기대 ${query.expectedCategory}, 실제 $actualCategory"
@@ -114,8 +114,8 @@ class RagContextCompressionComparisonIT {
             }
             ComparisonResult(
                 query = query,
-                rawMeasurement = RagContextMeasurementIT.measureChunks(query, rawDocs),
-                compressedMeasurement = RagContextMeasurementIT.measureChunks(query, compressedDocs),
+                rawMeasurement = measureChunks(query, rawDocs),
+                compressedMeasurement = measureChunks(query, compressedDocs),
             )
         }
 

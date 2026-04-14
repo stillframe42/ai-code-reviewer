@@ -6,9 +6,6 @@ import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Assumptions
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable
-import org.springframework.ai.document.Document
-import org.springframework.ai.tokenizer.JTokkitTokenCountEstimator
-import org.springframework.ai.tokenizer.TokenCountEstimator
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.jdbc.core.JdbcTemplate
@@ -20,17 +17,13 @@ import org.testcontainers.postgresql.PostgreSQLContainer
 import org.yaml.snakeyaml.Yaml
 import stillframe42.aicodereviewer.integration.AbstractIntegrationTest
 import stillframe42.aicodereviewer.rag.application.HybridConventionSearchService
-import stillframe42.aicodereviewer.rag.domain.model.ConventionCategory
-import stillframe42.aicodereviewer.rag.domain.model.ConventionCategory.API
-import stillframe42.aicodereviewer.rag.domain.model.ConventionCategory.ARCH
-import stillframe42.aicodereviewer.rag.domain.model.ConventionCategory.SECURITY
-import stillframe42.aicodereviewer.rag.domain.model.ConventionCategory.STYLE
 import stillframe42.aicodereviewer.rag.domain.port.`in`.ConventionIndexUseCase
 import stillframe42.aicodereviewer.rag.domain.service.FileCategoryMapper
 
 // RAG 컨텍스트 베이스라인 측정 — 컨텍스트 압축(tasks_20260416.md Phase 2~5) 전 baseline 수집
 // 일반 빌드에서는 자동 스킵. 수동 실행:
 //   RAG_MANUAL_TEST=true ./gradlew test --tests "*RagContextMeasurementIT*"
+// 공통 측정 인프라(SAMPLE_QUERIES, measureChunks 등)는 RagMeasurementSupport.kt에 정의
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("integration-test")
 @EnabledIfEnvironmentVariable(named = "RAG_MANUAL_TEST", matches = "true")
@@ -75,42 +68,6 @@ class RagContextMeasurementIT {
             System.err.println("[RagContextMeasurementIT] application-secret.yml 로드 실패: ${e.message}")
             emptyMap()
         }
-
-        // 측정 대상 쿼리 — 카테고리당 2개씩, FileCategoryMapper와 정확히 일치하도록 선정
-        // 카테고리 매핑 우선순위: SECURITY > API > ARCH > STYLE
-        val SAMPLE_QUERIES: List<SampleQuery> = listOf(
-            // ARCH (헥사고날 아키텍처, 트랜잭션, N+1)
-            SampleQuery("arch-1", "OrderService.kt",
-                "src/main/kotlin/stillframe42/codereviewertester/order/application/OrderService.kt", ARCH),
-            SampleQuery("arch-2", "ReviewRequestRepository.kt",
-                "src/main/kotlin/stillframe42/aicodereviewer/review/adapter/out/persistence/ReviewRequestRepository.kt", ARCH),
-
-            // API (Controller, REST)
-            SampleQuery("api-1", "OrderController.kt",
-                "src/main/kotlin/stillframe42/codereviewertester/order/adapter/web/OrderController.kt", API),
-            SampleQuery("api-2", "ChatController.kt",
-                "src/main/kotlin/stillframe42/aicodereviewer/chat/adapter/in/web/ChatController.kt", API),
-
-            // STYLE (Kotlin 컨벤션) — 키워드 미매칭 파일명
-            SampleQuery("style-1", "DiffPreprocessor.kt",
-                "src/main/kotlin/stillframe42/aicodereviewer/review/domain/service/DiffPreprocessor.kt", STYLE),
-            SampleQuery("style-2", "ReviewMode.kt",
-                "src/main/kotlin/stillframe42/aicodereviewer/review/domain/model/ReviewMode.kt", STYLE),
-
-            // SECURITY (인증, JWT)
-            SampleQuery("sec-1", "JwtAuthenticationFilter.kt",
-                "src/main/kotlin/stillframe42/aicodereviewer/security/JwtAuthenticationFilter.kt", SECURITY),
-            SampleQuery("sec-2", "SecurityConfig.kt",
-                "src/main/kotlin/stillframe42/aicodereviewer/config/SecurityConfig.kt", SECURITY),
-        )
-
-        // OpenAI cl100k_base 토크나이저 사용 — 임베딩 단계에서 사용되는 OpenAI text-embedding-3 기준
-        // Anthropic 토크나이저는 JVM에서 직접 사용 가능한 라이브러리가 없어 cl100k_base로 근사한다.
-        // 압축 전/후 비교에서는 동일 토크나이저를 사용하므로 절대값보다 상대 변화율이 의미 있다.
-        private val tokenEstimator: TokenCountEstimator = JTokkitTokenCountEstimator()
-
-        // 텍스트의 토큰 수를 반환 (cl100k_base 기준)
-        internal fun countTokens(text: String): Int = tokenEstimator.estimate(text)
 
         // QueryMeasurement 리스트로부터 마크다운 형식 baseline 보고서 문자열 생성
         internal fun formatBaselineReport(measurements: List<QueryMeasurement>): String = buildString {
@@ -205,55 +162,7 @@ class RagContextMeasurementIT {
                 appendLine("| ${m.query.id} | ${m.joinedTokens} | - | - |")
             }
         }
-
-        // 검색된 Document 리스트로부터 청크별 + 종합 측정값 계산
-        // 빈 List는 빈 측정 결과(totalTokens=0, joinedTokens=0)를 반환한다 —
-        // Phase 4 비교 테스트에서 압축 후 모든 청크가 제외되는 케이스를 지원하기 위함.
-        internal fun measureChunks(query: SampleQuery, docs: List<Document>): QueryMeasurement {
-            val chunks = docs.mapIndexed { idx, doc ->
-                val text = doc.text ?: ""
-                ChunkMeasurement(
-                    rank = idx + 1,
-                    tokens = countTokens(text),
-                    chars = text.length,
-                    sourceFile = doc.metadata["source"] as? String,
-                    text = text,
-                )
-            }
-            val joined = docs.joinToString("\n\n---\n\n") { it.text ?: "" }
-            return QueryMeasurement(
-                query = query,
-                chunks = chunks,
-                totalTokens = chunks.sumOf { it.tokens },
-                joinedTokens = if (docs.isEmpty()) 0 else countTokens(joined),
-            )
-        }
     }
-
-    // 측정 대상 단일 쿼리 (카테고리, 파일 경로, 검색 텍스트)
-    data class SampleQuery(
-        val id: String,
-        val queryText: String,
-        val filePath: String,
-        val expectedCategory: ConventionCategory,
-    )
-
-    // 청크 단위 측정 결과
-    data class ChunkMeasurement(
-        val rank: Int,
-        val tokens: Int,
-        val chars: Int,
-        val sourceFile: String?,
-        val text: String,
-    )
-
-    // 쿼리별 종합 측정 결과
-    data class QueryMeasurement(
-        val query: SampleQuery,
-        val chunks: List<ChunkMeasurement>,
-        val totalTokens: Int,    // 청크 토큰 합계 (구분자 제외)
-        val joinedTokens: Int,   // join("\n\n---\n\n") 후 실제 프롬프트 주입 형태 토큰 수
-    )
 
     @Autowired
     private lateinit var hybridSearchService: HybridConventionSearchService

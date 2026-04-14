@@ -13,7 +13,7 @@ class RagContextMeasurementReportTest {
 
     @Test
     fun `SAMPLE_QUERIES 8개의 expectedCategory가 FileCategoryMapper와 일치한다`() {
-        RagContextMeasurementIT.SAMPLE_QUERIES.forEach { query ->
+        SAMPLE_QUERIES.forEach { query ->
             val actual = FileCategoryMapper.selectCategory(query.filePath)
             assertThat(actual)
                 .withFailMessage(
@@ -36,9 +36,9 @@ class RagContextMeasurementReportTest {
                 .metadata(mapOf("source" to "architecture-guide.md"))
                 .build(),
         )
-        val query = RagContextMeasurementIT.SampleQuery("test", "Test.kt", "Test.kt", ARCH)
+        val query = SampleQuery("test", "Test.kt", "Test.kt", ARCH)
 
-        val result = RagContextMeasurementIT.measureChunks(query, docs)
+        val result = measureChunks(query, docs)
 
         assertThat(result.chunks).hasSize(2)
         assertThat(result.chunks[0].rank).isEqualTo(1)
@@ -51,9 +51,9 @@ class RagContextMeasurementReportTest {
     @Test
     fun `measureChunks는 빈 docs에 대해 빈 측정 결과를 반환한다`() {
         // Phase 4 비교 테스트에서 압축 후 모든 청크가 제외되는 케이스를 지원
-        val query = RagContextMeasurementIT.SampleQuery("test", "Test.kt", "Test.kt", ARCH)
+        val query = SampleQuery("test", "Test.kt", "Test.kt", ARCH)
 
-        val result = RagContextMeasurementIT.measureChunks(query, emptyList())
+        val result = measureChunks(query, emptyList())
 
         assertThat(result.chunks).isEmpty()
         assertThat(result.totalTokens).isZero()
@@ -63,13 +63,13 @@ class RagContextMeasurementReportTest {
 
     @Test
     fun `formatBaselineReport는 메타데이터 요약 상세 정성관찰 Phase4표 5개 섹션을 포함한다`() {
-        val query = RagContextMeasurementIT.SampleQuery(
+        val query = SampleQuery(
             "arch-1", "OrderService.kt", "src/main/.../OrderService.kt", ARCH,
         )
-        val measurement = RagContextMeasurementIT.QueryMeasurement(
+        val measurement = QueryMeasurement(
             query = query,
             chunks = listOf(
-                RagContextMeasurementIT.ChunkMeasurement(1, 100, 400, "architecture-guide.md", "샘플 청크 텍스트"),
+                ChunkMeasurement(1, 100, 400, "architecture-guide.md", "샘플 청크 텍스트"),
             ),
             totalTokens = 100,
             joinedTokens = 100,
@@ -107,11 +107,11 @@ class RagContextMeasurementReportTest {
         filePath: String,
         category: ConventionCategory,
         joined: Int,
-    ): RagContextMeasurementIT.QueryMeasurement {
-        val query = RagContextMeasurementIT.SampleQuery(id, queryText, filePath, category)
-        return RagContextMeasurementIT.QueryMeasurement(
+    ): QueryMeasurement {
+        val query = SampleQuery(id, queryText, filePath, category)
+        return QueryMeasurement(
             query = query,
-            chunks = listOf(RagContextMeasurementIT.ChunkMeasurement(1, joined, joined * 4, "src.md", "내용")),
+            chunks = listOf(ChunkMeasurement(1, joined, joined * 4, "src.md", "내용")),
             totalTokens = joined,
             joinedTokens = joined,
         )
