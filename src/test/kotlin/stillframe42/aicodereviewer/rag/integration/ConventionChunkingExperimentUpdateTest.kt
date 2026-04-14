@@ -1,4 +1,4 @@
-package stillframe42.aicodereviewer.rag
+package stillframe42.aicodereviewer.rag.integration
 
 import org.junit.jupiter.api.Assumptions.assumeTrue
 import org.junit.jupiter.api.BeforeAll

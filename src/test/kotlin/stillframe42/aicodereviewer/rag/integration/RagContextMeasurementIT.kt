@@ -1,4 +1,4 @@
-package stillframe42.aicodereviewer.rag
+package stillframe42.aicodereviewer.rag.integration
 
 import java.io.File
 import java.time.LocalDateTime
@@ -16,9 +16,13 @@ import org.testcontainers.containers.GenericContainer
 import org.testcontainers.postgresql.PostgreSQLContainer
 import org.yaml.snakeyaml.Yaml
 import stillframe42.aicodereviewer.integration.AbstractIntegrationTest
+import stillframe42.aicodereviewer.rag.QueryMeasurement
+import stillframe42.aicodereviewer.rag.SAMPLE_QUERIES
+import stillframe42.aicodereviewer.rag.SampleQuery
 import stillframe42.aicodereviewer.rag.application.HybridConventionSearchService
 import stillframe42.aicodereviewer.rag.domain.port.`in`.ConventionIndexUseCase
 import stillframe42.aicodereviewer.rag.domain.service.FileCategoryMapper
+import stillframe42.aicodereviewer.rag.measureChunks
 
 // RAG 컨텍스트 베이스라인 측정 — 컨텍스트 압축(tasks_20260416.md Phase 2~5) 전 baseline 수집
 // 일반 빌드에서는 자동 스킵. 수동 실행:

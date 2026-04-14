@@ -1,4 +1,4 @@
-package stillframe42.aicodereviewer.rag
+package stillframe42.aicodereviewer.rag.integration
 
 import org.junit.jupiter.api.Assumptions.assumeTrue
 import org.junit.jupiter.api.BeforeAll
@@ -23,14 +23,14 @@ import stillframe42.aicodereviewer.rag.domain.port.out.ConventionVectorPort
 import stillframe42.aicodereviewer.rag.domain.port.out.DocumentPreparerPort
 import java.io.File
 
-// text-embedding-3-small 모델 검색 품질 실험
-// 실행 조건: application-secret.yml에 실제 openai.api-key(sk-*)가 있어야 함
-// 실행 방법: ./gradlew experimentTest --tests "*EmbeddingSmallModelExperimentTest"
+// text-embedding-3-large 모델 검색 품질 실험
+// DynamicPropertySource에서 migration-large 경로 추가 → V9 마이그레이션으로 3072차원 테이블 사용
+// 실행 방법: ./gradlew experimentTest --tests "*EmbeddingLargeModelExperimentTest"
 @Tag("experiment")
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
 @ActiveProfiles("integration-test")
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-class EmbeddingSmallModelExperimentTest {
+class EmbeddingLargeModelExperimentTest {
 
     companion object {
         private val postgres: PostgreSQLContainer =
@@ -49,8 +49,14 @@ class EmbeddingSmallModelExperimentTest {
             registry.add("spring.datasource.password") { postgres.password }
             registry.add("spring.data.redis.host") { redis.host }
             registry.add("spring.data.redis.port") { redis.getMappedPort(6379).toString() }
-            registry.add("spring.ai.openai.embedding.options.model") { "text-embedding-3-small" }
-            registry.add("spring.ai.vectorstore.pgvector.dimensions") { "1536" }
+
+            // 3072차원 마이그레이션 포함 — V9가 embedding 컬럼을 3072로 변경
+            registry.add("spring.flyway.locations") {
+                "classpath:db/migration,classpath:db/migration-large"
+            }
+            registry.add("spring.ai.openai.embedding.options.model") { "text-embedding-3-large" }
+            registry.add("spring.ai.openai.embedding.options.dimensions") { "3072" }
+            registry.add("spring.ai.vectorstore.pgvector.dimensions") { "3072" }
 
             val secretResource = ClassPathResource("application-secret.yml")
             if (secretResource.exists()) {
@@ -87,12 +93,12 @@ class EmbeddingSmallModelExperimentTest {
     }
 
     @Test
-    fun `text-embedding-3-small 검색 품질 실험`() {
+    fun `text-embedding-3-large 검색 품질 실험`() {
         vectorPort.deleteAll()
         val docs = splitter.prepare()
         vectorPort.save(docs)
-        println("=== text-embedding-3-small: ${docs.size}개 청크 인덱싱 완료 ===")
-        runQueriesAndRecord("small")
+        println("=== text-embedding-3-large: ${docs.size}개 청크 인덱싱 완료 ===")
+        runQueriesAndRecord("large")
     }
 
     private data class QueryResult(val summary: String, val score: Int, val note: String, val elapsedMs: Long)

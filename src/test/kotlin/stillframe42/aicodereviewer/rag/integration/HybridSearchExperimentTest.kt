@@ -1,4 +1,4 @@
-package stillframe42.aicodereviewer.rag
+package stillframe42.aicodereviewer.rag.integration
 
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Assumptions.assumeTrue

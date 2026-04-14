@@ -3,9 +3,15 @@ package stillframe42.aicodereviewer.rag
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.springframework.ai.document.Document
+import stillframe42.aicodereviewer.rag.ChunkMeasurement
+import stillframe42.aicodereviewer.rag.QueryMeasurement
+import stillframe42.aicodereviewer.rag.SAMPLE_QUERIES
+import stillframe42.aicodereviewer.rag.SampleQuery
 import stillframe42.aicodereviewer.rag.domain.model.ConventionCategory
 import stillframe42.aicodereviewer.rag.domain.model.ConventionCategory.ARCH
 import stillframe42.aicodereviewer.rag.domain.service.FileCategoryMapper
+import stillframe42.aicodereviewer.rag.integration.RagContextMeasurementIT
+import stillframe42.aicodereviewer.rag.measureChunks
 
 // RagContextMeasurementIT의 순수 함수(measureChunks, formatBaselineReport)를 단위 테스트한다.
 // SpringBootTest 컨텍스트 없이 빠르게 실행되어 로직 변경 시 즉시 검증 가능

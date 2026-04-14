@@ -1,4 +1,4 @@
-package stillframe42.aicodereviewer.rag
+package stillframe42.aicodereviewer.rag.integration
 
 // 컨벤션 검색 품질 평가에 사용하는 표준 테스트 질문 목록
 // LABELED  — (레이블, 질문) 쌍: 검색 결과 리포트 등 라벨이 필요한 곳에서 사용
