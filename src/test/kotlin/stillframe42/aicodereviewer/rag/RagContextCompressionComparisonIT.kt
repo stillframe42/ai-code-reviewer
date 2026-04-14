@@ -14,6 +14,7 @@ import org.springframework.test.context.DynamicPropertyRegistry
 import org.springframework.test.context.DynamicPropertySource
 import org.testcontainers.containers.GenericContainer
 import org.testcontainers.postgresql.PostgreSQLContainer
+import org.yaml.snakeyaml.Yaml
 import stillframe42.aicodereviewer.integration.AbstractIntegrationTest
 import stillframe42.aicodereviewer.rag.application.HybridConventionSearchService
 import stillframe42.aicodereviewer.rag.domain.port.`in`.ConventionIndexUseCase
@@ -56,7 +57,7 @@ class RagContextCompressionComparisonIT {
             val file = File("src/main/resources/application-secret.yml")
             check(file.exists()) { "application-secret.yml 파일을 찾을 수 없습니다" }
             @Suppress("UNCHECKED_CAST")
-            val map = org.yaml.snakeyaml.Yaml().load<Map<String, Any>>(file.inputStream())
+            val map = Yaml().load<Map<String, Any>>(file.inputStream())
             buildMap {
                 (map["openai"] as? Map<*, *>)?.get("api-key")?.let { put("openai", it as String) }
             }
