@@ -96,9 +96,12 @@ class RagContextMeasurementIT {
                 "src/main/kotlin/stillframe42/aicodereviewer/config/SecurityConfig.kt", SECURITY),
         )
 
+        // OpenAI cl100k_base 토크나이저 사용 — 임베딩 단계에서 사용되는 OpenAI text-embedding-3 기준
+        // Anthropic 토크나이저는 JVM에서 직접 사용 가능한 라이브러리가 없어 cl100k_base로 근사한다.
+        // 압축 전/후 비교에서는 동일 토크나이저를 사용하므로 절대값보다 상대 변화율이 의미 있다.
         private val tokenEstimator: TokenCountEstimator = JTokkitTokenCountEstimator()
 
-        // 텍스트의 토큰 수를 반환 (cl100k_base 기준 — Spring AI 기본 인코딩)
+        // 텍스트의 토큰 수를 반환 (cl100k_base 기준)
         internal fun countTokens(text: String): Int = tokenEstimator.estimate(text)
 
         // 검색된 Document 리스트로부터 청크별 + 종합 측정값 계산

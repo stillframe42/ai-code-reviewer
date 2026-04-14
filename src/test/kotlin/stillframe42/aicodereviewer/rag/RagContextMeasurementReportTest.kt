@@ -1,6 +1,7 @@
 package stillframe42.aicodereviewer.rag
 
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
 import org.springframework.ai.document.Document
 import stillframe42.aicodereviewer.rag.domain.model.ConventionCategory.ARCH
@@ -50,11 +51,11 @@ class RagContextMeasurementReportTest {
     @Test
     fun `measureChunks는 빈 docs에 대해 예외를 던진다`() {
         val query = RagContextMeasurementIT.SampleQuery("test", "Test.kt", "Test.kt", ARCH)
-        try {
+        assertThatThrownBy {
             RagContextMeasurementIT.measureChunks(query, emptyList())
-            error("예외가 발생해야 함")
-        } catch (e: IllegalArgumentException) {
-            assertThat(e.message).contains("test").contains("0건")
         }
+            .isInstanceOf(IllegalArgumentException::class.java)
+            .hasMessageContaining("test")
+            .hasMessageContaining("0건")
     }
 }
