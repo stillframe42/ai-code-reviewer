@@ -16,6 +16,7 @@
 | v7 | review-system-v7.st | 2026-03-25 | v6 기반 + summary 2문장 제한, positives 최대 3개 제한 (가독성 개선) |
 | v8 | review-system-v8.st | 2026-04-01 | v7 기반 + Tool Calling 사용 지침 추가 (diff 외부 타입 참조 시 도구 호출 명시) |
 | v9 | review-system-v9.st | 2026-04-15 | v8 기반 + RAG 컨벤션 컨텍스트 주입 (`{convention_section}`) |
+| v10 | review-system-v10.st | 2026-04-14 | v9 기반 + BeanOutputConverter format 스키마 주입 (`{format}`) |
 
 ## 버전 전환 방법
 
@@ -30,6 +31,13 @@ app:
 ```
 
 ## 변경 이력
+
+### v10 (2026-04-14)
+
+- **변경 이유**: `buildVariables()`에서 `converter.getFormat()`을 주입하지 않아 AI가 `overall_score` 필드를 인지하지 못해 항상 0으로 반환되는 버그 수정
+- **주요 변경**:
+  - v9를 베이스로 유지
+  - `{format}` 플레이스홀더 추가 — `SpringAiReviewAdapter`가 `BeanOutputConverter.getFormat()`을 주입하여 JSON 스키마 명세를 프롬프트에 포함
 
 ### v9 (2026-04-15)
 
