@@ -156,11 +156,18 @@ class RagContextCompressionComparisonIT {
     }
 
     private fun StringBuilder.appendSummaryStats(comparisons: List<ComparisonResult>) {
+        // 토큰 총합 기준 절감률 — 실제 비용/품질에 직결되는 핵심 지표 (목표 달성 판정의 기준)
+        val totalRaw = comparisons.sumOf { it.rawMeasurement.joinedTokens }
+        val totalCompressed = comparisons.sumOf { it.compressedMeasurement.joinedTokens }
+        val totalReductionPercent = if (totalRaw == 0) 0 else ((totalRaw - totalCompressed) * 100 / totalRaw)
+        // 단순 평균 절감률 — 쿼리별 절감률의 산술 평균 (참고용, STYLE 우회 영향이 분모에 포함됨)
         val avgReductionPercent = (comparisons.map { it.reductionRate }.average() * 100).toInt()
-        val targetMet = avgReductionPercent >= 30
+        val targetMet = totalReductionPercent >= 30
+
         appendLine("## 요약 통계")
-        appendLine("- 전체 평균 절감률: ${avgReductionPercent}%")
-        appendLine("- 목표 달성 (30% 기준): ${if (targetMet) "✅" else "❌"}")
+        appendLine("- **토큰 총합 기준 절감률: ${totalReductionPercent}%** ${if (targetMet) "✅" else "❌"} (목표 30% 기준 달성 여부 — 핵심 지표)")
+        appendLine("- 단순 평균 절감률: ${avgReductionPercent}% (쿼리별 절감률의 산술 평균 — STYLE 우회 영향 포함)")
+        appendLine("- 압축 전 토큰 총합: $totalRaw / 압축 후 토큰 총합: $totalCompressed (절감 ${totalRaw - totalCompressed} tokens)")
         appendLine()
         appendLine("### 카테고리별 평균 절감률")
         appendLine("| 카테고리 | 평균 압축 전 | 평균 압축 후 | 절감률 |")
