@@ -1,12 +1,17 @@
 package stillframe42.aicodereviewer.rag
 
+import java.io.File
+import java.time.LocalDateTime
 import kotlinx.coroutines.runBlocking
+import org.junit.jupiter.api.Assumptions
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable
 import org.springframework.ai.document.Document
 import org.springframework.ai.tokenizer.JTokkitTokenCountEstimator
 import org.springframework.ai.tokenizer.TokenCountEstimator
+import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.test.context.ActiveProfiles
 import org.springframework.test.context.DynamicPropertyRegistry
 import org.springframework.test.context.DynamicPropertySource
@@ -14,12 +19,14 @@ import org.testcontainers.containers.GenericContainer
 import org.testcontainers.postgresql.PostgreSQLContainer
 import org.yaml.snakeyaml.Yaml
 import stillframe42.aicodereviewer.integration.AbstractIntegrationTest
+import stillframe42.aicodereviewer.rag.application.HybridConventionSearchService
 import stillframe42.aicodereviewer.rag.domain.model.ConventionCategory
 import stillframe42.aicodereviewer.rag.domain.model.ConventionCategory.API
 import stillframe42.aicodereviewer.rag.domain.model.ConventionCategory.ARCH
 import stillframe42.aicodereviewer.rag.domain.model.ConventionCategory.SECURITY
 import stillframe42.aicodereviewer.rag.domain.model.ConventionCategory.STYLE
-import java.time.LocalDateTime
+import stillframe42.aicodereviewer.rag.domain.port.`in`.ConventionIndexUseCase
+import stillframe42.aicodereviewer.rag.domain.service.FileCategoryMapper
 
 // RAG 컨텍스트 베이스라인 측정 — 컨텍스트 압축(tasks_20260416.md Phase 2~5) 전 baseline 수집
 // 일반 빌드에서는 자동 스킵. 수동 실행:
@@ -56,7 +63,7 @@ class RagContextMeasurementIT {
 
         // application-secret.yml에서 OpenAI API 키를 읽어 반환
         // (Anthropic 키는 본 측정에서 불필요 — 임베딩만 사용)
-        private fun readSecrets(): Map<String, String> = runCatching {
+        internal fun readSecrets(): Map<String, String> = runCatching {
             val file = java.io.File("src/main/resources/application-secret.yml")
             check(file.exists()) { "application-secret.yml 파일을 찾을 수 없습니다" }
             @Suppress("UNCHECKED_CAST")
@@ -249,9 +256,47 @@ class RagContextMeasurementIT {
         val joinedTokens: Int,   // join("\n\n---\n\n") 후 실제 프롬프트 주입 형태 토큰 수
     )
 
+    @Autowired
+    private lateinit var hybridSearchService: HybridConventionSearchService
+
+    @Autowired
+    private lateinit var conventionIndexUseCase: ConventionIndexUseCase
+
+    @Autowired
+    private lateinit var jdbcTemplate: JdbcTemplate
+
     @Test
-    fun `스켈레톤 컴파일 검증 placeholder`() = runBlocking {
-        // Task 5에서 실제 측정 로직으로 교체됨
-        Unit
+    fun `RAG 컨텍스트 토큰 베이스라인 측정`() = runBlocking {
+        val secrets = readSecrets()
+        Assumptions.assumeTrue(secrets.containsKey("openai")) {
+            "application-secret.yml의 openai.api-key가 필요합니다 (실제 임베딩 호출용)"
+        }
+
+        // 1. vector_store 초기화 후 재인덱싱
+        jdbcTemplate.execute("DELETE FROM vector_store")
+        conventionIndexUseCase.reindex()
+
+        // 2. 사전 정의된 8개 쿼리 순회 — 카테고리 매핑 무결성 검증 + 측정
+        val measurements = SAMPLE_QUERIES.map { query ->
+            val actualCategory = FileCategoryMapper.selectCategory(query.filePath)
+            check(actualCategory == query.expectedCategory) {
+                "${query.id}: 카테고리 매핑 불일치 — 기대 ${query.expectedCategory}, 실제 $actualCategory"
+            }
+            val docs = hybridSearchService.search(
+                query = query.queryText,
+                topK = 5,
+                category = query.expectedCategory,
+            )
+            measureChunks(query, docs)
+        }
+
+        // 3. 보고서 생성 + 저장
+        val reportPath = "plans/202604-2w/compression-experiment.md"
+        val file = File(reportPath)
+        file.parentFile?.mkdirs()
+        file.writeText(formatBaselineReport(measurements))
+
+        println("[RagContextMeasurementIT] 베이스라인 보고서 생성: $reportPath")
+        println("[RagContextMeasurementIT] 평균 joined 토큰: ${measurements.map { it.joinedTokens }.average().toInt()}")
     }
 }
