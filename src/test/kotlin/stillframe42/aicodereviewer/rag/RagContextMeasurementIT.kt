@@ -100,6 +100,30 @@ class RagContextMeasurementIT {
 
         // 텍스트의 토큰 수를 반환 (cl100k_base 기준 — Spring AI 기본 인코딩)
         internal fun countTokens(text: String): Int = tokenEstimator.estimate(text)
+
+        // 검색된 Document 리스트로부터 청크별 + 종합 측정값 계산
+        internal fun measureChunks(query: SampleQuery, docs: List<Document>): QueryMeasurement {
+            require(docs.isNotEmpty()) {
+                "${query.id}: 검색 결과가 0건입니다 — vector_store 또는 카테고리 매핑 확인"
+            }
+            val chunks = docs.mapIndexed { idx, doc ->
+                val text = doc.text ?: ""
+                ChunkMeasurement(
+                    rank = idx + 1,
+                    tokens = countTokens(text),
+                    chars = text.length,
+                    sourceFile = doc.metadata["source"] as? String,
+                    text = text,
+                )
+            }
+            val joined = docs.joinToString("\n\n---\n\n") { it.text ?: "" }
+            return QueryMeasurement(
+                query = query,
+                chunks = chunks,
+                totalTokens = chunks.sumOf { it.tokens },
+                joinedTokens = countTokens(joined),
+            )
+        }
     }
 
     // 측정 대상 단일 쿼리 (카테고리, 파일 경로, 검색 텍스트)
