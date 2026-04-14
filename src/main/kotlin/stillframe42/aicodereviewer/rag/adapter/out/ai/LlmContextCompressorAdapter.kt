@@ -1,5 +1,6 @@
 package stillframe42.aicodereviewer.rag.adapter.out.ai
 
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.springframework.ai.chat.client.ChatClient
@@ -53,6 +54,8 @@ class LlmContextCompressorAdapter(
                     .build()
             }
         }.getOrElse { e ->
+            // 코루틴 취소 예외는 상위로 전파해야 함 (구조적 동시성)
+            if (e is CancellationException) throw e
             logger.warn(
                 "청크 압축 실패 — 원본 fallback. query={}, source={}, error={}",
                 query, doc.metadata["source"], e.message,

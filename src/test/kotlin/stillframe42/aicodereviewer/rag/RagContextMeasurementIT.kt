@@ -281,7 +281,7 @@ class RagContextMeasurementIT {
             check(actualCategory == query.expectedCategory) {
                 "${query.id}: 카테고리 매핑 불일치 — 기대 ${query.expectedCategory}, 실제 $actualCategory"
             }
-            val docs = hybridSearchService.search(
+            val docs = hybridSearchService.searchRaw(
                 query = query.queryText,
                 topK = 5,
                 category = query.expectedCategory,

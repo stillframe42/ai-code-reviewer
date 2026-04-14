@@ -10,6 +10,7 @@ import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.jdbc.core.JdbcTemplate
 import stillframe42.aicodereviewer.integration.AbstractIntegrationTest
+import stillframe42.aicodereviewer.integration.support.WireMockStubs
 import stillframe42.aicodereviewer.rag.application.HybridConventionSearchService
 import stillframe42.aicodereviewer.rag.domain.model.ConventionCategory
 import stillframe42.aicodereviewer.rag.domain.port.`in`.ConventionIndexUseCase
@@ -37,6 +38,8 @@ class HybridConventionSearchIntegrationTest : AbstractIntegrationTest() {
                         .withTransformers("openai-embedding-batch"),
                 ),
         )
+        // LlmContextCompressorAdapter가 호출하는 OpenAI Chat API 스텁 (압축 정상 경로)
+        WireMockStubs.stubOpenAiChatResponse(wireMock, body = "compressed test content")
     }
 
     @Test
