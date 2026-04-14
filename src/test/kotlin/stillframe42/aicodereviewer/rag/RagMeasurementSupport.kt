@@ -41,29 +41,31 @@ internal data class QueryMeasurement(
 // 측정 대상 쿼리 — 카테고리당 2개씩, FileCategoryMapper와 정확히 일치하도록 선정
 // 카테고리 매핑 우선순위: SECURITY > API > ARCH > STYLE
 internal val SAMPLE_QUERIES: List<SampleQuery> = listOf(
+    // 모든 fixture 파일은 src/test/resources/fixtures/rag/sample-queries/ 하위에 보관 (self-contained)
+    // FileCategoryMapper는 파일명만 보고 카테고리를 결정하므로 fixture 경로로도 동일 동작
     // ARCH (헥사고날 아키텍처, 트랜잭션, N+1)
     SampleQuery("arch-1", "OrderService.kt",
-        "src/main/kotlin/stillframe42/codereviewertester/order/application/OrderService.kt", ARCH),
+        "src/test/resources/fixtures/rag/sample-queries/OrderService.kt", ARCH),
     SampleQuery("arch-2", "ReviewRequestRepository.kt",
-        "src/main/kotlin/stillframe42/aicodereviewer/review/adapter/out/persistence/ReviewRequestRepository.kt", ARCH),
+        "src/test/resources/fixtures/rag/sample-queries/ReviewRequestRepository.kt", ARCH),
 
     // API (Controller, REST)
     SampleQuery("api-1", "OrderController.kt",
-        "src/main/kotlin/stillframe42/codereviewertester/order/adapter/web/OrderController.kt", API),
+        "src/test/resources/fixtures/rag/sample-queries/OrderController.kt", API),
     SampleQuery("api-2", "ChatController.kt",
-        "src/main/kotlin/stillframe42/aicodereviewer/chat/adapter/in/web/ChatController.kt", API),
+        "src/test/resources/fixtures/rag/sample-queries/ChatController.kt", API),
 
     // STYLE (Kotlin 컨벤션) — 키워드 미매칭 파일명
     SampleQuery("style-1", "DiffPreprocessor.kt",
-        "src/main/kotlin/stillframe42/aicodereviewer/review/domain/service/DiffPreprocessor.kt", STYLE),
+        "src/test/resources/fixtures/rag/sample-queries/DiffPreprocessor.kt", STYLE),
     SampleQuery("style-2", "ReviewMode.kt",
-        "src/main/kotlin/stillframe42/aicodereviewer/review/domain/model/ReviewMode.kt", STYLE),
+        "src/test/resources/fixtures/rag/sample-queries/ReviewMode.kt", STYLE),
 
     // SECURITY (인증, JWT)
     SampleQuery("sec-1", "JwtAuthenticationFilter.kt",
-        "src/main/kotlin/stillframe42/aicodereviewer/security/JwtAuthenticationFilter.kt", SECURITY),
+        "src/test/resources/fixtures/rag/sample-queries/JwtAuthenticationFilter.kt", SECURITY),
     SampleQuery("sec-2", "SecurityConfig.kt",
-        "src/main/kotlin/stillframe42/aicodereviewer/config/SecurityConfig.kt", SECURITY),
+        "src/test/resources/fixtures/rag/sample-queries/SecurityConfig.kt", SECURITY),
 )
 
 // OpenAI cl100k_base 토크나이저 사용 — 임베딩 단계에서 사용되는 OpenAI text-embedding-3 기준

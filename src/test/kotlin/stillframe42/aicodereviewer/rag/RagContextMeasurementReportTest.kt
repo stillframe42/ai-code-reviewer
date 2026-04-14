@@ -3,6 +3,7 @@ package stillframe42.aicodereviewer.rag
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.springframework.ai.document.Document
+import java.io.File
 import stillframe42.aicodereviewer.rag.ChunkMeasurement
 import stillframe42.aicodereviewer.rag.QueryMeasurement
 import stillframe42.aicodereviewer.rag.SAMPLE_QUERIES
@@ -105,6 +106,16 @@ class RagContextMeasurementReportTest {
         assertThat(report).contains("ARCH")
         // 평균이 (200 + 400) / 2 = 300 으로 계산되어야 함
         assertThat(report).contains("300")
+    }
+
+    @Test
+    fun `SAMPLE_QUERIES의 모든 fixture 파일이 실제로 존재한다`() {
+        SAMPLE_QUERIES.forEach { query ->
+            val file = File(query.filePath)
+            assertThat(file.exists())
+                .withFailMessage("fixture 파일이 존재하지 않습니다: ${query.filePath}")
+                .isTrue()
+        }
     }
 
     private fun makeMeasurement(
