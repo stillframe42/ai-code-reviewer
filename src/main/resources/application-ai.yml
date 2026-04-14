@@ -5,6 +5,7 @@ app:
   rag:
     auto-index: true
     retry-base-delay: PT2S   # Exponential Backoff 기본 대기 시간 (2초)
+    similarity-threshold: 0.0  # RRF 혼합 검색 후보 수집 단계 임계값 (0.0 = 필터링 없음, RRF가 품질 제어)
   review:
     diff:
       # 추가 제외 glob 패턴 목록 (빈 목록 = 추가 제외 없음)
@@ -37,7 +38,7 @@ app:
           input-per-1k: 0.000150
           output-per-1k: 0.000600
   prompt:
-    review-system: classpath:prompts/review-system-v9.st   # v9: v8 기반 + RAG 컨벤션 컨텍스트 주입
+    review-system: classpath:prompts/review-system-v10.st  # v10: v9 기반 + BeanOutputConverter format 스키마 주입
     chat-system: classpath:prompts/chat-system.st
     chat-user: classpath:prompts/chat-user.st
 

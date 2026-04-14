@@ -13,7 +13,7 @@ app:
           input-per-1k: 0.000150
           output-per-1k: 0.000600
   prompt:
-    review-system: classpath:prompts/review-system-v8.st
+    review-system: classpath:prompts/review-system-v10.st
     chat-system: classpath:prompts/chat-system.st
     chat-user: classpath:prompts/chat-user.st
   review:

@@ -149,14 +149,21 @@ class SpringAiReviewAdapter(
                 }
             }
 
-    // convention_section: 문서가 있으면 헤더+내용, 없으면 빈 문자열 (v9 템플릿에 항상 주입)
+    // convention_section: 컨텍스트가 있으면 위반 검출 지시문을 포함한 블록, 없으면 빈 문자열
+    // format: BeanOutputConverter가 CodeReviewAiResponse 스키마로부터 생성한 JSON 포맷 명세
     private fun buildVariables(code: String, conventionContext: String?): Map<String, Any> {
         val conventionSection = if (!conventionContext.isNullOrBlank()) {
-            "[참고 컨벤션 문서]\n$conventionContext\n"
+            """[참고 컨벤션 문서]
+$conventionContext
+
+위 컨벤션 문서의 "리뷰 체크리스트" 항목을 기준으로 diff에서 위반 사항을 확인합니다.
+위반이 발견되면 severity MAJOR 이슈로 지적하고, 다른 이슈보다 먼저 나열합니다.
+"""
         } else ""
         return mapOf(
             "code" to code,
             "convention_section" to conventionSection,
+            "format" to converter.getFormat(),
         )
     }
 
