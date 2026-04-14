@@ -1,6 +1,7 @@
 package stillframe42.aicodereviewer.review.adapter.out.ai
 
 import com.github.tomakehurst.wiremock.client.WireMock.containing
+import com.github.tomakehurst.wiremock.client.WireMock.notContaining
 import com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor
 import com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo
 import kotlinx.coroutines.runBlocking
@@ -62,6 +63,8 @@ class SpringAiReviewAdapterConventionTest : AbstractIntegrationTest() {
         wireMock.verify(
             postRequestedFor(urlPathEqualTo("/v1/messages"))
                 .withRequestBody(containing("overall_score"))
+                .withRequestBody(notContaining("severity MAJOR 이슈로"))
+                .withRequestBody(notContaining("참고 컨벤션 문서"))
         )
     }
 }
