@@ -157,6 +157,19 @@ class SpringAiReviewAdapter(
 }
 ```
 
+#### 코드 리뷰 체크리스트
+
+diff에서 아래 패턴이 발견되면 **MAJOR** 이슈로 지적한다:
+
+- Controller 생성자 파라미터 타입이 `*UseCase` 인터페이스가 아닌 `*Service`/`*Adapter` 구현체인가?
+  ```kotlin
+  // ❌ 위반 예시 — 이 패턴이 보이면 지적
+  class OrderController(private val orderService: OrderService)
+  // ✅ 올바른 형태
+  class OrderController(private val orderUseCase: OrderUseCase)
+  ```
+- Application 계층(`application/` 패키지)에 해당 기능의 `*UseCase` 인터페이스 없이 `*Service` 구현체만 존재하는가?
+
 ---
 
 ## 3. 의존성 방향 규칙
@@ -253,6 +266,19 @@ package stillframe42.aicodereviewer.review.adapter.out.persistence
 | JPA Entity | `{기능}Entity` | `ReviewRequestEntity` |
 | DTO (요청) | `{기능}Request` | `ReviewRequest` |
 | DTO (응답) | `{기능}Response` | `ReviewResponse` |
+
+#### 코드 리뷰 체크리스트
+
+diff에서 아래 패턴이 발견되면 **MAJOR** 이슈로 지적한다:
+
+- `application/` 패키지의 `@Service` 클래스명이 `Default` 접두어로 시작하지 않는가?
+  ```kotlin
+  // ❌ 위반 예시 — 이 패턴이 보이면 지적
+  @Service class OrderService(...)
+  // ✅ 올바른 형태
+  @Service class DefaultOrderService(...) : OrderUseCase
+  ```
+- UseCase 구현체가 `*UseCase` 인터페이스를 구현(`implement`)하지 않는가?
 
 ---
 
