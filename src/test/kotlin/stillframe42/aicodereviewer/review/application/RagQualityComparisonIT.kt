@@ -9,8 +9,8 @@ import kotlinx.coroutines.runBlocking
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Assumptions
 import org.junit.jupiter.api.BeforeEach
-import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.data.redis.core.ReactiveRedisTemplate
@@ -32,9 +32,13 @@ import stillframe42.aicodereviewer.review.domain.port.out.AiReviewPort
 // RAG 적용 전/후 리뷰 품질 비교용 수동 실행 테스트
 // AbstractIntegrationTest를 상속하지 않음 — Anthropic/OpenAI API를 WireMock으로 리다이렉트하지 않기 위해
 // (실제 임베딩 없이는 HNSW 벡터 검색이 degenerate 그래프로 결과를 반환하지 않음)
+//
+// 실행 방법: RAG_MANUAL_TEST=true 환경 변수 설정 후 실행
+//   RAG_MANUAL_TEST=true ./gradlew test --tests "*RagQualityComparisonIT*"
+// 일반 빌드(./gradlew test)에서는 자동 스킵되어 실제 API 호출 없음
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("integration-test")
-//@Disabled("수동 실행용 — 실제 Anthropic/OpenAI API 키 필요")
+@EnabledIfEnvironmentVariable(named = "RAG_MANUAL_TEST", matches = "true")
 class RagQualityComparisonIT {
 
     companion object {
