@@ -47,8 +47,22 @@ class RagQualityComparisonIT {
         val postgres: PostgreSQLContainer = AbstractIntegrationTest.postgres
         val redis: GenericContainer<*> = AbstractIntegrationTest.redis
 
-        // 아키텍처 컨벤션 관련 키워드
-        private val CONVENTION_KEYWORDS = listOf("UseCase", "Default", "포트", "port", "헥사고날", "hexagonal", "컨벤션")
+        // 아키텍처 컨벤션 관련 키워드 — regex 기반 정확 매칭.
+        // case-sensitive + 앞뒤에 ASCII 알파벳이 오지 않을 때만 매칭한다.
+        // - 영문 키워드: import→port, default→Default 같은 substring 오매칭을 차단
+        // - 한글 키워드: 앞뒤에 영문자가 올 수 없으므로 항상 안전하게 매칭됨
+        //   (\b 단어 경계는 Kotlin Regex가 ASCII만 인식하므로 한글에 무용)
+        internal val keywordPatterns: List<Pair<String, Regex>> = listOf(
+            "UseCase", "Default", "포트", "port", "헥사고날", "hexagonal", "컨벤션",
+        ).map { kw -> kw to Regex("(?<![A-Za-z])${Regex.escape(kw)}(?![A-Za-z])") }
+
+        // 키워드별 출현 횟수를 Map으로 반환한다. 키 순서는 keywordPatterns 순서를 따른다.
+        internal fun countByKeyword(text: String): Map<String, Int> =
+            keywordPatterns.associate { (kw, regex) -> kw to regex.findAll(text).count() }
+
+        // 모든 키워드 출현 횟수의 총합을 반환한다.
+        internal fun countKeywords(text: String): Int =
+            countByKeyword(text).values.sum()
 
         @JvmStatic
         @DynamicPropertySource
@@ -181,18 +195,33 @@ class RagQualityComparisonIT {
             review = reviewAfter,
         )
 
-        // 핵심 검증: RAG 파이프라인이 convention context를 실제로 검색했는가
-        // AI 출력은 비결정적이므로 특정 키워드 보유 여부가 아닌, 컨텍스트 주입 여부를 검증한다.
+        // 1차 검증: RAG 파이프라인이 convention context를 실제로 검색했는가
+        // AI 출력은 비결정적이므로 특정 키워드 보유 여부가 아닌, 컨텍스트 주입 여부를 먼저 검증한다.
         assertThat(contextAfter)
             .withFailMessage("reindex 후 ARCH 컨벤션 컨텍스트가 검색되어야 합니다. vector_store 또는 RRF 검색을 확인하세요.")
             .isNotBlank()
 
-        // 참고 지표: 키워드 출현 횟수 (수동 품질 비교용 — 테스트 성패에는 영향 없음)
-        val afterText = reviewAfter.summary +
-            "\n" + reviewAfter.issues.joinToString("\n") { "${it.description} ${it.suggestion}" }
-        val keywordCount = countKeywords(afterText)
-        println("[RAG 품질 비교] 컨벤션 키워드 출현 횟수: $keywordCount (결과 파일 참조)")
+        // 2차 검증: 리뷰 출력에 컨벤션 키워드가 실제로 반영되었는가 (상대 비교)
+        val beforeCount = countKeywords(reviewBefore.toFullText())
+        val afterCount = countKeywords(reviewAfter.toFullText())
+        println("[RAG 품질 비교] 컨벤션 키워드 출현 횟수: before=$beforeCount, after=$afterCount")
         println("[RAG 품질 비교] 검색된 컨텍스트 길이: ${contextAfter.length}자")
+
+        // after는 최소 1회 이상 컨벤션 키워드를 언급해야 한다
+        assertThat(afterCount)
+            .withFailMessage(
+                "RAG 적용 후 리뷰에 컨벤션 키워드가 최소 1회 이상 포함되어야 합니다 " +
+                    "(before=$beforeCount, after=$afterCount)",
+            )
+            .isGreaterThanOrEqualTo(1)
+
+        // after는 before보다 엄격히 많아야 한다 (주입 효과가 실제로 나타났는가)
+        assertThat(afterCount)
+            .withFailMessage(
+                "RAG 적용 후 리뷰의 컨벤션 키워드 수가 before보다 많아야 합니다 " +
+                    "(before=$beforeCount, after=$afterCount)",
+            )
+            .isGreaterThan(beforeCount)
     }
 
     // 리뷰 결과를 지정 파일에 마크다운 형식으로 저장한다
@@ -200,10 +229,9 @@ class RagQualityComparisonIT {
         val now = LocalDateTime.now()
         // 부모 디렉토리가 없으면 자동 생성 (plans/202604-2w/ 등)
         File(filename).parentFile?.mkdirs()
-        val fullText = review.summary +
-            "\n" + review.issues.joinToString("\n") { "${it.description} ${it.suggestion}" }
-        val countDetails = CONVENTION_KEYWORDS.joinToString("\n") { kw ->
-            "- \"$kw\": ${fullText.split(kw, ignoreCase = true).size - 1}회"
+        val fullText = review.toFullText()
+        val countDetails = countByKeyword(fullText).entries.joinToString("\n") { (kw, count) ->
+            "- \"$kw\": ${count}회"
         }
         File(filename).writeText(buildString {
             appendLine("# RAG 적용 ${label} 리뷰 결과")
@@ -234,7 +262,9 @@ class RagQualityComparisonIT {
         })
     }
 
-    // 지정 키워드의 총 출현 횟수를 합산하여 반환한다
-    private fun countKeywords(text: String): Int =
-        CONVENTION_KEYWORDS.sumOf { kw -> text.split(kw, ignoreCase = true).size - 1 }
+    // 리뷰 결과 텍스트(summary + 각 이슈의 description/suggestion)를 하나의 문자열로 조립한다.
+    // 키워드 카운팅과 리포트 생성이 같은 소스를 바라보도록 단일 지점으로 통일한다.
+    private fun CodeReview.toFullText(): String =
+        summary + "\n" + issues.joinToString("\n") { "${it.description} ${it.suggestion}" }
+
 }
