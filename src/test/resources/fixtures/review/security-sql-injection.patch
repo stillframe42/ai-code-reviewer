@@ -1,0 +1,33 @@
+diff --git a/src/main/kotlin/stillframe42/codereviewertester/audit/infrastructure/SecurityAuditRepository.kt b/src/main/kotlin/stillframe42/codereviewertester/audit/infrastructure/SecurityAuditRepository.kt
+new file mode 100644
+index 0000000..b4c0a10
+--- /dev/null
++++ b/src/main/kotlin/stillframe42/codereviewertester/audit/infrastructure/SecurityAuditRepository.kt
+@@ -0,0 +1,27 @@
++package stillframe42.codereviewertester.audit.infrastructure
++
++import org.springframework.jdbc.core.JdbcTemplate
++import org.springframework.stereotype.Repository
++import stillframe42.codereviewertester.audit.domain.AuditUser
++
++@Repository
++class SecurityAuditRepository(private val db: JdbcTemplate) {
++
++    // 취약점 1: 문자열 직접 연결로 SQL Injection 가능
++    fun findByUsername(username: String): AuditUser? {
++        val sql = "SELECT * FROM audit_users WHERE username = '" + username + "'"
++        return db.queryForObject(sql, AuditUser::class.java)
++    }
++
++    // 취약점 2: 문자열 템플릿으로 SQL Injection 가능
++    fun findByEmail(email: String): AuditUser? {
++        val sql = "SELECT * FROM audit_users WHERE email = '$email'"
++        return db.queryForObject(sql, AuditUser::class.java)
++    }
++
++    // 취약점 3: 검색 필터에도 동일 패턴 반복
++    fun searchAuditUsers(keyword: String): List<AuditUser> {
++        val sql = "SELECT * FROM audit_users WHERE name LIKE '%" + keyword + "%' OR email LIKE '%" + keyword + "%'"
++        return db.query(sql, AuditUserRowMapper())
++    }
++}
