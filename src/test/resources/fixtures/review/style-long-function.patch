@@ -1,0 +1,94 @@
+diff --git a/src/main/kotlin/stillframe42/codereviewertester/report/MonthlyReportBuilder.kt b/src/main/kotlin/stillframe42/codereviewertester/report/MonthlyReportBuilder.kt
+new file mode 100644
+index 0000000..d4e5f6a
+--- /dev/null
++++ b/src/main/kotlin/stillframe42/codereviewertester/report/MonthlyReportBuilder.kt
+@@ -0,0 +1,88 @@
++package stillframe42.codereviewertester.report
++
++class MonthlyReportBuilder {
++
++    // 의도된 위반 1: 단일 함수가 100줄 이상 (가독성 저해)
++    // 의도된 위반 2: 로컬 함수 사용 (외부 변수 암묵적 캡처)
++    // 의도된 위반 3: FQCN 직접 사용 (java.util.concurrent.atomic.AtomicLong)
++    fun buildMonthlyReport(rows: List<Map<String, Any>>): String {
++        val counter = java.util.concurrent.atomic.AtomicLong(0)
++        val buffer = StringBuilder()
++        val totals = mutableMapOf<String, Long>()
++        val errors = mutableListOf<String>()
++
++        fun appendRow(row: Map<String, Any>) {
++            val id = row["id"]?.toString() ?: "unknown"
++            val amount = (row["amount"] as? Number)?.toLong() ?: 0L
++            val category = row["category"]?.toString() ?: "misc"
++            counter.incrementAndGet()
++            totals[category] = (totals[category] ?: 0L) + amount
++            buffer.append("[").append(id).append("] ")
++            buffer.append(category).append("=").append(amount).append("\n")
++            if (amount < 0) errors.add("negative amount for $id")
++        }
++
++        fun appendSummary() {
++            buffer.append("\n=== SUMMARY ===\n")
++            buffer.append("total rows: ").append(counter.get()).append("\n")
++            for ((cat, sum) in totals) {
++                buffer.append(cat).append(": ").append(sum).append("\n")
++            }
++        }
++
++        fun appendErrors() {
++            if (errors.isEmpty()) return
++            buffer.append("\n=== ERRORS ===\n")
++            for (err in errors) buffer.append("- ").append(err).append("\n")
++        }
++
++        buffer.append("=== MONTHLY REPORT ===\n")
++        buffer.append("generated at: ").append(System.currentTimeMillis()).append("\n")
++        buffer.append("\n=== ROWS ===\n")
++        for (row in rows) {
++            appendRow(row)
++            if (counter.get() % 10L == 0L) {
++                buffer.append("--- checkpoint ").append(counter.get()).append(" ---\n")
++            }
++        }
++
++        appendSummary()
++        appendErrors()
++
++        buffer.append("\n=== FOOTER ===\n")
++        val hash = buffer.toString().hashCode()
++        buffer.append("hash: ").append(hash).append("\n")
++        buffer.append("end of report\n")
++
++        val duplicate = buffer.toString()
++        val reversed = duplicate.reversed()
++        val lines = duplicate.lines()
++        val lineCount = lines.size
++        val charCount = duplicate.length
++        val wordCount = duplicate.split(Regex("\\s+")).size
++
++        buffer.append("lines: ").append(lineCount).append("\n")
++        buffer.append("chars: ").append(charCount).append("\n")
++        buffer.append("words: ").append(wordCount).append("\n")
++        buffer.append("reversed-head: ").append(reversed.take(20)).append("\n")
++
++        for (i in 0..9) {
++            buffer.append("padding-").append(i).append("\n")
++        }
++
++        val finalText = buffer.toString()
++        val upperCased = finalText.uppercase()
++        val lowerCased = finalText.lowercase()
++        val trimmed = finalText.trim()
++
++        buffer.append("upper-head: ").append(upperCased.take(10)).append("\n")
++        buffer.append("lower-head: ").append(lowerCased.take(10)).append("\n")
++        buffer.append("trimmed-length: ").append(trimmed.length).append("\n")
++
++        for (i in 0..9) {
++            buffer.append("tail-padding-").append(i).append("\n")
++        }
++
++        return buffer.toString()
++    }
++}
