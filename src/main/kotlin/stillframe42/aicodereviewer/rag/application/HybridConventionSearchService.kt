@@ -20,12 +20,21 @@ class HybridConventionSearchService(
 ) {
     // 일반 검색 — 벡터 + 키워드 + RRF + 압축 (전체 파이프라인)
     // 프로덕션 코드는 이 메서드를 사용한다.
+    //
+    // Direction B: ARCH 카테고리는 압축을 우회한다.
+    // ARCH 규칙(헥사고날 레이어, 포트-어댑터, 트랜잭션 경계 등)은 쿼리 파일명과
+    // 표면적으로 관련 없어 보이는 경우가 많아(예: "OrderService.kt" 쿼리에 대한
+    // "Controller는 UseCase에만 의존" chunk) context-compressor의 NONE 판정으로
+    // 통째 drop되는 regression이 `compression-comparison_2.md` arch-1 케이스에서
+    // 확인됐다. ARCH 카테고리만 우회해 최소 변경으로 retrieval 완전성을 보존한다.
+    // 다른 카테고리(API/SECURITY/STYLE)는 압축 유지 — 토큰 절감 효과 유지.
     suspend fun search(
         query: String,
         topK: Int = 5,
         category: ConventionCategory? = null,
     ): List<Document> {
         val rawResults = searchRaw(query, topK, category)
+        if (category == ConventionCategory.ARCH) return rawResults
         return contextCompressor.compress(query, rawResults)
     }
 
