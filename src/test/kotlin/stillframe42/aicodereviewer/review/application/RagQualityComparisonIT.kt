@@ -108,16 +108,18 @@ class RagQualityComparisonIT {
             emptyMap()
         }
 
-        // PR #11 diff: stillframe42/code-reviewer-tester
-        // 의도적 컨벤션 위반:
-        //   1. OrderController가 OrderUseCase 인터페이스 대신 OrderService 구현체에 직접 의존
-        //   2. 클래스명 OrderService (헥사고날 컨벤션상 DefaultOrderService 여야 함)
-        //   3. OrderUseCase 포트 인터페이스 부재
-        private val DIFF: String = checkNotNull(
-            RagQualityComparisonIT::class.java.getResourceAsStream("/fixtures/review/pr11-order-diff.patch")
-        ) { "fixtures/review/pr11-order-diff.patch 를 찾을 수 없습니다" }
-            .bufferedReader()
-            .readText()
+        // fixture basename으로 src/test/resources/fixtures/review/ 하위 파일을 로드한다.
+        // .patch 를 먼저 찾고 없으면 .kt 를 찾는다. 둘 다 없으면 예외.
+        // PR 전체 diff(.patch)와 단일 파일 raw 소스(.kt) 양쪽을 같은 인터페이스로 지원한다.
+        internal fun loadFixture(name: String): String {
+            val candidates = listOf("$name.patch", "$name.kt")
+            for (candidate in candidates) {
+                val stream = RagQualityComparisonIT::class.java
+                    .getResourceAsStream("/fixtures/review/$candidate")
+                if (stream != null) return stream.bufferedReader().readText()
+            }
+            error("fixture 파일을 찾을 수 없습니다: $name (.patch 또는 .kt 필요)")
+        }
     }
 
     @Autowired
@@ -158,6 +160,11 @@ class RagQualityComparisonIT {
             "application-secret.yml에서 Anthropic/OpenAI API 키를 읽지 못했습니다. 실제 API 키가 필요한 수동 실행 테스트입니다."
         }
 
+        val repeatN = (System.getenv("RAG_REPEAT_N")?.toIntOrNull() ?: 1).coerceAtLeast(1)
+        val fixtureName = System.getenv("RAG_FIXTURE") ?: "pr11-order"
+        val diff = loadFixture(fixtureName)
+        println("[RAG] fixture=$fixtureName N=$repeatN → API 호출 예정: ${repeatN * 2}회")
+
         // OrderController.kt는 API 카테고리로 분류되어 api-design.md만 검색된다.
         // 의도한 컨벤션 위반(UseCase 없이 구현체 직접 의존, DefaultXxx 명명 미준수)은
         // ARCH 카테고리(architecture-guide.md)에 정의되어 있으므로
@@ -165,80 +172,132 @@ class RagQualityComparisonIT {
         val filePath = "src/main/kotlin/stillframe42/codereviewertester/order/application/OrderService.kt"
         val query = "OrderService.kt"
 
-        // Before: vector_store 비운 상태 → buildContext가 빈 문자열 반환 → conventionContext = null
-        jdbcTemplate.execute("DELETE FROM vector_store")
-        val contextBefore = conventionContextService.buildContext(query = query, filePath = filePath)
-        val reviewBefore = aiReviewPort.reviewCode(
-            code = DIFF,
-            provider = AiProvider.ANTHROPIC,
-            conventionContext = null,
-        )
-        writeResult(
-            filename = "plans/202604-2w/rag-quality-before.md",
-            label = "전",
-            context = contextBefore,
-            review = reviewBefore,
-        )
+        val runs: List<RunResult> = (1..repeatN).map { runIndex ->
+            // Before: vector_store 비운 상태 → buildContext가 빈 문자열 반환 → conventionContext = null
+            jdbcTemplate.execute("DELETE FROM vector_store")
+            val contextBefore = conventionContextService.buildContext(query = query, filePath = filePath)
+            val reviewBefore = aiReviewPort.reviewCode(
+                code = diff,
+                provider = AiProvider.ANTHROPIC,
+                conventionContext = null,
+            )
 
-        // After: reindex 후 buildContext → 아키텍처 컨벤션 포함 → conventionContext 주입
-        conventionIndexUseCase.reindex()
-        val contextAfter = conventionContextService.buildContext(query = query, filePath = filePath)
-        val reviewAfter = aiReviewPort.reviewCode(
-            code = DIFF,
-            provider = AiProvider.ANTHROPIC,
-            conventionContext = contextAfter.ifBlank { null },
-        )
-        writeResult(
-            filename = "plans/202604-2w/rag-quality-after.md",
-            label = "후",
-            context = contextAfter,
-            review = reviewAfter,
-        )
+            // After: reindex 후 buildContext → 아키텍처 컨벤션 포함 → conventionContext 주입
+            conventionIndexUseCase.reindex()
+            val contextAfter = conventionContextService.buildContext(query = query, filePath = filePath)
+            val reviewAfter = aiReviewPort.reviewCode(
+                code = diff,
+                provider = AiProvider.ANTHROPIC,
+                conventionContext = contextAfter.ifBlank { null },
+            )
 
-        // 1차 검증: RAG 파이프라인이 convention context를 실제로 검색했는가
-        // AI 출력은 비결정적이므로 특정 키워드 보유 여부가 아닌, 컨텍스트 주입 여부를 먼저 검증한다.
-        assertThat(contextAfter)
-            .withFailMessage("reindex 후 ARCH 컨벤션 컨텍스트가 검색되어야 합니다. vector_store 또는 RRF 검색을 확인하세요.")
-            .isNotBlank()
+            writeRunResult(
+                fixtureName = fixtureName,
+                runIndex = runIndex,
+                contextBefore = contextBefore,
+                reviewBefore = reviewBefore,
+                contextAfter = contextAfter,
+                reviewAfter = reviewAfter,
+            )
 
-        // 2차 검증: 리뷰 출력에 컨벤션 키워드가 실제로 반영되었는가 (상대 비교)
-        val beforeCount = countKeywords(reviewBefore.toFullText())
-        val afterCount = countKeywords(reviewAfter.toFullText())
-        println("[RAG 품질 비교] 컨벤션 키워드 출현 횟수: before=$beforeCount, after=$afterCount")
-        println("[RAG 품질 비교] 검색된 컨텍스트 길이: ${contextAfter.length}자")
+            buildRunResult(runIndex, reviewBefore, reviewAfter, contextAfter)
+        }
 
-        // after는 최소 1회 이상 컨벤션 키워드를 언급해야 한다
-        assertThat(afterCount)
+        writeSummary(fixtureName, runs, repeatN)
+
+        // 1차 검증: retrieval 인프라 — 모든 run에서 컨텍스트가 검색되어야 한다 (엄격)
+        val retrievalFailMessage = "일부 run에서 RAG 컨텍스트 검색이 실패했습니다. " +
+            "contextAfterLength per run: " +
+            runs.joinToString { "${it.runIndex}=${it.contextAfterLength}" }
+        assertThat(runs)
+            .withFailMessage(retrievalFailMessage)
+            .allMatch { it.contextAfterLength > 0 }
+
+        // 2차 검증: 키워드 지표 — 중앙값 기준 (비결정성에 robust, N=1에서는 단일값)
+        val beforeMedian = runs.map { it.beforeKeywordCount }.median()
+        val afterMedian = runs.map { it.afterKeywordCount }.median()
+        println("[RAG 품질 비교] 키워드 카운트 median: before=$beforeMedian, after=$afterMedian (N=$repeatN)")
+
+        assertThat(afterMedian)
             .withFailMessage(
-                "RAG 적용 후 리뷰에 컨벤션 키워드가 최소 1회 이상 포함되어야 합니다 " +
-                    "(before=$beforeCount, after=$afterCount)",
+                "after 키워드 카운트 중앙값이 1 미만입니다 " +
+                    "(before median=$beforeMedian, after median=$afterMedian, N=$repeatN)",
             )
             .isGreaterThanOrEqualTo(1)
 
-        // after는 before보다 엄격히 많아야 한다 (주입 효과가 실제로 나타났는가)
-        assertThat(afterCount)
+        assertThat(afterMedian)
             .withFailMessage(
-                "RAG 적용 후 리뷰의 컨벤션 키워드 수가 before보다 많아야 합니다 " +
-                    "(before=$beforeCount, after=$afterCount)",
+                "after 키워드 카운트 중앙값이 before보다 크지 않습니다 " +
+                    "(before median=$beforeMedian, after median=$afterMedian, N=$repeatN)",
             )
-            .isGreaterThan(beforeCount)
+            .isGreaterThan(beforeMedian)
     }
 
-    // 리뷰 결과를 지정 파일에 마크다운 형식으로 저장한다
-    private fun writeResult(filename: String, label: String, context: String, review: CodeReview) {
+    // per-run 지표 집계용 불변 데이터. summary.md 표 생성과 assertion median 계산의 단일 소스.
+    // severity 키는 IssueSeverity enum의 name() 값을 그대로 사용한다
+    // (CRITICAL / MAJOR / MINOR / SUGGESTION).
+    private data class RunResult(
+        val runIndex: Int,
+        val beforeScore: Int,
+        val afterScore: Int,
+        val beforeKeywordCount: Int,
+        val afterKeywordCount: Int,
+        val beforeIssueCountsBySeverity: Map<String, Int>,
+        val afterIssueCountsBySeverity: Map<String, Int>,
+        val contextAfterLength: Int,
+    )
+
+    // 한 iteration의 before/after 리뷰 결과로부터 RunResult를 만든다.
+    // 키워드 카운팅은 companion.countKeywords (정적 regex 패턴 재사용)로 위임한다.
+    private fun buildRunResult(
+        runIndex: Int,
+        reviewBefore: CodeReview,
+        reviewAfter: CodeReview,
+        contextAfter: String,
+    ): RunResult = RunResult(
+        runIndex = runIndex,
+        beforeScore = reviewBefore.overallScore,
+        afterScore = reviewAfter.overallScore,
+        beforeKeywordCount = countKeywords(reviewBefore.toFullText()),
+        afterKeywordCount = countKeywords(reviewAfter.toFullText()),
+        beforeIssueCountsBySeverity = reviewBefore.issues
+            .groupingBy { it.severity.name }
+            .eachCount(),
+        afterIssueCountsBySeverity = reviewAfter.issues
+            .groupingBy { it.severity.name }
+            .eachCount(),
+        contextAfterLength = contextAfter.length,
+    )
+
+    // 정수 리스트의 중앙값. 짝수 N일 때는 하위 중앙값(정렬된 리스트의 size/2 인덱스)을 반환한다.
+    // 키워드 카운트는 정수이며 비교 의미만 유지하면 되므로 Double median으로 올릴 이유가 없다.
+    private fun List<Int>.median(): Int {
+        require(isNotEmpty()) { "median은 비어있지 않은 리스트에서만 계산할 수 있습니다" }
+        return sorted()[size / 2]
+    }
+
+    // 단일 리뷰 결과(before 또는 after)를 새 디렉토리 구조에 저장한다.
+    // Spec A의 writeResult와 동일한 리포트 포맷을 유지하되 파일 경로와 헤더만 fixture/run 인식형으로 변경.
+    private fun writeSingleReview(
+        filename: String,
+        fixtureName: String,
+        runIndex: Int,
+        label: String,
+        context: String,
+        review: CodeReview,
+    ) {
         val now = LocalDateTime.now()
-        // 부모 디렉토리가 없으면 자동 생성 (plans/202604-2w/ 등)
         File(filename).parentFile?.mkdirs()
         val fullText = review.toFullText()
         val countDetails = countByKeyword(fullText).entries.joinToString("\n") { (kw, count) ->
             "- \"$kw\": ${count}회"
         }
         File(filename).writeText(buildString {
-            appendLine("# RAG 적용 ${label} 리뷰 결과")
+            appendLine("# RAG 적용 $label 리뷰 결과 — $fixtureName run_$runIndex")
             appendLine()
             appendLine("## 테스트 조건")
-            appendLine("- PR: stillframe42/code-reviewer-tester#11")
-            appendLine("- 파일: OrderController.kt, OrderService.kt")
+            appendLine("- Fixture: $fixtureName")
+            appendLine("- Run index: $runIndex")
             appendLine("- 실행일시: $now")
             appendLine()
             appendLine("## 주입된 컨벤션 컨텍스트")
@@ -259,6 +318,89 @@ class RagQualityComparisonIT {
             appendLine("## 컨벤션 관련 피드백 언급 횟수")
             appendLine(countDetails)
             appendLine("- 합계: ${countKeywords(fullText)}회")
+        })
+    }
+
+    // 한 iteration의 before/after 결과를 run_N/ 하위에 두 개의 마크다운 파일로 저장한다.
+    private fun writeRunResult(
+        fixtureName: String,
+        runIndex: Int,
+        contextBefore: String,
+        reviewBefore: CodeReview,
+        contextAfter: String,
+        reviewAfter: CodeReview,
+    ) {
+        val runDir = "plans/202604-2w/rag-quality/$fixtureName/run_$runIndex"
+        writeSingleReview("$runDir/before.md", fixtureName, runIndex, "전", contextBefore, reviewBefore)
+        writeSingleReview("$runDir/after.md", fixtureName, runIndex, "후", contextAfter, reviewAfter)
+    }
+
+    // 통계 표 한 행을 StringBuilder에 쓴다. min/median(하위)/max/mean 순.
+    private fun StringBuilder.appendStatRow(label: String, values: List<Int>) {
+        val sorted = values.sorted()
+        val min = sorted.first()
+        val max = sorted.last()
+        val median = sorted[sorted.size / 2]
+        val mean = values.average()
+        appendLine("| $label | $min | $median | $max | ${"%.2f".format(mean)} |")
+    }
+
+    // N개 run의 집계 결과를 summary.md로 저장한다. N=1일 때도 자연스럽게 동작한다
+    // (min=median=max=단일값, mean=단일값.00).
+    private fun writeSummary(fixtureName: String, runs: List<RunResult>, repeatN: Int) {
+        val filename = "plans/202604-2w/rag-quality/$fixtureName/summary.md"
+        File(filename).parentFile?.mkdirs()
+
+        val severityKeys = listOf("CRITICAL", "MAJOR", "MINOR", "SUGGESTION")
+
+        File(filename).writeText(buildString {
+            appendLine("# RAG 품질 평가 요약 — $fixtureName")
+            appendLine()
+            appendLine("## 실행 조건")
+            appendLine("- Fixture: $fixtureName")
+            appendLine("- Repeat N: $repeatN")
+            appendLine("- 실행일시: ${LocalDateTime.now()}")
+            appendLine()
+
+            appendLine("## Per-run 지표")
+            appendLine()
+            appendLine("| Run | before 총점 | after 총점 | before 키워드 | after 키워드 | before CRITICAL | after CRITICAL | after 컨텍스트 길이 |")
+            appendLine("|---|---|---|---|---|---|---|---|")
+            runs.forEach { r ->
+                val beforeCrit = r.beforeIssueCountsBySeverity["CRITICAL"] ?: 0
+                val afterCrit = r.afterIssueCountsBySeverity["CRITICAL"] ?: 0
+                appendLine("| ${r.runIndex} | ${r.beforeScore} | ${r.afterScore} | ${r.beforeKeywordCount} | ${r.afterKeywordCount} | $beforeCrit | $afterCrit | ${r.contextAfterLength} |")
+            }
+            appendLine()
+
+            appendLine("## 통계 (N=$repeatN)")
+            appendLine()
+            appendLine("| 지표 | min | median | max | mean |")
+            appendLine("|---|---|---|---|---|")
+            appendStatRow("before 총점", runs.map { it.beforeScore })
+            appendStatRow("after 총점", runs.map { it.afterScore })
+            appendStatRow("before 키워드", runs.map { it.beforeKeywordCount })
+            appendStatRow("after 키워드", runs.map { it.afterKeywordCount })
+            severityKeys.forEach { sev ->
+                appendStatRow("before $sev", runs.map { it.beforeIssueCountsBySeverity[sev] ?: 0 })
+                appendStatRow("after $sev", runs.map { it.afterIssueCountsBySeverity[sev] ?: 0 })
+            }
+            appendLine()
+
+            val beforeMedian = runs.map { it.beforeKeywordCount }.median()
+            val afterMedian = runs.map { it.afterKeywordCount }.median()
+            val retrievalOk = runs.all { it.contextAfterLength > 0 }
+            val minKw = afterMedian >= 1
+            val gtBefore = afterMedian > beforeMedian
+            val verdict = if (retrievalOk && minKw && gtBefore) "PASS" else "FAIL"
+
+            appendLine("## Assertion 결과")
+            appendLine()
+            appendLine("- [${if (retrievalOk) "x" else " "}] 모든 run에서 컨텍스트 검색 성공")
+            appendLine("- [${if (minKw) "x" else " "}] after 키워드 중앙값 >= 1 (median=$afterMedian)")
+            appendLine("- [${if (gtBefore) "x" else " "}] after 키워드 중앙값 > before 키워드 중앙값 (before=$beforeMedian, after=$afterMedian)")
+            appendLine()
+            appendLine("**판정:** $verdict")
         })
     }
 
