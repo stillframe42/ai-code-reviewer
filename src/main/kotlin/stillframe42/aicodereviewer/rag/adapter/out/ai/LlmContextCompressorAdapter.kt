@@ -67,10 +67,18 @@ class LlmContextCompressorAdapter(
     private fun callCompressor(query: String, chunkText: String): String {
         val systemMessage = promptResource.getContentAsString(Charsets.UTF_8)
             .replace("{query}", query)
+        // temperature=0.0: borderline chunk에 대한 gpt-4o-mini의 relevance 판정이
+        // run마다 달라지는 비결정성을 억제한다 (N=5 실험에서 608 bytes variance 재현됨).
+        // 완전한 결정론은 아니지만 동일 chunk를 같은 판정으로 통과시킬 확률이 크게 높아진다.
         return chatClient.prompt()
             .system(systemMessage)
             .user(chunkText)
-            .options(OpenAiChatOptions.builder().model(properties.model).build())
+            .options(
+                OpenAiChatOptions.builder()
+                    .model(properties.model)
+                    .temperature(0.0)
+                    .build(),
+            )
             .call()
             .content()
             ?.trim()
