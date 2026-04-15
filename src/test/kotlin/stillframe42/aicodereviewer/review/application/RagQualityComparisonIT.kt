@@ -27,7 +27,9 @@ import stillframe42.aicodereviewer.integration.support.WireMockStubs
 import stillframe42.aicodereviewer.rag.application.ConventionContextService
 import stillframe42.aicodereviewer.rag.domain.port.`in`.ConventionIndexUseCase
 import stillframe42.aicodereviewer.review.domain.model.CodeReview
-import stillframe42.aicodereviewer.review.domain.port.out.AiReviewPort
+import stillframe42.aicodereviewer.review.domain.model.DiffFilterOptions
+import stillframe42.aicodereviewer.review.domain.model.ReviewMode
+import stillframe42.aicodereviewer.review.domain.port.`in`.ReviewUseCase
 
 // RAG 적용 전/후 리뷰 품질 비교용 수동 실행 테스트
 // AbstractIntegrationTest를 상속하지 않음 — Anthropic/OpenAI API를 WireMock으로 리다이렉트하지 않기 위해
@@ -89,6 +91,12 @@ class RagQualityComparisonIT {
                 registry.add("openai.api-key") { key }
                 registry.add("spring.ai.openai.api-key") { key }
             }
+            // 방향 D: integration-test profile이 app.ai.reviewer.*-model을
+            // test-haiku-model / test-sonnet-model로 override(WireMock stub용 가짜 이름)하는데,
+            // 본 테스트는 실제 Anthropic API를 호출하므로 404가 발생한다.
+            // 프로덕션 application-ai.yml 의 기본값으로 재-override하여 실제 모델 호출이 가능하게 한다.
+            registry.add("app.ai.reviewer.default-model") { "claude-haiku-4-5-20251001" }
+            registry.add("app.ai.reviewer.critical-model") { "claude-sonnet-4-6" }
         }
 
         // application-secret.yml에서 API 키 맵을 읽어 반환한다.
@@ -122,9 +130,14 @@ class RagQualityComparisonIT {
         }
     }
 
+    // 방향 D: 프로덕션 경로(DefaultReviewService → DiffPreprocessor → reviewParallel →
+    // 파일별 buildContext → aggregate)를 그대로 거치는 테스트. AiReviewPort 직접 호출은
+    // 프로덕션과 다른 single-shot 경로였기 때문에 제거함.
     @Autowired
-    private lateinit var aiReviewPort: AiReviewPort
+    private lateinit var reviewUseCase: ReviewUseCase
 
+    // 진단 목적 — reviewAfter 완료 후 같은 filePath로 buildContext를 read-only 재호출하여
+    // 파일별 retrieval 길이를 샘플링하는 용도. 실제 assertion은 리뷰 출력에 기반한다.
     @Autowired
     private lateinit var conventionContextService: ConventionContextService
 
@@ -163,33 +176,52 @@ class RagQualityComparisonIT {
         val repeatN = (System.getenv("RAG_REPEAT_N")?.toIntOrNull() ?: 1).coerceAtLeast(1)
         val fixtureName = System.getenv("RAG_FIXTURE") ?: "pr11-order"
         val diff = loadFixture(fixtureName)
-        println("[RAG] fixture=$fixtureName N=$repeatN → API 호출 예정: ${repeatN * 2}회")
+        println("[RAG] fixture=$fixtureName N=$repeatN → API 호출 예정: ${repeatN * 2}회 (프로덕션 경로)")
 
-        // OrderController.kt는 API 카테고리로 분류되어 api-design.md만 검색된다.
-        // 의도한 컨벤션 위반(UseCase 없이 구현체 직접 의존, DefaultXxx 명명 미준수)은
-        // ARCH 카테고리(architecture-guide.md)에 정의되어 있으므로
-        // OrderService.kt 경로를 기준으로 ARCH 컨벤션을 가져온다.
-        val filePath = "src/main/kotlin/stillframe42/codereviewertester/order/application/OrderService.kt"
-        val query = "OrderService.kt"
+        // 방향 D: 프로덕션 경로 사용.
+        // DefaultReviewService.reviewCode는 diffOptions가 null이 아니면 DiffPreprocessor →
+        // reviewParallel → 파일별 buildContext(filePath=파일경로, category=FileCategoryMapper) →
+        // aggregate를 거친다. 테스트는 RAG 컨텍스트를 직접 조립하지 않고 프로덕션이
+        // 실제로 retrieve·compress해서 사용하는 경로 전체를 측정한다.
+        val diffOptions = DiffFilterOptions()
+        val filePaths = parseFilePaths(diff)
+        println("[RAG] fixture 파일 경로: $filePaths")
 
         val runs: List<RunResult> = (1..repeatN).map { runIndex ->
-            // Before: vector_store 비운 상태 → buildContext가 빈 문자열 반환 → conventionContext = null
+            // Before: vector_store 비우고 Redis 캐시 flush → 프로덕션 내부 buildContext가
+            // 빈 문자열 반환. DefaultReviewService는 이를 그대로 conventionContext로 전달한다.
             jdbcTemplate.execute("DELETE FROM vector_store")
-            val contextBefore = conventionContextService.buildContext(query = query, filePath = filePath)
-            val reviewBefore = aiReviewPort.reviewCode(
+            flushRedis()
+            val reviewBefore = reviewUseCase.reviewCode(
                 code = diff,
                 provider = AiProvider.ANTHROPIC,
-                conventionContext = null,
+                diffOptions = diffOptions,
+                mode = ReviewMode.Simple,
+            )
+            val contextBefore = "" // before는 vector_store 비워 있어 retrieval 없음
+
+            // After: reindex → Redis flush(이전 run의 cache-hit 방지) → 프로덕션 경로 재호출.
+            // 동일 diff이므로 cache key가 같아 flush 없으면 reviewBefore 결과가 그대로 반환된다.
+            conventionIndexUseCase.reindex()
+            flushRedis()
+            val reviewAfter = reviewUseCase.reviewCode(
+                code = diff,
+                provider = AiProvider.ANTHROPIC,
+                diffOptions = diffOptions,
+                mode = ReviewMode.Simple,
             )
 
-            // After: reindex 후 buildContext → 아키텍처 컨벤션 포함 → conventionContext 주입
-            conventionIndexUseCase.reindex()
-            val contextAfter = conventionContextService.buildContext(query = query, filePath = filePath)
-            val reviewAfter = aiReviewPort.reviewCode(
-                code = diff,
-                provider = AiProvider.ANTHROPIC,
-                conventionContext = contextAfter.ifBlank { null },
-            )
+            // 진단 목적: 프로덕션 경로가 파일별로 내부에서 build한 context는 직접 관찰 불가.
+            // 같은 쿼리 전략(파일명 마지막 세그먼트)으로 read-only 재호출해 길이만 샘플링한다.
+            // vector_store는 여전히 populated 상태이므로 reviewAfter가 본 context와 동일한 결과를 낸다.
+            // joinToString 람다는 suspend가 아니므로 for 루프로 buildContext를 호출한 뒤 조립한다.
+            val perFileSections = mutableListOf<String>()
+            for (fp in filePaths) {
+                val query = fp.substringAfterLast("/")
+                val fileContext = conventionContextService.buildContext(query = query, filePath = fp)
+                perFileSections += "## $fp (query=$query, ${fileContext.length}자)\n\n$fileContext"
+            }
+            val contextAfter = perFileSections.joinToString("\n\n--- FILE SEPARATOR ---\n\n")
 
             writeRunResult(
                 fixtureName = fixtureName,
@@ -408,5 +440,23 @@ class RagQualityComparisonIT {
     // 키워드 카운팅과 리포트 생성이 같은 소스를 바라보도록 단일 지점으로 통일한다.
     private fun CodeReview.toFullText(): String =
         summary + "\n" + issues.joinToString("\n") { "${it.description} ${it.suggestion}" }
+
+    // unified diff 문자열에서 `+++ b/...` 라인을 파싱하여 파일 경로 목록을 반환한다.
+    // DefaultReviewService.extractFilePath와 동등한 로직이지만 테스트용 public 접근자.
+    private fun parseFilePaths(diff: String): List<String> =
+        diff.lineSequence()
+            .filter { it.startsWith("+++ b/") }
+            .map { it.removePrefix("+++ b/") }
+            .toList()
+
+    // Redis 전체 flush. DefaultReviewService가 쓰는 review 캐시를 제거해
+    // 같은 diff에 대한 이전 실행 결과가 캐시 히트로 재사용되지 않게 한다.
+    private fun flushRedis() {
+        redisTemplate.connectionFactory
+            .reactiveConnection
+            .serverCommands()
+            .flushAll()
+            .block()
+    }
 
 }
