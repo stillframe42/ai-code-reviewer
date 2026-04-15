@@ -1,0 +1,25 @@
+diff --git a/src/main/kotlin/stillframe42/codereviewertester/order/domain/OrderEntity.kt b/src/main/kotlin/stillframe42/codereviewertester/order/domain/OrderEntity.kt
+new file mode 100644
+index 0000000..c1a2b3d
+--- /dev/null
++++ b/src/main/kotlin/stillframe42/codereviewertester/order/domain/OrderEntity.kt
+@@ -0,0 +1,19 @@
++package stillframe42.codereviewertester.order.domain
++
++import jakarta.persistence.Entity
++import jakarta.persistence.GeneratedValue
++import jakarta.persistence.GenerationType
++import jakarta.persistence.Id
++import java.time.Instant
++
++// 의도된 위반: Kotlin data class를 JPA @Entity로 사용
++// - data class는 final이므로 JPA 프록시/LazyInitialization 불가
++// - auto-generated equals/hashCode가 JPA 영속성 컨텍스트의 프록시 비교를 깨뜨림
++@Entity
++data class OrderEntity(
++    @Id
++    @GeneratedValue(strategy = GenerationType.IDENTITY)
++    val id: Long = 0,
++    val customerName: String,
++    val createdAt: Instant,
++)
