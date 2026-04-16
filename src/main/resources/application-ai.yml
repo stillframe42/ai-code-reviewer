@@ -47,6 +47,9 @@ app:
     chat-system: classpath:prompts/chat-system.st
     chat-user: classpath:prompts/chat-user.st
 
+rag:
+  enabled: true
+
 spring:
   ai:
     anthropic:
