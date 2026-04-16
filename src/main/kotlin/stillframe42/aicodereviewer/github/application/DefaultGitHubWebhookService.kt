@@ -201,8 +201,10 @@ class DefaultGitHubWebhookService(
     private fun buildReviewOutput(review: CodeReview, prDiff: String): ReviewOutput {
         val resolution = diffPositionResolver.resolve(prDiff, review.issues)
         val bodyReview = review.copy(issues = resolution.unmappedIssues)
+        // 인라인 코멘트 수 + 요약 이슈 수를 합산하여 총 이슈 수 계산
+        val totalIssueCount = resolution.lineComments.size + resolution.unmappedIssues.size
         return ReviewOutput(
-            body = reviewCommentFormatterPort.format(bodyReview),
+            body = reviewCommentFormatterPort.format(bodyReview, totalIssueCount, resolution.lineComments.size),
             lineComments = resolution.lineComments,
             hasNoIssues = review.issues.isEmpty(),
         )

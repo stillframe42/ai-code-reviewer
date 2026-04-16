@@ -15,7 +15,29 @@ class MarkdownReviewCommentFormatter(
     private val modelName: String,
 ) : ReviewCommentFormatterPort {
 
-    override fun format(review: CodeReview): String = buildString {
+    // 기존 시그니처 — 하위 호환성 유지, 이슈 수는 review.issues.size 기준
+    override fun format(review: CodeReview): String =
+        formatBody(review, "Issues Found (${review.issues.size})")
+
+    // 총/인라인/요약 수를 명시적으로 받는 오버로드
+    override fun format(review: CodeReview, totalIssueCount: Int, lineCommentCount: Int): String {
+        val unmappedCount = review.issues.size
+        val label = buildIssuesLabel(totalIssueCount, lineCommentCount, unmappedCount)
+        return formatBody(review, label)
+    }
+
+    // 이슈 라벨 문자열 생성: 총 N개 — 인라인 M, 요약 K 형식
+    private fun buildIssuesLabel(total: Int, inline: Int, unmapped: Int): String {
+        if (total == 0) return "Issues Found (총 0개)"
+        val parts = mutableListOf<String>()
+        if (inline > 0) parts.add("인라인 $inline")
+        if (unmapped > 0) parts.add("요약 $unmapped")
+        return if (parts.isEmpty()) "Issues Found (총 ${total}개)"
+        else "Issues Found (총 ${total}개 — ${parts.joinToString(", ")})"
+    }
+
+    // 공통 마크다운 본문 렌더링
+    private fun formatBody(review: CodeReview, issuesLabel: String): String = buildString {
         appendLine("## 🤖 AI Code Review")
         appendLine()
 
@@ -26,7 +48,7 @@ class MarkdownReviewCommentFormatter(
         appendLine(review.summary)
         appendLine()
 
-        appendLine("### 🚨 Issues Found (${review.issues.size})")
+        appendLine("### 🚨 $issuesLabel")
         appendLine()
         if (review.issues.isEmpty()) {
             appendLine("발견된 이슈가 없습니다.")
