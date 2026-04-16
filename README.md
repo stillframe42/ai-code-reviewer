@@ -12,11 +12,13 @@
 
 - **GitHub Webhook 통합**: PR 이벤트(opened, synchronize, reopened) 수신 → AI 리뷰 자동 실행 → 인라인 코멘트 작성
 - **자동 코드 리뷰**: Pull Request diff 또는 코드 스니펫을 AI가 분석하여 개선 사항 제안
+- **RAG 기반 컨벤션 리뷰**: 프로젝트 코딩 컨벤션 문서를 벡터·키워드 하이브리드 검색(RRF)으로 조회하고, LLM 컨텍스트 압축 후 리뷰에 반영
 - **diff 전처리**: 테스트 파일·잠금 파일 자동 제거, context 줄 수 조정으로 토큰 절감
 - **Tool Calling 리뷰**: GitHub API를 도구로 활용해 파일별 상세 정보를 조회하는 고급 리뷰 모드
 - **AI 채팅**: 단일 응답 및 SSE 스트리밍 방식으로 자유 형식 AI 대화 지원
 - **다양한 AI 백엔드**: Anthropic Claude / OpenAI GPT 프로바이더 선택 지원
 - **리뷰 이력 관리**: 리뷰 결과 PostgreSQL 저장, PR별·통계 조회 API 제공
+- **옵저버빌리티**: Langfuse trace 에 리뷰 파이프라인(review.root → RAG → LLM) span 자동 기록, Micrometer/Prometheus 메트릭 수집
 
 ### 기술 스택
 
@@ -31,7 +33,9 @@
 | DB | PostgreSQL (운영·테스트, Testcontainers) |
 | DB 마이그레이션 | Flyway 10+ |
 | 캐시 | Redis |
-| 옵저버빌리티 | Langfuse, Micrometer |
+| 벡터 DB | PgVector (PostgreSQL 확장) |
+| RAG 검색 | 벡터 + 키워드 하이브리드 (RRF), LLM 컨텍스트 압축 |
+| 옵저버빌리티 | Langfuse (trace/span), Micrometer/Prometheus, Grafana |
 | 기본 모델 | claude-haiku-4-5-20251001 |
 
 ---
@@ -126,10 +130,11 @@ app:
 1. GitHub PR 이벤트 수신 (`POST /api/github/webhook`)
 2. HMAC-SHA256 서명 검증
 3. 중복 이벤트 확인 (repository + PR 번호 + head SHA 기준)
-4. PR diff 조회 및 전처리
-5. AI 코드 리뷰 실행
-6. 리뷰 결과 DB 저장
-7. GitHub PR에 인라인 코멘트 작성
+4. PR diff 조회 및 전처리 (테스트/잠금 파일 제거, 토큰 절감)
+5. RAG 컨벤션 검색 (파일별 카테고리 분류 → 벡터+키워드 하이브리드 검색 → LLM 컨텍스트 압축)
+6. AI 코드 리뷰 실행 (컨벤션 컨텍스트 + diff → LLM 분석)
+7. 리뷰 결과 DB 저장
+8. diff position 매핑 → GitHub PR에 인라인 코멘트 작성
 
 ---
 
@@ -339,12 +344,13 @@ Flyway로 마이그레이션을 관리합니다. `src/main/resources/db/migratio
 | `tool_call_logs` | Tool Calling 호출 이력 (도구명, 인자, 응답 크기, 소요 시간) |
 | `review_issue_categories` | 이슈 카테고리 집계용 정규화 테이블 |
 | `llm_cost_logs` | LLM 호출별 비용 기록 (모델명, 프롬프트·완성 토큰, 추정 비용) |
+| `vector_store` | RAG 컨벤션 문서 벡터 저장소 (PgVector, HNSW 인덱스, tsvector 전문검색) |
 
 ---
 
 ## 프롬프트 버전
 
-현재 활성 버전: **v8** (`application-ai.yml`에서 변경 가능)
+현재 활성 버전: **v10** (`application-ai.yml`에서 변경 가능)
 
 | 버전 | 주요 변경 |
 |------|---------|
@@ -355,7 +361,9 @@ Flyway로 마이그레이션을 관리합니다. `src/main/resources/db/migratio
 | v5 | `[QUERY_REVIEW]` 헤더 파일 처리 지침 추가 |
 | v6 | `filename` 필드 안내 (diff position 매핑용) |
 | v7 | summary 2문장 제한, positives 최대 3개 제한 |
-| **v8** | **현재**: Tool Calling 사용 지침 추가 |
+| v8 | Tool Calling 사용 지침 추가 |
+| v9 | RAG 컨벤션 컨텍스트 주입 지침 추가 |
+| **v10** | **현재**: BeanOutputConverter format 스키마 주입 |
 
 버전별 상세 변경 이력은 `src/main/resources/prompts/README.md` 참조.
 
@@ -395,14 +403,20 @@ src/
 │   │   │   │   └── RetryAdvisor.kt
 │   │   │   ├── cache/
 │   │   │   │   └── AbstractRedisCacheAdapter.kt
-│   │   │   ├── langfuse/                      # Langfuse 옵저버빌리티
+│   │   │   ├── langfuse/                      # Langfuse 클라이언트 (기술 종속)
 │   │   │   │   ├── LangfuseClient.kt
 │   │   │   │   ├── LangfuseObservationHandler.kt
+│   │   │   │   ├── LangfuseTraceContextHolder.kt
 │   │   │   │   └── ...
 │   │   │   ├── metrics/                       # Micrometer 메트릭
 │   │   │   │   ├── LlmMetrics.kt
 │   │   │   │   ├── ReviewMetrics.kt
 │   │   │   │   └── ...
+│   │   │   ├── observability/                 # 기술 중립 관측 포트
+│   │   │   │   ├── ObservabilityPort.kt       # span 추적 아웃바운드 포트
+│   │   │   │   ├── SpanHandle.kt
+│   │   │   │   ├── WithSpan.kt                # suspend 확장 유틸
+│   │   │   │   └── NoopObservabilityAdapter.kt
 │   │   │   └── port/
 │   │   │       └── CostLogPort.kt             # Advisor → persistence 역방향 의존 제거용 포트
 │   │   ├── chat/                               # 채팅 기능
@@ -443,6 +457,31 @@ src/
 │   │   │           ├── ReviewPersistenceAdapter.kt
 │   │   │           ├── ReviewQueryAdapter.kt
 │   │   │           └── CostLogAdapter.kt      # CostLogPort 구현체
+│   │   ├── rag/                                # RAG 컨벤션 검색 기능
+│   │   │   ├── domain/
+│   │   │   │   ├── model/ConventionCategory.kt # ARCH, API, SECURITY, STYLE
+│   │   │   │   ├── service/
+│   │   │   │   │   ├── FileCategoryMapper.kt   # 파일 경로 → 카테고리 매핑
+│   │   │   │   │   └── ReciprocaRankFusion.kt  # RRF 알고리즘
+│   │   │   │   └── port/
+│   │   │   │       ├── in/ConventionIndexUseCase.kt
+│   │   │   │       └── out/
+│   │   │   │           ├── ConventionVectorPort.kt
+│   │   │   │           ├── ConventionKeywordSearchPort.kt
+│   │   │   │           └── ContextCompressorPort.kt
+│   │   │   ├── application/
+│   │   │   │   ├── ConventionContextService.kt       # RAG 컨텍스트 빌드 (검색 → 압축 → 조합)
+│   │   │   │   ├── HybridConventionSearchService.kt  # 벡터 + 키워드 + RRF 하이브리드 검색
+│   │   │   │   └── DefaultConventionIndexService.kt  # 문서 인덱싱
+│   │   │   └── adapter/
+│   │   │       ├── in/
+│   │   │       │   ├── web/ConventionAdminController.kt
+│   │   │       │   └── cli/ConventionIndexingRunner.kt
+│   │   │       └── out/ai/
+│   │   │           ├── SpringAiConventionVectorAdapter.kt
+│   │   │           ├── LlmContextCompressorAdapter.kt  # gpt-4o-mini 기반 추출 압축
+│   │   │           ├── MarkdownHeaderSplitter.kt
+│   │   │           └── OverlappingTokenSplitter.kt
 │   │   └── github/                             # GitHub Webhook & API 통합
 │   │       ├── domain/
 │   │       │   ├── model/                      # PullRequestEvent, PrFile 등
@@ -466,28 +505,41 @@ src/
 │   │           └── out/persistence/ProcessedEventAdapter.kt
 │   └── resources/
 │       ├── application.yml
-│       ├── application-ai.yml                  # AI 모델·프롬프트 설정
+│       ├── application-ai.yml                  # AI 모델·프롬프트·RAG 설정
 │       ├── application-db.yml                  # DB 설정
 │       ├── application-github.yml              # GitHub App 설정
+│       ├── application-langfuse.yml            # Langfuse 옵저버빌리티 설정
 │       ├── application-secret.yml              # API 키 (gitignore)
 │       ├── db/migration/                       # Flyway 마이그레이션
 │       │   ├── V1__create_processed_event_table.sql
 │       │   ├── V2__create_review_tables.sql
 │       │   ├── V3__add_tool_call_count_and_issue_categories.sql
 │       │   └── V4__create_llm_cost_logs.sql
+│       ├── conventions/                        # RAG 인덱싱 대상 컨벤션 문서
+│       │   ├── architecture-guide.md
+│       │   ├── api-design.md
+│       │   ├── kotlin-style.md
+│       │   └── security-checklist.md
 │       └── prompts/
-│           ├── review-system-v1.st ~ v8.st     # 리뷰 시스템 프롬프트 버전별
+│           ├── review-system-v1.st ~ v10.st    # 리뷰 시스템 프롬프트 버전별
 │           ├── review-user.st
 │           ├── chat-system.st
 │           ├── chat-user.st
+│           ├── context-compressor.st           # RAG 컨텍스트 압축 프롬프트
 │           └── README.md                       # 버전별 변경 이력
 └── test/
     ├── kotlin/stillframe42/aicodereviewer/
     │   ├── chat/                               # 채팅 단위/통합 테스트
+    │   ├── common/observability/               # WithSpanTest (span 유틸 단위 테스트)
     │   ├── review/                             # 리뷰 단위/통합 테스트
     │   │   └── benchmark/                      # 프롬프트 버전별 벤치마크
-    │   └── github/                             # GitHub Webhook 통합 테스트
-    │       └── WebhookFlowIntegrationTest.kt   # WireMock + Testcontainers
+    │   ├── rag/                                # RAG 검색 품질 통합 테스트
+    │   ├── github/                             # GitHub Webhook 통합 테스트
+    │   │   └── adapter/out/formatter/          # MarkdownReviewCommentFormatterTest
+    │   └── integration/                        # 전체 파이프라인 통합 테스트
+    │       ├── AbstractIntegrationTest.kt      # PostgreSQL + WireMock + Redis 베이스
+    │       ├── WebhookFlowIntegrationTest.kt
+    │       └── ReviewObservabilityIntegrationTest.kt  # Langfuse span tree 검증
     └── resources/
         ├── fixtures/review/                    # 벤치마크 테스트용 코드 픽스처
         └── test-keys/                          # JWT 테스트용 RSA 키
