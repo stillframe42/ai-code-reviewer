@@ -77,9 +77,7 @@ class DefaultReviewService(
             reviewWithCache(preprocessResult.diff, provider, mode, modelName,
                 filePath = preprocessResult.fileNames.singleOrNull())
 
-        val finalReview = review.copy(modelName = modelName)
-        reviewMetrics.recordIssues(finalReview.issues)
-        finalReview
+        review.copy(modelName = modelName)
     }
 
     // 캐시 조회 → 히트 시 즉시 반환, 미스 시 RAG 호출 후 AI 호출 후 캐시 저장
