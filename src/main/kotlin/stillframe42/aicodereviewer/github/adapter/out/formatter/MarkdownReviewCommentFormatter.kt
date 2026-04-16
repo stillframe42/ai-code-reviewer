@@ -78,5 +78,4 @@ class MarkdownReviewCommentFormatter(
             .format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss z"))
         append("> 생성 시간: $timestamp | 모델: $modelName")
     }
-
 }

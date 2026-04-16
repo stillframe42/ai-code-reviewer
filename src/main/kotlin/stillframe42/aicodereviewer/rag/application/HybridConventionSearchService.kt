@@ -4,11 +4,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.springframework.ai.document.Document
 import org.springframework.stereotype.Service
+import stillframe42.aicodereviewer.common.observability.ObservabilityPort
 import stillframe42.aicodereviewer.config.RagProperties
 import stillframe42.aicodereviewer.rag.domain.model.ConventionCategory
 import stillframe42.aicodereviewer.rag.domain.port.out.ContextCompressorPort
 import stillframe42.aicodereviewer.rag.domain.port.out.ConventionKeywordSearchPort
-import stillframe42.aicodereviewer.common.observability.ObservabilityPort
 import stillframe42.aicodereviewer.rag.domain.port.out.ConventionVectorPort
 import stillframe42.aicodereviewer.rag.domain.service.reciprocalRankFusion
 
