@@ -8,6 +8,8 @@ import kotlinx.coroutines.sync.withPermit
 import org.springframework.stereotype.Service
 import stillframe42.aicodereviewer.common.Logging
 import stillframe42.aicodereviewer.common.metrics.ReviewMetrics
+import stillframe42.aicodereviewer.common.observability.ObservabilityPort
+import stillframe42.aicodereviewer.common.observability.withSpan
 import stillframe42.aicodereviewer.review.domain.service.AiModelSelector
 import stillframe42.aicodereviewer.config.ReviewProperties
 import stillframe42.aicodereviewer.core.AiProvider
@@ -34,6 +36,7 @@ class DefaultReviewService(
     private val reviewMetrics: ReviewMetrics,
     private val reviewCacheStatsStore: ReviewCacheStatsStore,
     private val conventionContextService: ConventionContextService,
+    private val observabilityPort: ObservabilityPort,
 ) : ReviewUseCase, Logging {
 
     override suspend fun reviewCode(
@@ -41,9 +44,19 @@ class DefaultReviewService(
         provider: AiProvider,
         diffOptions: DiffFilterOptions?,
         mode: ReviewMode,
-    ): CodeReview {
+    ): CodeReview = observabilityPort.withSpan(
+        name = "review.root",
+        input = mapOf("provider" to provider.name, "mode" to (mode::class.simpleName ?: "Unknown"), "hasDiffOptions" to (diffOptions != null)),
+        outputMapper = { review: CodeReview ->
+            mapOf(
+                "overallScore" to review.overallScore,
+                "issueCount" to review.issues.size,
+                "modelName" to (review.modelName ?: "unknown"),
+            )
+        },
+    ) {
         // diffOptions가 없으면 전처리 없이 바로 AI 호출 (직접 API 호출 경로 — 캐시 미적용)
-        val options = diffOptions ?: return aiReviewPort.reviewCode(code, provider, mode, reviewContext = null, modelName = null)
+        val options = diffOptions ?: return@withSpan aiReviewPort.reviewCode(code, provider, mode, reviewContext = null, modelName = null)
 
         val merged = options.copy(
             additionalExcludePatterns = options.additionalExcludePatterns +
@@ -64,7 +77,9 @@ class DefaultReviewService(
             reviewWithCache(preprocessResult.diff, provider, mode, modelName,
                 filePath = preprocessResult.fileNames.singleOrNull())
 
-        return review.copy(modelName = modelName)
+        val finalReview = review.copy(modelName = modelName)
+        reviewMetrics.recordIssues(finalReview.issues)
+        finalReview
     }
 
     // 캐시 조회 → 히트 시 즉시 반환, 미스 시 RAG 호출 후 AI 호출 후 캐시 저장
