@@ -13,6 +13,7 @@ import org.springframework.beans.factory.annotation.Value
 import org.springframework.core.io.Resource
 import org.springframework.stereotype.Component
 import stillframe42.aicodereviewer.common.Logging
+import stillframe42.aicodereviewer.common.observability.ObservabilityPort
 import stillframe42.aicodereviewer.config.RagCompressionProperties
 import stillframe42.aicodereviewer.rag.domain.port.out.ContextCompressorPort
 
@@ -25,6 +26,7 @@ class LlmContextCompressorAdapter(
     private val properties: RagCompressionProperties,
     @param:Value("classpath:prompts/context-compressor.st")
     private val promptResource: Resource,
+    private val observabilityPort: ObservabilityPort,
 ) : ContextCompressorPort, Logging {
 
     // cl100k_base 토큰 카운터 — 압축 임계값 판정용
@@ -33,7 +35,33 @@ class LlmContextCompressorAdapter(
     override suspend fun compress(
         query: String,
         documents: List<Document>,
-    ): List<Document> = documents.mapNotNull { doc -> compressOne(query, doc) }
+    ): List<Document> {
+        val beforeTokens = documents.sumOf { tokenEstimator.estimate(it.text ?: "") }
+        val handle = observabilityPort.startSpan(
+            name = "rag.compress",
+            input = mapOf("query" to query, "document_count" to documents.size, "before_tokens" to beforeTokens),
+        )
+        return try {
+            val result = documents.mapNotNull { doc -> compressOne(query, doc) }
+            val afterTokens = result.sumOf { tokenEstimator.estimate(it.text ?: "") }
+            observabilityPort.endSpan(
+                handle,
+                output = mapOf(
+                    "result_count" to result.size,
+                    "after_tokens" to afterTokens,
+                ),
+                metadata = mapOf(
+                    "before_tokens" to beforeTokens,
+                    "after_tokens" to afterTokens,
+                    "compression_ratio" to if (beforeTokens > 0) "%.2f".format(afterTokens.toDouble() / beforeTokens) else "N/A",
+                ),
+            )
+            result
+        } catch (e: Throwable) {
+            observabilityPort.endSpanWithError(handle, e.message ?: e.javaClass.simpleName)
+            throw e
+        }
+    }
 
     // 단일 청크 압축 — 임계값 이하면 우회, 초과면 LLM 호출, 실패 시 원본 fallback, 빈/NONE 결과는 null
     private suspend fun compressOne(query: String, doc: Document): Document? {

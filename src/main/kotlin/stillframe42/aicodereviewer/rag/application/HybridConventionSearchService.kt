@@ -8,6 +8,7 @@ import stillframe42.aicodereviewer.config.RagProperties
 import stillframe42.aicodereviewer.rag.domain.model.ConventionCategory
 import stillframe42.aicodereviewer.rag.domain.port.out.ContextCompressorPort
 import stillframe42.aicodereviewer.rag.domain.port.out.ConventionKeywordSearchPort
+import stillframe42.aicodereviewer.common.observability.ObservabilityPort
 import stillframe42.aicodereviewer.rag.domain.port.out.ConventionVectorPort
 import stillframe42.aicodereviewer.rag.domain.service.reciprocalRankFusion
 
@@ -17,6 +18,7 @@ class HybridConventionSearchService(
     private val keywordPort: ConventionKeywordSearchPort,
     private val ragProperties: RagProperties,
     private val contextCompressor: ContextCompressorPort,
+    private val observabilityPort: ObservabilityPort,
 ) {
     // 일반 검색 — 벡터 + 키워드 + RRF + 압축 (전체 파이프라인)
     // 프로덕션 코드는 이 메서드를 사용한다.
@@ -45,15 +47,33 @@ class HybridConventionSearchService(
         topK: Int = 5,
         category: ConventionCategory? = null,
     ): List<Document> {
-        val candidateSize = topK * 2
+        val handle = observabilityPort.startSpan(
+            name = "rag.hybrid-search",
+            input = mapOf("query" to query, "topK" to topK, "category" to (category?.name ?: "ALL")),
+        )
+        return try {
+            val candidateSize = topK * 2
 
-        // ConventionVectorPort.search()는 suspend가 아닌 블로킹 함수 — IO 스레드풀에서 실행
-        val vectorResults = withContext(Dispatchers.IO) {
-            vectorPort.search(query, candidateSize, category, ragProperties.similarityThreshold)
+            // ConventionVectorPort.search()는 suspend가 아닌 블로킹 함수 — IO 스레드풀에서 실행
+            val vectorResults = withContext(Dispatchers.IO) {
+                vectorPort.search(query, candidateSize, category, ragProperties.similarityThreshold)
+            }
+            // 벡터·키워드 동일한 category 범위로 검색하여 RRF 결과의 카테고리 일관성 보장
+            val keywordResults = keywordPort.search(query, candidateSize, category)
+
+            val rrf = reciprocalRankFusion(vectorResults, keywordResults, topK)
+            observabilityPort.endSpan(
+                handle,
+                output = mapOf(
+                    "vector_hit_count" to vectorResults.size,
+                    "keyword_hit_count" to keywordResults.size,
+                    "rrf_top_doc_ids" to rrf.take(5).map { it.id ?: "unknown" },
+                ),
+            )
+            rrf
+        } catch (e: Throwable) {
+            observabilityPort.endSpanWithError(handle, e.message ?: e.javaClass.simpleName)
+            throw e
         }
-        // 벡터·키워드 동일한 category 범위로 검색하여 RRF 결과의 카테고리 일관성 보장
-        val keywordResults = keywordPort.search(query, candidateSize, category)
-
-        return reciprocalRankFusion(vectorResults, keywordResults, topK)
     }
 }
