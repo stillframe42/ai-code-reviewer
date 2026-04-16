@@ -72,10 +72,10 @@ class SpringAiReviewAdapter(
             is ReviewMode.WithGitHubTools -> TOOL_TIMEOUT
         }
         val toolCallCounter = AtomicInteger(0)
-        // traceId를 미리 생성하여 코루틴 컨텍스트로 전파한다.
-        // LangfuseObservationHandler.onStart()는 이 traceId를 재사용하고,
+        // 상위에서 이미 설정된 traceId가 있으면 재사용한다 (review.root span 이 생성한 trace).
+        // 없으면 새로 생성하여 LangfuseObservationHandler.onStart()에서 재사용하고,
         // Tool 실행(executeToolCall)에서 LangfuseTraceContextHolder.get()으로 안전하게 접근할 수 있다.
-        val traceId = UUID.randomUUID().toString()
+        val traceId = LangfuseTraceContextHolder.get() ?: UUID.randomUUID().toString()
         return withTimeout(timeout) {
             withContext(
                 Dispatchers.IO +

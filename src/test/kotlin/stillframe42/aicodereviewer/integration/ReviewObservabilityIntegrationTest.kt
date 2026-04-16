@@ -14,8 +14,6 @@ import stillframe42.aicodereviewer.review.domain.model.DiffFilterOptions
 import stillframe42.aicodereviewer.review.domain.model.ReviewMode
 import stillframe42.aicodereviewer.review.domain.port.`in`.ReviewUseCase
 
-// Langfuse를 활성화하여 WireMock으로 span 전송 여부를 검증하는 통합 테스트
-// integration-test 프로파일은 langfuse.enabled=false이므로 여기서 명시적으로 override한다
 @TestPropertySource(properties = ["langfuse.enabled=true"])
 class ReviewObservabilityIntegrationTest : AbstractIntegrationTest() {
 
@@ -56,25 +54,34 @@ class ReviewObservabilityIntegrationTest : AbstractIntegrationTest() {
             )
         }
 
-        // 리뷰 파이프라인 실행 후 Langfuse에 ingestion 요청이 발생했는지 확인
-        val requests = WireMockStubs.findLangfuseIngestionRequests(wireMock)
-        assertThat(requests).isNotEmpty
+        val allEvents = extractAllEvents()
+        val eventTypes = allEvents.map { it["type"] as? String }
+        val spanNames = extractSpanNames(allEvents)
 
-        // 전송된 모든 이벤트 타입 수집
-        val allTypes = extractAllEventTypes()
-
-        // LLM 호출이 발생하면 LangfuseObservationHandler가 trace-create와 generation-create를 기록
-        assertThat(allTypes).contains("trace-create")
-        assertThat(allTypes).contains("generation-create")
+        // trace 자동 생성 확인
+        assertThat(eventTypes).contains("trace-create")
+        // LLM 호출에 의한 generation 이벤트 확인
+        assertThat(eventTypes).contains("generation-create")
+        // review.root span 생성 확인
+        assertThat(spanNames).contains("review.root")
+        // RAG 파이프라인 span 확인
+        assertThat(spanNames).contains("rag.context")
+        assertThat(spanNames).contains("rag.hybrid-search")
     }
 
-    private fun extractAllEventTypes(): List<String> {
+    @Suppress("UNCHECKED_CAST")
+    private fun extractAllEvents(): List<Map<String, Any>> {
         val requests = WireMockStubs.findLangfuseIngestionRequests(wireMock)
         return requests.flatMap { req ->
             val json = objectMapper.readValue<Map<String, Any>>(req.bodyAsString)
-            @Suppress("UNCHECKED_CAST")
-            val batch = json["batch"] as? List<Map<String, Any>> ?: emptyList()
-            batch.mapNotNull { it["type"] as? String }
+            json["batch"] as? List<Map<String, Any>> ?: emptyList()
         }
     }
+
+    @Suppress("UNCHECKED_CAST")
+    private fun extractSpanNames(events: List<Map<String, Any>>): List<String> =
+        events.filter { it["type"] == "span-create" }
+            .mapNotNull { event ->
+                (event["body"] as? Map<String, Any>)?.get("name") as? String
+            }
 }

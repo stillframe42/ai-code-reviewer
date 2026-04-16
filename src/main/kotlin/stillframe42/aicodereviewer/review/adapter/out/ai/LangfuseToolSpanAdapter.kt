@@ -15,8 +15,10 @@ class LangfuseToolSpanAdapter(
 ) : ToolObservationPort, Logging {
 
     // ObservabilityPort — SpanHandle 반환
+    // traceId가 없으면 자동으로 trace-create를 전송하고 holder에 설정한다
+    // 이를 통해 review.root span이 trace를 시작하고 하위 span이 같은 trace에 연결된다
     override fun startSpan(name: String, input: Map<String, Any>, metadata: Map<String, Any>): SpanHandle {
-        val traceId = LangfuseTraceContextHolder.get() ?: return SpanHandle(spanId = "", traceId = "")
+        val traceId = LangfuseTraceContextHolder.get() ?: createTrace(name)
         val spanId = UUID.randomUUID().toString()
         // timestamp와 startTime에 동일한 시각 값을 사용하기 위해 단 한 번만 캡처
         val now = Instant.now().toString()
@@ -100,6 +102,33 @@ class LangfuseToolSpanAdapter(
         } catch (e: Exception) {
             logger.warn("[LANGFUSE] span-update(error) 전송 실패 (무시): {}", e.message)
         }
+    }
+
+    // traceId가 존재하지 않을 때 새 trace를 생성하고 holder에 등록한다
+    // review.root span 등 파이프라인 최상위에서 호출되어 전체 trace 컨텍스트를 시작한다
+    private fun createTrace(name: String): String {
+        val traceId = UUID.randomUUID().toString()
+        val now = Instant.now().toString()
+        try {
+            langfuseClient.ingest(
+                listOf(
+                    mapOf(
+                        "type" to "trace-create",
+                        "id" to UUID.randomUUID().toString(),
+                        "timestamp" to now,
+                        "body" to mapOf(
+                            "id" to traceId,
+                            "name" to name,
+                            "timestamp" to now,
+                        ),
+                    ),
+                ),
+            )
+        } catch (e: Exception) {
+            logger.warn("[LANGFUSE] trace-create 전송 실패 (무시): {}", e.message)
+        }
+        LangfuseTraceContextHolder.set(traceId)
+        return traceId
     }
 
     // ToolObservationPort (레거시) — String spanId 기반
