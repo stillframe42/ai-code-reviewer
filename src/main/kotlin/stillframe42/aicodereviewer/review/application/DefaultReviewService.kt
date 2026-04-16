@@ -5,6 +5,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.supervisorScope
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
+import kotlinx.coroutines.withContext
 import org.springframework.stereotype.Service
 import stillframe42.aicodereviewer.common.Logging
 import stillframe42.aicodereviewer.common.metrics.ReviewMetrics
@@ -44,40 +45,41 @@ class DefaultReviewService(
         provider: AiProvider,
         diffOptions: DiffFilterOptions?,
         mode: ReviewMode,
-    ): CodeReview = observabilityPort.withSpan(
-        name = "review.root",
-        input = mapOf("provider" to provider.name, "mode" to (mode::class.simpleName ?: "Unknown"), "hasDiffOptions" to (diffOptions != null)),
-        outputMapper = { review: CodeReview ->
-            mapOf(
-                "overallScore" to review.overallScore,
-                "issueCount" to review.issues.size,
-                "modelName" to (review.modelName ?: "unknown"),
+    ): CodeReview = withContext(observabilityPort.traceContext()) {
+        observabilityPort.withSpan(
+            name = "review.root",
+            input = mapOf("provider" to provider.name, "mode" to (mode::class.simpleName ?: "Unknown"), "hasDiffOptions" to (diffOptions != null)),
+            outputMapper = { review: CodeReview ->
+                mapOf(
+                    "overallScore" to review.overallScore,
+                    "issueCount" to review.issues.size,
+                    "modelName" to (review.modelName ?: "unknown"),
+                )
+            },
+        ) {
+            val options = diffOptions ?: return@withSpan aiReviewPort.reviewCode(code, provider, mode, reviewContext = null, modelName = null)
+
+            val merged = options.copy(
+                additionalExcludePatterns = options.additionalExcludePatterns +
+                    reviewProperties.diff.additionalExcludePatterns,
+                maxTokens = options.maxTokens ?: reviewProperties.diff.maxTokens,
             )
-        },
-    ) {
-        // diffOptions가 없으면 전처리 없이 바로 AI 호출 (직접 API 호출 경로 — 캐시 미적용)
-        val options = diffOptions ?: return@withSpan aiReviewPort.reviewCode(code, provider, mode, reviewContext = null, modelName = null)
+            val preprocessResult = diffPreprocessor.preprocess(code, merged)
+            logger.debug("=== 전처리된 diff (AI 전달 내용) ===\n{}", preprocessResult.diff)
 
-        val merged = options.copy(
-            additionalExcludePatterns = options.additionalExcludePatterns +
-                reviewProperties.diff.additionalExcludePatterns,
-            maxTokens = options.maxTokens ?: reviewProperties.diff.maxTokens,
-        )
-        val preprocessResult = diffPreprocessor.preprocess(code, merged)
-        logger.debug("=== 전처리된 diff (AI 전달 내용) ===\n{}", preprocessResult.diff)
+            val importance = prImportanceAnalyzer.analyze(preprocessResult.fileNames)
+            val modelName = aiModelSelector.selectModel(importance)
+            logger.info("PR 중요도: {}, 선택 모델: {}", importance, modelName)
 
-        val importance = prImportanceAnalyzer.analyze(preprocessResult.fileNames)
-        val modelName = aiModelSelector.selectModel(importance)
-        logger.info("PR 중요도: {}, 선택 모델: {}", importance, modelName)
+            val fileDiffs = preprocessResult.fileDiffs.filter { it.isNotBlank() }
+            val review = if (fileDiffs.size > 1)
+                reviewParallel(fileDiffs, provider, mode, modelName)
+            else
+                reviewWithCache(preprocessResult.diff, provider, mode, modelName,
+                    filePath = preprocessResult.fileNames.singleOrNull())
 
-        val fileDiffs = preprocessResult.fileDiffs.filter { it.isNotBlank() }
-        val review = if (fileDiffs.size > 1)
-            reviewParallel(fileDiffs, provider, mode, modelName)
-        else
-            reviewWithCache(preprocessResult.diff, provider, mode, modelName,
-                filePath = preprocessResult.fileNames.singleOrNull())
-
-        review.copy(modelName = modelName)
+            review.copy(modelName = modelName)
+        }
     }
 
     // 캐시 조회 → 히트 시 즉시 반환, 미스 시 RAG 호출 후 AI 호출 후 캐시 저장
