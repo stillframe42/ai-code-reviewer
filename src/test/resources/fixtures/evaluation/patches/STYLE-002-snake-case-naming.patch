@@ -1,0 +1,44 @@
+diff --git a/src/main/kotlin/com/example/shop/product/domain/PriceCalculator.kt b/src/main/kotlin/com/example/shop/product/domain/PriceCalculator.kt
+new file mode 100644
+index 0000000..b2c3d4e
+--- /dev/null
++++ b/src/main/kotlin/com/example/shop/product/domain/PriceCalculator.kt
+@@ -0,0 +1,37 @@
++package com.example.shop.product.domain
++
++import java.math.BigDecimal
++import java.math.RoundingMode
++
++class PriceCalculator {
++
++    fun calculateFinalPrice(
++        base_price: BigDecimal,
++        discount_rate: Double,
++        tax_rate: Double,
++        shipping_cost: BigDecimal,
++    ): BigDecimal {
++        val discount_amount = base_price.multiply(BigDecimal(discount_rate))
++        val discounted_price = base_price.subtract(discount_amount)
++        val tax_amount = discounted_price.multiply(BigDecimal(tax_rate))
++        val total_price = discounted_price.add(tax_amount).add(shipping_cost)
++        return total_price.setScale(0, RoundingMode.HALF_UP)
++    }
++
++    fun applyBulkDiscount(
++        item_list: List<CartItem>,
++        bulk_threshold: Int,
++        bulk_discount_rate: Double,
++    ): BigDecimal {
++        val total_quantity = item_list.sumOf { it.quantity }
++        val base_total = item_list.sumOf { it.unit_price.multiply(BigDecimal(it.quantity)) }
++
++        return if (total_quantity >= bulk_threshold) {
++            val discount_amount = base_total.multiply(BigDecimal(bulk_discount_rate))
++            base_total.subtract(discount_amount)
++        } else {
++            base_total
++        }
++    }
++}
++
++data class CartItem(val product_name: String, val unit_price: BigDecimal, val quantity: Int)

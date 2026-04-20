@@ -1,0 +1,166 @@
+{
+  "version": "1.0",
+  "description": "RAG 평가용 골든 데이터셋 — 컨벤션 위반 코드 20개 케이스",
+  "cases": [
+    {
+      "id": "SEC-001",
+      "category": "SECURITY",
+      "description": "문자열 연결 방식 SQL 쿼리",
+      "patch_file": "patches/SEC-001-sql-injection.patch",
+      "expected_issues": ["SQL Injection 취약점 — 파라미터 바인딩 미사용"],
+      "relevant_convention": "security-checklist.md#A03"
+    },
+    {
+      "id": "SEC-002",
+      "category": "SECURITY",
+      "description": "평문 비밀번호 저장 및 로그 출력",
+      "patch_file": "patches/SEC-002-plaintext-password.patch",
+      "expected_issues": ["평문 비밀번호 저장 — PasswordEncoder 미사용", "로그에 민감 정보(비밀번호) 출력"],
+      "relevant_convention": "security-checklist.md#A02"
+    },
+    {
+      "id": "SEC-003",
+      "category": "SECURITY",
+      "description": "소스 코드 내 API 키/시크릿 하드코딩",
+      "patch_file": "patches/SEC-003-hardcoded-secret.patch",
+      "expected_issues": ["API 키/시크릿 하드코딩 — 환경변수 또는 외부 설정 사용 필요"],
+      "relevant_convention": "security-checklist.md#2.3"
+    },
+    {
+      "id": "SEC-004",
+      "category": "SECURITY",
+      "description": "사용자 입력 HTML 직접 삽입(XSS) 및 Log Injection",
+      "patch_file": "patches/SEC-004-xss-unescaped-input.patch",
+      "expected_issues": ["XSS 취약점 — 사용자 입력 HTML 이스케이프 미적용", "Log Injection — 사용자 입력 개행 문자 미처리"],
+      "relevant_convention": "security-checklist.md#A03-output"
+    },
+    {
+      "id": "SEC-005",
+      "category": "SECURITY",
+      "description": "JWT 서명 검증 누락",
+      "patch_file": "patches/SEC-005-missing-jwt-verification.patch",
+      "expected_issues": ["JWT 서명 검증 누락 — 토큰 무결성 미확인"],
+      "relevant_convention": "security-checklist.md#A07"
+    },
+    {
+      "id": "ARCH-001",
+      "category": "ARCH",
+      "description": "컬렉션 루프 내 개별 쿼리 (N+1)",
+      "patch_file": "patches/ARCH-001-n-plus-one-query.patch",
+      "expected_issues": ["N+1 쿼리 — 컬렉션 루프 내 지연 로딩, @EntityGraph 또는 fetch join 필요"],
+      "relevant_convention": "architecture-guide.md#9"
+    },
+    {
+      "id": "ARCH-002",
+      "category": "ARCH",
+      "description": "UseCase 인터페이스 미구현, Controller가 구현체 직접 의존",
+      "patch_file": "patches/ARCH-002-controller-repository-direct.patch",
+      "expected_issues": ["UseCase 인터페이스 미구현 — Application Layer는 인바운드 포트를 구현해야 함", "Controller가 구현체 직접 의존 — UseCase 인터페이스 타입으로 주입 필요"],
+      "relevant_convention": "architecture-guide.md#2.3"
+    },
+    {
+      "id": "ARCH-003",
+      "category": "ARCH",
+      "description": "JPA Entity에 data class 사용",
+      "patch_file": "patches/ARCH-003-jpa-entity-dataclass.patch",
+      "expected_issues": ["JPA Entity에 data class 사용 금지 — 일반 class로 선언 필요"],
+      "relevant_convention": "architecture-guide.md#2.1"
+    },
+    {
+      "id": "ARCH-004",
+      "category": "ARCH",
+      "description": "Service 간 순환 참조",
+      "patch_file": "patches/ARCH-004-circular-dependency.patch",
+      "expected_issues": ["Service 간 순환 참조 — 의존성 방향 규칙 위반"],
+      "relevant_convention": "architecture-guide.md#3"
+    },
+    {
+      "id": "ARCH-005",
+      "category": "ARCH",
+      "description": "쓰기 로직에 @Transactional 누락",
+      "patch_file": "patches/ARCH-005-missing-transactional.patch",
+      "expected_issues": ["쓰기 로직에 @Transactional 누락 — Application Layer에서 트랜잭션 선언 필요"],
+      "relevant_convention": "architecture-guide.md#6"
+    },
+    {
+      "id": "STYLE-001",
+      "category": "STYLE",
+      "description": "100줄 이상 단일 함수 (SRP 위반)",
+      "patch_file": "patches/STYLE-001-long-function.patch",
+      "expected_issues": ["100줄 이상 단일 함수 — SRP 위반, 역할별 함수 분리 필요"],
+      "relevant_convention": "kotlin-style.md#10"
+    },
+    {
+      "id": "STYLE-002",
+      "category": "STYLE",
+      "description": "snake_case 변수명 사용",
+      "patch_file": "patches/STYLE-002-snake-case-naming.patch",
+      "expected_issues": ["snake_case 변수명 — camelCase 사용 필요"],
+      "relevant_convention": "kotlin-style.md#1.2"
+    },
+    {
+      "id": "STYLE-003",
+      "category": "STYLE",
+      "description": "로컬 함수의 외부 변수 암묵적 캡처",
+      "patch_file": "patches/STYLE-003-local-function-capture.patch",
+      "expected_issues": ["로컬 함수 사용 금지 — 외부 변수 암묵적 캡처, private 확장 함수로 추출 필요"],
+      "relevant_convention": "kotlin-style.md#local-function"
+    },
+    {
+      "id": "STYLE-004",
+      "category": "STYLE",
+      "description": "FQCN 직접 사용 (import 없이)",
+      "patch_file": "patches/STYLE-004-fqcn-usage.patch",
+      "expected_issues": ["FQCN 직접 사용 금지 — import 선언 후 단순 타입명 사용 필요"],
+      "relevant_convention": "kotlin-style.md#2.2"
+    },
+    {
+      "id": "STYLE-005",
+      "category": "STYLE",
+      "description": "와일드카드 import 사용",
+      "patch_file": "patches/STYLE-005-wildcard-import.patch",
+      "expected_issues": ["와일드카드 import 금지 — 각 클래스를 명시적으로 import"],
+      "relevant_convention": "kotlin-style.md#2.1"
+    },
+    {
+      "id": "API-001",
+      "category": "API",
+      "description": "GET 메서드로 리소스 생성/변경 처리",
+      "patch_file": "patches/API-001-get-for-mutation.patch",
+      "expected_issues": ["GET 메서드로 리소스 생성 — POST 사용 필요", "URL에 동사 사용 금지"],
+      "relevant_convention": "api-design.md#3.1"
+    },
+    {
+      "id": "API-002",
+      "category": "API",
+      "description": "에러 응답 형식 혼재",
+      "patch_file": "patches/API-002-inconsistent-error-response.patch",
+      "expected_issues": ["에러 응답 형식 비일관 — ErrorResponse 또는 ValidationErrorResponse 스키마 통일 필요"],
+      "relevant_convention": "api-design.md#2"
+    },
+    {
+      "id": "API-003",
+      "category": "API",
+      "description": "하위 호환성 깨는 변경, 버전 미관리",
+      "patch_file": "patches/API-003-no-versioning.patch",
+      "expected_issues": ["하위 호환성 깨는 변경 — 기존 필드 타입 변경/제거 시 API 버저닝 필요"],
+      "relevant_convention": "api-design.md#6"
+    },
+    {
+      "id": "API-004",
+      "category": "API",
+      "description": "응답에 불필요한 민감 필드 노출",
+      "patch_file": "patches/API-004-excessive-response-data.patch",
+      "expected_issues": ["응답에 불필요한 민감 필드 노출 — 전용 응답 DTO로 필요한 필드만 반환"],
+      "relevant_convention": "api-design.md#5.3"
+    },
+    {
+      "id": "API-005",
+      "category": "API",
+      "description": "부적절한 HTTP 상태 코드 사용",
+      "patch_file": "patches/API-005-wrong-status-code.patch",
+      "expected_issues": ["부적절한 HTTP 상태 코드 — 생성 시 201, 삭제 시 204, 서버 오류 시 500 사용"],
+      "relevant_convention": "api-design.md#4"
+    }
+  ]
+}

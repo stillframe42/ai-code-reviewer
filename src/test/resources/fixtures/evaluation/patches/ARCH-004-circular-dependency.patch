@@ -1,0 +1,45 @@
+diff --git a/src/main/kotlin/com/example/shop/order/application/DefaultOrderService.kt b/src/main/kotlin/com/example/shop/order/application/DefaultOrderService.kt
+new file mode 100644
+index 0000000..d4e5f6a
+--- /dev/null
++++ b/src/main/kotlin/com/example/shop/order/application/DefaultOrderService.kt
+@@ -0,0 +1,38 @@
++package com.example.shop.order.application
++
++import org.springframework.stereotype.Service
++import java.math.BigDecimal
++
++@Service
++class DefaultOrderService(
++    private val paymentService: DefaultPaymentService,
++    private val orderRepository: OrderRepository,
++) {
++    fun createOrder(customerId: Long, items: List<OrderItem>): Long {
++        val totalAmount = items.sumOf { it.price * BigDecimal(it.quantity) }
++        val orderId = orderRepository.save(customerId, totalAmount)
++        paymentService.processPayment(orderId, totalAmount)
++        return orderId
++    }
++
++    fun cancelOrder(orderId: Long) {
++        orderRepository.updateStatus(orderId, "CANCELLED")
++        paymentService.refund(orderId)
++    }
++
++    fun getOrderTotal(orderId: Long): BigDecimal = orderRepository.getTotal(orderId)
++}
++
++@Service
++class DefaultPaymentService(
++    private val orderService: DefaultOrderService,
++    private val paymentGateway: PaymentGateway,
++) {
++    fun processPayment(orderId: Long, amount: BigDecimal) {
++        paymentGateway.charge(orderId, amount)
++    }
++
++    fun refund(orderId: Long) {
++        val total = orderService.getOrderTotal(orderId)
++        paymentGateway.refund(orderId, total)
++    }
++}

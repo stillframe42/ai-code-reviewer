@@ -1,0 +1,40 @@
+diff --git a/src/main/kotlin/com/example/shop/order/domain/OrderValidator.kt b/src/main/kotlin/com/example/shop/order/domain/OrderValidator.kt
+new file mode 100644
+index 0000000..e5f6a7b
+--- /dev/null
++++ b/src/main/kotlin/com/example/shop/order/domain/OrderValidator.kt
+@@ -0,0 +1,33 @@
++package com.example.shop.order.domain
++
++import jakarta.validation.constraints.*
++import java.math.BigDecimal
++import java.time.*
++
++class OrderValidator {
++
++    fun validate(request: OrderCreateRequest): List<String> {
++        val errors = mutableListOf<String>()
++
++        if (request.customerName.isBlank()) {
++            errors.add("고객명은 필수입니다")
++        }
++        if (request.items.isEmpty()) {
++            errors.add("주문 항목이 비어있습니다")
++        }
++        if (request.totalAmount <= BigDecimal.ZERO) {
++            errors.add("주문 금액은 양수여야 합니다")
++        }
++        if (request.deliveryDate.isBefore(LocalDate.now())) {
++            errors.add("배송일은 오늘 이후여야 합니다")
++        }
++        return errors
++    }
++}
++
++data class OrderCreateRequest(
++    val customerName: String,
++    val items: List<String>,
++    val totalAmount: BigDecimal,
++    val deliveryDate: LocalDate,
++    val note: String? = null,
++)

@@ -1,0 +1,40 @@
+diff --git a/src/main/kotlin/com/example/shop/order/adapter/in/web/OrderApiHandler.kt b/src/main/kotlin/com/example/shop/order/adapter/in/web/OrderApiHandler.kt
+new file mode 100644
+index 0000000..a1b2c3d
+--- /dev/null
++++ b/src/main/kotlin/com/example/shop/order/adapter/in/web/OrderApiHandler.kt
+@@ -0,0 +1,32 @@
++package com.example.shop.order.adapter.`in`.web
++
++import org.springframework.web.bind.annotation.GetMapping
++import org.springframework.web.bind.annotation.RequestParam
++import org.springframework.web.bind.annotation.RestController
++
++@RestController
++class OrderApiHandler(private val orderService: OrderService) {
++
++    @GetMapping("/api/orders/create")
++    fun createOrder(
++        @RequestParam customerId: Long,
++        @RequestParam productId: Long,
++        @RequestParam quantity: Int,
++    ): Map<String, Any> {
++        val orderId = orderService.create(customerId, productId, quantity)
++        return mapOf("orderId" to orderId, "status" to "created")
++    }
++
++    @GetMapping("/api/orders/cancel")
++    fun cancelOrder(@RequestParam orderId: Long): Map<String, Any> {
++        orderService.cancel(orderId)
++        return mapOf("orderId" to orderId, "status" to "cancelled")
++    }
++
++    @GetMapping("/api/orders/updateStatus")
++    fun updateOrderStatus(
++        @RequestParam orderId: Long,
++        @RequestParam newStatus: String,
++    ): Map<String, Any> {
++        orderService.updateStatus(orderId, newStatus)
++        return mapOf("orderId" to orderId, "status" to newStatus)
++    }
++}

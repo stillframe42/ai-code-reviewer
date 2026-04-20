@@ -1,0 +1,33 @@
+diff --git a/src/main/kotlin/com/example/shop/order/adapter/out/persistence/OrderEntity.kt b/src/main/kotlin/com/example/shop/order/adapter/out/persistence/OrderEntity.kt
+new file mode 100644
+index 0000000..c3d4e5f
+--- /dev/null
++++ b/src/main/kotlin/com/example/shop/order/adapter/out/persistence/OrderEntity.kt
+@@ -0,0 +1,26 @@
++package com.example.shop.order.adapter.out.persistence
++
++import jakarta.persistence.Entity
++import jakarta.persistence.EnumType
++import jakarta.persistence.Enumerated
++import jakarta.persistence.GeneratedValue
++import jakarta.persistence.GenerationType
++import jakarta.persistence.Id
++import jakarta.persistence.Table
++import java.math.BigDecimal
++import java.time.Instant
++
++@Entity
++@Table(name = "orders")
++data class OrderEntity(
++    @Id
++    @GeneratedValue(strategy = GenerationType.IDENTITY)
++    val id: Long = 0,
++    val customerId: Long,
++    val customerName: String,
++    val totalAmount: BigDecimal,
++    @Enumerated(EnumType.STRING)
++    val status: OrderStatus = OrderStatus.PENDING,
++    val createdAt: Instant = Instant.now(),
++)
++
++enum class OrderStatus { PENDING, CONFIRMED, SHIPPED, DELIVERED, CANCELLED }

@@ -1,0 +1,50 @@
+diff --git a/src/main/kotlin/com/example/shop/statistics/domain/StatisticsAggregator.kt b/src/main/kotlin/com/example/shop/statistics/domain/StatisticsAggregator.kt
+new file mode 100644
+index 0000000..c3d4e5f
+--- /dev/null
++++ b/src/main/kotlin/com/example/shop/statistics/domain/StatisticsAggregator.kt
+@@ -0,0 +1,42 @@
++package com.example.shop.statistics.domain
++
++import java.math.BigDecimal
++
++class StatisticsAggregator {
++
++    fun aggregateSalesData(records: List<SalesRecord>): SalesReport {
++        val categoryTotals = mutableMapOf<String, BigDecimal>()
++        val errors = mutableListOf<String>()
++        var totalRevenue = BigDecimal.ZERO
++        var processedCount = 0
++
++        fun processRecord(record: SalesRecord) {
++            if (record.amount <= BigDecimal.ZERO) {
++                errors.add("Invalid amount for record ${record.id}: ${record.amount}")
++                return
++            }
++            totalRevenue = totalRevenue.add(record.amount)
++            categoryTotals[record.category] =
++                (categoryTotals[record.category] ?: BigDecimal.ZERO).add(record.amount)
++            processedCount++
++        }
++
++        fun buildSummary(): String {
++            val lines = mutableListOf<String>()
++            lines.add("총 매출: $totalRevenue")
++            lines.add("처리 건수: $processedCount")
++            lines.add("오류 건수: ${errors.size}")
++            categoryTotals.forEach { (cat, total) ->
++                lines.add("  $cat: $total")
++            }
++            return lines.joinToString("\n")
++        }
++
++        records.forEach { processRecord(it) }
++
++        return SalesReport(
++            totalRevenue = totalRevenue,
++            categoryTotals = categoryTotals.toMap(),
++            errorMessages = errors.toList(),
++            summary = buildSummary(),
++        )
++    }
++}

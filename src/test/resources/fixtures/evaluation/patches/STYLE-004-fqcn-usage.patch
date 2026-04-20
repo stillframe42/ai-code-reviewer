@@ -1,0 +1,37 @@
+diff --git a/src/main/kotlin/com/example/shop/common/DateTimeUtils.kt b/src/main/kotlin/com/example/shop/common/DateTimeUtils.kt
+new file mode 100644
+index 0000000..d4e5f6a
+--- /dev/null
++++ b/src/main/kotlin/com/example/shop/common/DateTimeUtils.kt
+@@ -0,0 +1,30 @@
++package com.example.shop.common
++
++object DateTimeUtils {
++
++    private val counter = java.util.concurrent.atomic.AtomicInteger(0)
++
++    fun formatTimestamp(instant: java.time.Instant): String {
++        val formatter = java.time.format.DateTimeFormatter
++            .ofPattern("yyyy-MM-dd HH:mm:ss")
++            .withZone(java.time.ZoneId.of("Asia/Seoul"))
++        return formatter.format(instant)
++    }
++
++    fun parseDate(dateStr: String): java.time.LocalDate {
++        return java.time.LocalDate.parse(dateStr, java.time.format.DateTimeFormatter.ISO_LOCAL_DATE)
++    }
++
++    fun calculateDaysBetween(start: java.time.LocalDate, end: java.time.LocalDate): Long {
++        return java.time.temporal.ChronoUnit.DAYS.between(start, end)
++    }
++
++    fun generateRequestId(): String {
++        val sequence = counter.incrementAndGet()
++        val timestamp = java.time.Instant.now().toEpochMilli()
++        return "REQ-$timestamp-$sequence"
++    }
++
++    fun currentSeoulTime(): java.time.ZonedDateTime {
++        return java.time.ZonedDateTime.now(java.time.ZoneId.of("Asia/Seoul"))
++    }
++}

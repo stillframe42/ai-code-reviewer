@@ -1,0 +1,42 @@
+diff --git a/src/main/kotlin/com/example/shop/order/adapter/in/web/OrderController.kt b/src/main/kotlin/com/example/shop/order/adapter/in/web/OrderController.kt
+new file mode 100644
+index 0000000..e5f6a7b
+--- /dev/null
++++ b/src/main/kotlin/com/example/shop/order/adapter/in/web/OrderController.kt
+@@ -0,0 +1,35 @@
++package com.example.shop.order.adapter.`in`.web
++
++import org.springframework.http.ResponseEntity
++import org.springframework.web.bind.annotation.DeleteMapping
++import org.springframework.web.bind.annotation.PathVariable
++import org.springframework.web.bind.annotation.PostMapping
++import org.springframework.web.bind.annotation.RequestBody
++import org.springframework.web.bind.annotation.RestController
++
++@RestController
++class OrderController(private val orderService: OrderService) {
++
++    @PostMapping("/api/orders")
++    fun createOrder(@RequestBody request: CreateOrderRequest): ResponseEntity<Map<String, Any>> {
++        val orderId = orderService.create(request)
++        return ResponseEntity.ok(mapOf("orderId" to orderId, "status" to "created"))
++    }
++
++    @DeleteMapping("/api/orders/{id}")
++    fun deleteOrder(@PathVariable id: Long): ResponseEntity<Map<String, Any>> {
++        orderService.delete(id)
++        return ResponseEntity.ok(mapOf("message" to "삭제 완료", "deletedId" to id))
++    }
++
++    @PostMapping("/api/orders/{id}/confirm")
++    fun confirmOrder(@PathVariable id: Long): ResponseEntity<Map<String, Any>> {
++        return try {
++            orderService.confirm(id)
++            ResponseEntity.ok(mapOf("orderId" to id, "status" to "confirmed"))
++        } catch (e: Exception) {
++            ResponseEntity.status(404).body(mapOf("error" to "처리 중 오류 발생: ${e.message}"))
++        }
++    }
++}
++
++data class CreateOrderRequest(val customerId: Long, val productIds: List<Long>)

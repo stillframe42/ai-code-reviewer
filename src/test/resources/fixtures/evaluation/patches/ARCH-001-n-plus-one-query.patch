@@ -1,0 +1,42 @@
+diff --git a/src/main/kotlin/com/example/shop/order/adapter/out/persistence/OrderRepository.kt b/src/main/kotlin/com/example/shop/order/adapter/out/persistence/OrderRepository.kt
+new file mode 100644
+index 0000000..a1b2c3d
+--- /dev/null
++++ b/src/main/kotlin/com/example/shop/order/adapter/out/persistence/OrderRepository.kt
+@@ -0,0 +1,34 @@
++package com.example.shop.order.adapter.out.persistence
++
++import org.springframework.stereotype.Repository
++
++@Repository
++class OrderRepository(
++    private val orderJpaRepository: OrderJpaRepository,
++    private val orderItemJpaRepository: OrderItemJpaRepository,
++) {
++    fun findAllWithItems(): List<OrderWithItems> {
++        val orders = orderJpaRepository.findAll()
++        return orders.map { order ->
++            val items = orderItemJpaRepository.findByOrderId(order.id)
++            OrderWithItems(
++                orderId = order.id,
++                customerName = order.customerName,
++                items = items.map { item ->
++                    val product = orderItemJpaRepository.findProductById(item.productId)
++                    OrderItemDetail(
++                        productName = product?.name ?: "unknown",
++                        quantity = item.quantity,
++                        price = item.price,
++                    )
++                },
++            )
++        }
++    }
++
++    fun findOrderSummaries(customerId: Long): List<OrderSummary> {
++        val orders = orderJpaRepository.findByCustomerId(customerId)
++        return orders.map { order ->
++            val itemCount = orderItemJpaRepository.countByOrderId(order.id)
++            OrderSummary(orderId = order.id, itemCount = itemCount, total = order.totalAmount)
++        }
++    }
++}

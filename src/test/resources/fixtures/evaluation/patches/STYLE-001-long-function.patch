@@ -1,0 +1,114 @@
+diff --git a/src/main/kotlin/com/example/shop/report/domain/ReportFormatter.kt b/src/main/kotlin/com/example/shop/report/domain/ReportFormatter.kt
+new file mode 100644
+index 0000000..a1b2c3d
+--- /dev/null
++++ b/src/main/kotlin/com/example/shop/report/domain/ReportFormatter.kt
+@@ -0,0 +1,108 @@
++package com.example.shop.report.domain
++
++import java.math.BigDecimal
++import java.math.RoundingMode
++import java.time.Instant
++import java.time.ZoneId
++import java.time.format.DateTimeFormatter
++
++class ReportFormatter {
++
++    fun generateMonthlySalesReport(
++        transactions: List<Map<String, Any>>,
++        targetMonth: Int,
++        targetYear: Int,
++    ): String {
++        val buffer = StringBuilder()
++        val categoryTotals = mutableMapOf<String, BigDecimal>()
++        val dailyTotals = mutableMapOf<Int, BigDecimal>()
++        val refunds = mutableListOf<String>()
++        var transactionCount = 0
++        var totalRevenue = BigDecimal.ZERO
++        var maxTransaction = BigDecimal.ZERO
++        var minTransaction = BigDecimal("999999999")
++
++        buffer.append("=== 월간 매출 보고서 ===\n")
++        buffer.append("기간: ${targetYear}년 ${targetMonth}월\n")
++        buffer.append("생성 시각: ${Instant.now()}\n\n")
++
++        for (tx in transactions) {
++            val amount = tx["amount"]?.let { BigDecimal(it.toString()) } ?: continue
++            val category = tx["category"]?.toString() ?: "미분류"
++            val date = tx["date"]?.toString() ?: continue
++            val txType = tx["type"]?.toString() ?: "sale"
++
++            val instant = Instant.parse(date)
++            val localDate = instant.atZone(ZoneId.of("Asia/Seoul")).toLocalDate()
++
++            if (localDate.monthValue != targetMonth || localDate.year != targetYear) continue
++
++            if (txType == "refund") {
++                refunds.add("환불: $category - $amount (${localDate})")
++                totalRevenue = totalRevenue.subtract(amount)
++                continue
++            }
++
++            transactionCount++
++            totalRevenue = totalRevenue.add(amount)
++            categoryTotals[category] = (categoryTotals[category] ?: BigDecimal.ZERO).add(amount)
++            dailyTotals[localDate.dayOfMonth] = (dailyTotals[localDate.dayOfMonth] ?: BigDecimal.ZERO).add(amount)
++
++            if (amount > maxTransaction) maxTransaction = amount
++            if (amount < minTransaction) minTransaction = amount
++        }
++
++        buffer.append("--- 카테고리별 매출 ---\n")
++        categoryTotals.entries
++            .sortedByDescending { it.value }
++            .forEach { (category, total) ->
++                val percentage = if (totalRevenue > BigDecimal.ZERO) {
++                    total.multiply(BigDecimal(100)).divide(totalRevenue, 1, RoundingMode.HALF_UP)
++                } else BigDecimal.ZERO
++                buffer.append("  $category: ${total}원 (${percentage}%)\n")
++            }
++
++        buffer.append("\n--- 일별 매출 추이 ---\n")
++        for (day in 1..31) {
++            val dayTotal = dailyTotals[day] ?: continue
++            val barLength = dayTotal.divide(BigDecimal(10000), 0, RoundingMode.HALF_UP).toInt()
++            val bar = "█".repeat(barLength.coerceAtMost(50))
++            buffer.append("  ${day}일: $bar ${dayTotal}원\n")
++        }
++
++        buffer.append("\n--- 환불 내역 ---\n")
++        if (refunds.isEmpty()) {
++            buffer.append("  환불 내역 없음\n")
++        } else {
++            refunds.forEach { buffer.append("  $it\n") }
++        }
++
++        buffer.append("\n--- 통계 요약 ---\n")
++        buffer.append("  총 거래 건수: ${transactionCount}건\n")
++        buffer.append("  총 매출액: ${totalRevenue}원\n")
++        if (transactionCount > 0) {
++            val average = totalRevenue.divide(BigDecimal(transactionCount), 0, RoundingMode.HALF_UP)
++            buffer.append("  평균 거래액: ${average}원\n")
++            buffer.append("  최대 거래액: ${maxTransaction}원\n")
++            buffer.append("  최소 거래액: ${minTransaction}원\n")
++        }
++        buffer.append("  환불 건수: ${refunds.size}건\n")
++
++        val activeDays = dailyTotals.size
++        if (activeDays > 0) {
++            val dailyAverage = totalRevenue.divide(BigDecimal(activeDays), 0, RoundingMode.HALF_UP)
++            buffer.append("  영업일 수: ${activeDays}일\n")
++            buffer.append("  일 평균 매출: ${dailyAverage}원\n")
++        }
++
++        val topCategory = categoryTotals.maxByOrNull { it.value }
++        if (topCategory != null) {
++            buffer.append("  최고 매출 카테고리: ${topCategory.key} (${topCategory.value}원)\n")
++        }
++
++        val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").withZone(ZoneId.of("Asia/Seoul"))
++        buffer.append("\n보고서 생성 완료: ${formatter.format(Instant.now())}\n")
++
++        return buffer.toString()
++    }
++}

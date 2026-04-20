@@ -1,0 +1,40 @@
+diff --git a/src/main/kotlin/com/example/shop/comment/adapter/in/web/XssProtectionFilter.kt b/src/main/kotlin/com/example/shop/comment/adapter/in/web/XssProtectionFilter.kt
+new file mode 100644
+index 0000000..d4e5f6a
+--- /dev/null
++++ b/src/main/kotlin/com/example/shop/comment/adapter/in/web/XssProtectionFilter.kt
+@@ -0,0 +1,33 @@
++package com.example.shop.comment.adapter.`in`.web
++
++import org.slf4j.LoggerFactory
++import org.springframework.stereotype.Component
++
++@Component
++class XssProtectionFilter {
++
++    private val logger = LoggerFactory.getLogger(javaClass)
++
++    fun renderCommentHtml(username: String, comment: String): String {
++        logger.info("댓글 렌더링 요청: username=$username, comment=$comment")
++        return """
++            <div class="comment">
++                <span class="author">$username</span>
++                <p class="body">$comment</p>
++            </div>
++        """.trimIndent()
++    }
++
++    fun renderSearchResult(query: String, results: List<String>): String {
++        logger.info("검색 결과 렌더링: query=$query")
++        val html = StringBuilder("<h2>검색 결과: $query</h2><ul>")
++        results.forEach { result ->
++            html.append("<li>$result</li>")
++        }
++        html.append("</ul>")
++        return html.toString()
++    }
++
++    fun logUserAction(action: String, userInput: String) {
++        logger.info("사용자 액션: action=$action, input=$userInput")
++    }
++}

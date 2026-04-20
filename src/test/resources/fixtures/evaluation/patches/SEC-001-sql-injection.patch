@@ -1,0 +1,39 @@
+diff --git a/src/main/kotlin/com/example/shop/audit/infrastructure/SecurityAuditRepository.kt b/src/main/kotlin/com/example/shop/audit/infrastructure/SecurityAuditRepository.kt
+new file mode 100644
+index 0000000..a1b2c3d
+--- /dev/null
++++ b/src/main/kotlin/com/example/shop/audit/infrastructure/SecurityAuditRepository.kt
+@@ -0,0 +1,35 @@
++package com.example.shop.audit.infrastructure
++
++import org.springframework.jdbc.core.JdbcTemplate
++import org.springframework.stereotype.Repository
++
++@Repository
++class SecurityAuditRepository(private val jdbcTemplate: JdbcTemplate) {
++
++    fun findByUsername(username: String): Map<String, Any>? {
++        val sql = "SELECT * FROM audit_logs WHERE username = '" + username + "'"
++        return jdbcTemplate.queryForMap(sql)
++    }
++
++    fun findByDateRange(startDate: String, endDate: String): List<Map<String, Any>> {
++        val sql = "SELECT * FROM audit_logs WHERE created_at BETWEEN '$startDate' AND '$endDate'"
++        return jdbcTemplate.queryForList(sql)
++    }
++
++    fun searchLogs(keyword: String, level: String): List<Map<String, Any>> {
++        val sql = "SELECT * FROM audit_logs WHERE message LIKE '%" + keyword + "%' AND level = '$level'"
++        return jdbcTemplate.queryForList(sql)
++    }
++
++    fun countByAction(action: String): Long {
++        val sql = "SELECT count(*) FROM audit_logs WHERE action = '$action'"
++        return jdbcTemplate.queryForObject(sql, Long::class.java) ?: 0L
++    }
++
++    fun deleteOldLogs(beforeDate: String): Int {
++        val sql = "DELETE FROM audit_logs WHERE created_at < '$beforeDate'"
++        return jdbcTemplate.update(sql)
++    }
++}

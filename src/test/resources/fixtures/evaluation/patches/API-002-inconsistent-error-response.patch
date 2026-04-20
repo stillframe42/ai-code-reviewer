@@ -1,0 +1,45 @@
+diff --git a/src/main/kotlin/com/example/shop/common/GlobalApiExceptionHandler.kt b/src/main/kotlin/com/example/shop/common/GlobalApiExceptionHandler.kt
+new file mode 100644
+index 0000000..b2c3d4e
+--- /dev/null
++++ b/src/main/kotlin/com/example/shop/common/GlobalApiExceptionHandler.kt
+@@ -0,0 +1,37 @@
++package com.example.shop.common
++
++import org.springframework.http.ResponseEntity
++import org.springframework.web.bind.annotation.ExceptionHandler
++import org.springframework.web.bind.annotation.RestControllerAdvice
++
++@RestControllerAdvice
++class GlobalApiExceptionHandler {
++
++    @ExceptionHandler(IllegalArgumentException::class)
++    fun handleBadRequest(e: IllegalArgumentException): ResponseEntity<Map<String, Any>> {
++        return ResponseEntity.badRequest().body(
++            mapOf("error" to (e.message ?: "잘못된 요청"))
++        )
++    }
++
++    @ExceptionHandler(NoSuchElementException::class)
++    fun handleNotFound(e: NoSuchElementException): ResponseEntity<Map<String, Any>> {
++        return ResponseEntity.status(404).body(
++            mapOf(
++                "message" to (e.message ?: "리소스를 찾을 수 없음"),
++                "code" to 4004,
++                "timestamp" to System.currentTimeMillis(),
++            )
++        )
++    }
++
++    @ExceptionHandler(Exception::class)
++    fun handleGeneral(e: Exception): ResponseEntity<Map<String, Any>> {
++        return ResponseEntity.status(500).body(
++            mapOf(
++                "errorMessage" to "서버 내부 오류가 발생했습니다",
++                "errorCode" to "INTERNAL_ERROR",
++                "detail" to (e.message ?: ""),
++                "stackTrace" to e.stackTraceToString(),
++            )
++        )
++    }
++}

@@ -1,0 +1,42 @@
+diff --git a/src/main/kotlin/com/example/shop/payment/application/DefaultPaymentService.kt b/src/main/kotlin/com/example/shop/payment/application/DefaultPaymentService.kt
+new file mode 100644
+index 0000000..e5f6a7b
+--- /dev/null
++++ b/src/main/kotlin/com/example/shop/payment/application/DefaultPaymentService.kt
+@@ -0,0 +1,35 @@
++package com.example.shop.payment.application
++
++import org.springframework.stereotype.Service
++import java.math.BigDecimal
++import java.time.Instant
++
++@Service
++class DefaultPaymentService(
++    private val paymentRepository: PaymentRepository,
++    private val ledgerRepository: LedgerRepository,
++) {
++    fun processPayment(orderId: Long, amount: BigDecimal): Long {
++        val payment = Payment(orderId = orderId, amount = amount, paidAt = Instant.now())
++        val paymentId = paymentRepository.save(payment)
++        ledgerRepository.recordDebit(orderId, amount)
++        return paymentId
++    }
++
++    fun refund(paymentId: Long) {
++        val payment = paymentRepository.findById(paymentId)
++            ?: throw NoSuchElementException("결제 정보 없음: $paymentId")
++        paymentRepository.updateStatus(paymentId, "REFUNDED")
++        ledgerRepository.recordCredit(payment.orderId, payment.amount)
++    }
++
++    fun transferBalance(fromAccountId: Long, toAccountId: Long, amount: BigDecimal) {
++        ledgerRepository.recordDebit(fromAccountId, amount)
++        ledgerRepository.recordCredit(toAccountId, amount)
++        paymentRepository.saveTransfer(
++            fromAccountId = fromAccountId,
++            toAccountId = toAccountId,
++            amount = amount,
++            transferredAt = Instant.now(),
++        )
++    }
++}

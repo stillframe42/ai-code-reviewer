@@ -1,0 +1,44 @@
+diff --git a/src/main/kotlin/com/example/shop/product/application/DefaultProductService.kt b/src/main/kotlin/com/example/shop/product/application/DefaultProductService.kt
+new file mode 100644
+index 0000000..b2c3d4e
+--- /dev/null
++++ b/src/main/kotlin/com/example/shop/product/application/DefaultProductService.kt
+@@ -0,0 +1,36 @@
++package com.example.shop.product.application
++
++import org.springframework.data.jpa.repository.JpaRepository
++import org.springframework.stereotype.Service
++import org.springframework.web.bind.annotation.GetMapping
++import org.springframework.web.bind.annotation.PathVariable
++import org.springframework.web.bind.annotation.PostMapping
++import org.springframework.web.bind.annotation.RequestBody
++import org.springframework.web.bind.annotation.RestController
++
++interface ProductJpaRepository : JpaRepository<ProductEntity, Long>
++
++@Service
++class DefaultProductService(
++    private val productJpaRepository: ProductJpaRepository,
++) {
++    fun findAll(): List<ProductEntity> = productJpaRepository.findAll()
++
++    fun findById(id: Long): ProductEntity =
++        productJpaRepository.findById(id).orElseThrow { NoSuchElementException("상품 없음: $id") }
++
++    fun save(entity: ProductEntity): ProductEntity = productJpaRepository.save(entity)
++
++    fun deleteById(id: Long) = productJpaRepository.deleteById(id)
++}
++
++@RestController
++class ProductController(private val productService: DefaultProductService) {
++
++    @GetMapping("/api/products")
++    fun list(): List<ProductEntity> = productService.findAll()
++
++    @GetMapping("/api/products/{id}")
++    fun get(@PathVariable id: Long): ProductEntity = productService.findById(id)
++
++    @PostMapping("/api/products")
++    fun create(@RequestBody entity: ProductEntity): ProductEntity = productService.save(entity)
++}
