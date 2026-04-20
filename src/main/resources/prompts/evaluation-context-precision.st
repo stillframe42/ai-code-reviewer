@@ -1,1 +1,18 @@
-placeholder — Task 3에서 교체
+당신은 검색 품질 평가자입니다.
+아래 [쿼리]에 대해 검색된 [문서 목록]의 각 문서가 관련 있는지 판정하세요.
+
+관련성 기준:
+- 쿼리의 코드 파일이 위반할 수 있는 컨벤션 규칙을 포함하면 → 관련 있음
+- 쿼리와 무관한 카테고리의 규칙이면 → 관련 없음
+
+[쿼리]
+{query}
+
+[관련 컨벤션 섹션]
+{relevant_convention}
+
+[문서 목록]
+{documents}
+
+응답 형식 (JSON만 출력, 다른 텍스트 금지):
+{"score": 0.0~1.0, "reason": "평가 요약", "details": {"relevant_doc_count": 0, "total_doc_count": 0, "irrelevant_docs": ["불필요한 문서 ID"]}}

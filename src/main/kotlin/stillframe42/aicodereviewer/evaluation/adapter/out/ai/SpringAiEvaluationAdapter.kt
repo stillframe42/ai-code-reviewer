@@ -48,16 +48,37 @@ class SpringAiEvaluationAdapter(
         retrievedDocs: List<Document>,
         relevantConvention: String,
     ): EvaluationScore {
-        // Task 3에서 구현
-        TODO("Task 3에서 구현")
+        val documentsText = retrievedDocs.mapIndexed { index, doc ->
+            "[문서 ${index + 1}] (ID: ${doc.id ?: "unknown"})\n${doc.text ?: ""}"
+        }.joinToString("\n\n---\n\n")
+
+        val prompt = contextPrecisionPrompt.getContentAsString(Charsets.UTF_8)
+            .replace("{query}", query)
+            .replace("{relevant_convention}", relevantConvention)
+            .replace("{documents}", documentsText)
+
+        val raw = callLlm(prompt)
+        return parseScore(raw, EvaluationMetric.CONTEXT_PRECISION)
     }
 
     override suspend fun evaluateContextRecall(
         expectedIssues: List<String>,
         retrievedDocs: List<Document>,
     ): EvaluationScore {
-        // Task 3에서 구현
-        TODO("Task 3에서 구현")
+        val issuesText = expectedIssues.mapIndexed { index, issue ->
+            "${index + 1}. $issue"
+        }.joinToString("\n")
+
+        val documentsText = retrievedDocs.mapIndexed { index, doc ->
+            "[문서 ${index + 1}] (ID: ${doc.id ?: "unknown"})\n${doc.text ?: ""}"
+        }.joinToString("\n\n---\n\n")
+
+        val prompt = contextRecallPrompt.getContentAsString(Charsets.UTF_8)
+            .replace("{expected_issues}", issuesText)
+            .replace("{documents}", documentsText)
+
+        val raw = callLlm(prompt)
+        return parseScore(raw, EvaluationMetric.CONTEXT_RECALL)
     }
 
     private suspend fun callLlm(systemPrompt: String): String =
