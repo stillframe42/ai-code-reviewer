@@ -37,8 +37,8 @@ class DefaultEvaluationService(
             val fileName = extractFileName(patchContent)
             val category = FileCategoryMapper.selectCategory(fileName)
 
-            // 3. 컨벤션 검색
-            val retrievedDocs = hybridSearchService.search(patchContent, topK = 5, category = category)
+            // 3. 컨벤션 검색 — 프로덕션(ConventionContextService)과 동일하게 파일명을 쿼리로 사용
+            val retrievedDocs = hybridSearchService.search(fileName, topK = 5, category = category)
 
             // 4. 코드 리뷰 생성
             val codeReview = reviewUseCase.reviewCode(patchContent, AiProvider.ANTHROPIC)
