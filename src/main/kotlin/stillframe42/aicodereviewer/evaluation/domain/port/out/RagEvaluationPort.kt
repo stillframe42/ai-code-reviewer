@@ -20,4 +20,10 @@ interface RagEvaluationPort {
         expectedIssues: List<String>,
         retrievedDocs: List<Document>,
     ): EvaluationScore
+
+    suspend fun evaluateAnswerRelevancy(
+        inputCode: String,
+        expectedIssues: List<String>,
+        generatedReview: String,
+    ): EvaluationScore
 }

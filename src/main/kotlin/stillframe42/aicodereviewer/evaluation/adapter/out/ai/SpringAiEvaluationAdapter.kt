@@ -28,6 +28,8 @@ class SpringAiEvaluationAdapter(
     private val contextPrecisionPrompt: Resource,
     @param:Value("classpath:prompts/evaluation-context-recall.st")
     private val contextRecallPrompt: Resource,
+    @param:Value("classpath:prompts/evaluation-answer-relevancy.st")
+    private val answerRelevancyPrompt: Resource,
 ) : RagEvaluationPort, Logging {
 
     override suspend fun evaluateFaithfulness(
@@ -79,6 +81,24 @@ class SpringAiEvaluationAdapter(
 
         val raw = callLlm(prompt)
         return parseScore(raw, EvaluationMetric.CONTEXT_RECALL)
+    }
+
+    override suspend fun evaluateAnswerRelevancy(
+        inputCode: String,
+        expectedIssues: List<String>,
+        generatedReview: String,
+    ): EvaluationScore {
+        val issuesText = expectedIssues.mapIndexed { index, issue ->
+            "${index + 1}. $issue"
+        }.joinToString("\n")
+
+        val prompt = answerRelevancyPrompt.getContentAsString(Charsets.UTF_8)
+            .replace("{input_code}", inputCode)
+            .replace("{expected_issues}", issuesText)
+            .replace("{review}", generatedReview)
+
+        val raw = callLlm(prompt)
+        return parseScore(raw, EvaluationMetric.ANSWER_RELEVANCY)
     }
 
     private suspend fun callLlm(systemPrompt: String): String =
