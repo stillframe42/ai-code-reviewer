@@ -12,18 +12,22 @@ import org.springframework.test.context.DynamicPropertyRegistry
 import org.springframework.test.context.DynamicPropertySource
 import org.testcontainers.containers.GenericContainer
 import org.testcontainers.postgresql.PostgreSQLContainer
+import org.yaml.snakeyaml.Yaml
 import stillframe42.aicodereviewer.evaluation.domain.model.EvaluationMetric
 import stillframe42.aicodereviewer.evaluation.domain.port.out.RagEvaluationPort
 import stillframe42.aicodereviewer.integration.AbstractIntegrationTest
+import java.io.File
 
 // 실제 OpenAI API 호출 통합 테스트 — 비용 발생하므로 수동 실행만 허용
 // EVAL_MANUAL_TEST=true ./gradlew test --tests "*EvaluationAdapterIT*"
+// spring.ai.openai.base-url 미설정 → 실제 OpenAI API 사용
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("integration-test")
 @EnabledIfEnvironmentVariable(named = "EVAL_MANUAL_TEST", matches = "true")
 class EvaluationAdapterIT {
 
     companion object {
+        val wireMock = AbstractIntegrationTest.wireMock
         val postgres: PostgreSQLContainer = AbstractIntegrationTest.postgres
         val redis: GenericContainer<*> = AbstractIntegrationTest.redis
 
@@ -33,8 +37,29 @@ class EvaluationAdapterIT {
             registry.add("spring.datasource.url") { postgres.jdbcUrl }
             registry.add("spring.datasource.username") { postgres.username }
             registry.add("spring.datasource.password") { postgres.password }
+            registry.add("github.api.base-url") { "http://localhost:${wireMock.port()}" }
+            registry.add("langfuse.host") { "http://localhost:${wireMock.port()}" }
             registry.add("spring.data.redis.host") { redis.host }
-            registry.add("spring.data.redis.port") { redis.getMappedPort(6379) }
+            registry.add("spring.data.redis.port") { redis.getMappedPort(6379).toString() }
+            // spring.ai.openai.base-url 미설정 → 실제 OpenAI API 사용
+            val secrets = readSecrets()
+            secrets["openai"]?.let { key ->
+                registry.add("openai.api-key") { key }
+                registry.add("spring.ai.openai.api-key") { key }
+            }
+        }
+
+        private fun readSecrets(): Map<String, String> = runCatching {
+            val file = File("src/main/resources/application-secret.yml")
+            check(file.exists()) { "application-secret.yml 파일을 찾을 수 없습니다" }
+            @Suppress("UNCHECKED_CAST")
+            val map = Yaml().load<Map<String, Any>>(file.inputStream())
+            buildMap {
+                (map["openai"] as? Map<*, *>)?.get("api-key")?.let { put("openai", it as String) }
+            }
+        }.getOrElse { e ->
+            System.err.println("[EvaluationAdapterIT] application-secret.yml 로드 실패: ${e.message}")
+            emptyMap()
         }
     }
 
