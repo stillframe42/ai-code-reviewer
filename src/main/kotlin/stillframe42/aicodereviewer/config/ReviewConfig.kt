@@ -9,5 +9,6 @@ import org.springframework.context.annotation.Configuration
     AiReviewerProperties::class,
     RagProperties::class,
     RagCompressionProperties::class,
+    EvaluationProperties::class,
 )
 class ReviewConfig
