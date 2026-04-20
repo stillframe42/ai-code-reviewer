@@ -118,12 +118,9 @@ class SpringAiEvaluationAdapter(
                 ?: ""
         }
 
-    // JSON 응답 파싱 — 마크다운 코드 펜스 래핑도 처리
+    // JSON 응답 파싱 — 마크다운 코드 펜스 래핑 + 앞뒤 비JSON 텍스트 제거
     private fun parseScore(raw: String, metric: EvaluationMetric): EvaluationScore {
-        val jsonStr = raw
-            .removePrefix("```json").removePrefix("```")
-            .removeSuffix("```")
-            .trim()
+        val jsonStr = extractJson(raw)
 
         return runCatching {
             val map: Map<String, Any> = objectMapper.readValue(jsonStr)
@@ -140,5 +137,18 @@ class SpringAiEvaluationAdapter(
                 reason = "파싱 실패: $raw",
             )
         }
+    }
+
+    // LLM 응답에서 JSON 객체를 추출 — 코드 펜스, 앞뒤 텍스트 제거
+    private fun extractJson(raw: String): String {
+        val stripped = raw
+            .replace(Regex("```json\\s*"), "")
+            .replace(Regex("```\\s*"), "")
+            .trim()
+        // 첫 번째 { 부터 마지막 } 까지 추출
+        val start = stripped.indexOf('{')
+        val end = stripped.lastIndexOf('}')
+        if (start < 0 || end < 0 || end <= start) return stripped
+        return stripped.substring(start, end + 1)
     }
 }

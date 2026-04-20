@@ -19,6 +19,7 @@ import stillframe42.aicodereviewer.evaluation.domain.model.EvaluationResult
 import stillframe42.aicodereviewer.evaluation.domain.model.GoldenCase
 import stillframe42.aicodereviewer.evaluation.domain.port.`in`.EvaluationUseCase
 import stillframe42.aicodereviewer.integration.AbstractIntegrationTest
+import stillframe42.aicodereviewer.rag.domain.port.`in`.ConventionIndexUseCase
 import java.io.File
 
 // 골든 데이터셋 20개 케이스 일괄 평가 실행 — 실제 API 호출 (비용 ~$1-2)
@@ -76,10 +77,16 @@ class EvaluationRunnerIT {
     private lateinit var evaluationUseCase: EvaluationUseCase
 
     @Autowired
+    private lateinit var conventionIndexUseCase: ConventionIndexUseCase
+
+    @Autowired
     private lateinit var objectMapper: ObjectMapper
 
     @Test
     fun `골든 데이터셋 20개 케이스 일괄 평가 실행`() = runBlocking {
+        // 벡터 스토어에 컨벤션 문서 인덱싱 — 테스트 환경에서는 WireMock으로 인해 자동 인덱싱 실패하므로 수동 실행
+        conventionIndexUseCase.reindex()
+
         val json = javaClass.classLoader
             .getResourceAsStream("fixtures/evaluation/golden-dataset.json")!!
             .bufferedReader().readText()
