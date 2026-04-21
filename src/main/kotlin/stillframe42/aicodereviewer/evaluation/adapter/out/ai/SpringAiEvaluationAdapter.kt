@@ -24,6 +24,8 @@ class SpringAiEvaluationAdapter(
     private val objectMapper: ObjectMapper,
     @param:Value("classpath:prompts/evaluation-faithfulness.st")
     private val faithfulnessPrompt: Resource,
+    @param:Value("classpath:prompts/evaluation-faithfulness-fewshot.st")
+    private val faithfulnessFewshotPrompt: Resource,
     @param:Value("classpath:prompts/evaluation-context-precision.st")
     private val contextPrecisionPrompt: Resource,
     @param:Value("classpath:prompts/evaluation-context-recall.st")
@@ -37,7 +39,10 @@ class SpringAiEvaluationAdapter(
         generatedReview: String,
     ): EvaluationScore {
         val contextText = context.joinToString("\n\n---\n\n") { it.text ?: "" }
-        val prompt = faithfulnessPrompt.getContentAsString(Charsets.UTF_8)
+        // Sub-plan A 토글: faithfulnessFewshot=true 시 Few-shot 예시 프롬프트 사용
+        val promptResource = if (evaluationProperties.faithfulnessFewshot) faithfulnessFewshotPrompt
+                             else faithfulnessPrompt
+        val prompt = promptResource.getContentAsString(Charsets.UTF_8)
             .replace("{context}", contextText)
             .replace("{review}", generatedReview)
 
