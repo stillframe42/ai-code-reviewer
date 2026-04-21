@@ -33,3 +33,18 @@ private fun MutableMap<String, Double>.accumulate(results: List<Document>, k: In
         }
     }
 }
+
+// N-list RRF — Multi-query Retrieval에서 사용 (각 변형 쿼리 결과를 별개 ranking으로 통합).
+fun reciprocalRankFusion(
+    rankedLists: List<List<Document>>,
+    topK: Int,
+    k: Int = 60,
+): List<Document> {
+    val scores = mutableMapOf<String, Double>()
+    rankedLists.forEach { scores.accumulate(it, k) }
+    val allDocuments = rankedLists.flatten().associateBy { it.id }
+    return scores.entries
+        .sortedByDescending { it.value }
+        .take(topK)
+        .mapNotNull { (id, _) -> allDocuments[id] }
+}

@@ -10,6 +10,7 @@ import stillframe42.aicodereviewer.rag.domain.model.ConventionCategory
 import stillframe42.aicodereviewer.rag.domain.port.out.ContextCompressorPort
 import stillframe42.aicodereviewer.rag.domain.port.out.ConventionKeywordSearchPort
 import stillframe42.aicodereviewer.rag.domain.port.out.ConventionVectorPort
+import stillframe42.aicodereviewer.rag.domain.service.MultiQueryGenerator
 import stillframe42.aicodereviewer.rag.domain.service.reciprocalRankFusion
 
 @Service
@@ -19,6 +20,7 @@ class HybridConventionSearchService(
     private val ragProperties: RagProperties,
     private val contextCompressor: ContextCompressorPort,
     private val observabilityPort: ObservabilityPort,
+    private val multiQueryGenerator: MultiQueryGenerator,
 ) {
     // 일반 검색 — 벡터 + 키워드 + RRF + 압축 (전체 파이프라인)
     // 프로덕션 코드는 이 메서드를 사용한다.
@@ -36,7 +38,14 @@ class HybridConventionSearchService(
         category: ConventionCategory? = null,
         threshold: Double = ragProperties.similarityThreshold,
     ): List<Document> {
-        val rawResults = searchRaw(query, topK, category, threshold)
+        // multiQueryEnabled=true 시 원본 + LLM 변형 3개로 fan-out 검색 후 N-list RRF 통합 (B-3)
+        val rawResults = if (ragProperties.multiQueryEnabled) {
+            val queries = multiQueryGenerator.generateMultipleQueries(query)
+            val perQueryResults = queries.map { q -> searchRaw(q, topK, category, threshold) }
+            reciprocalRankFusion(perQueryResults, topK)
+        } else {
+            searchRaw(query, topK, category, threshold)
+        }
         if (category == ConventionCategory.ARCH) return rawResults
         return contextCompressor.compress(query, rawResults)
     }

@@ -17,4 +17,7 @@ data class RagProperties(
     // STYLE 카테고리는 범용 룰이라 카테고리 필터링이 검색 풀을 과도하게 좁힘.
     // 측정/실험 단계에서 활성화하여 효과 검증 후 production 적용 여부 결정 (Phase 4).
     val styleFilterBypass: Boolean = false,
+    // Multi-query Retrieval 활성화 — true 시 원본 쿼리를 LLM으로 3가지 변형 후 각각 검색 → 결과 통합 RRF.
+    // production default false, 측정/실험 단계에서만 true. Phase 4에서 적용 여부 결정.
+    val multiQueryEnabled: Boolean = false,
 )
