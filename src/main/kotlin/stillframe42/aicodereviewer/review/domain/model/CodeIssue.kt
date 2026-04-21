@@ -8,5 +8,7 @@ data class CodeIssue(
     val line: Int?,
     val severity: IssueSeverity,
     val description: String,
-    val suggestion: String
+    val suggestion: String,
+    // CoT 프롬프트(v12)에서 issue 도출 reasoning을 명시적으로 채움. 다른 버전에서는 null.
+    val reasoning: String? = null,
 )
