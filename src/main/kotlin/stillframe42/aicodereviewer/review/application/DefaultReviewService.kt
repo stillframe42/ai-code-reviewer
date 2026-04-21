@@ -20,6 +20,7 @@ import stillframe42.aicodereviewer.review.domain.model.ReviewMode
 import stillframe42.aicodereviewer.review.domain.port.`in`.ReviewUseCase
 import stillframe42.aicodereviewer.review.domain.port.out.AiReviewPort
 import stillframe42.aicodereviewer.review.domain.port.out.ReviewCacheStore
+import stillframe42.aicodereviewer.config.RagProperties
 import stillframe42.aicodereviewer.rag.application.ConventionContextService
 import stillframe42.aicodereviewer.review.domain.port.out.ReviewCacheStatsStore
 import stillframe42.aicodereviewer.review.domain.service.DiffPreprocessor
@@ -38,6 +39,8 @@ class DefaultReviewService(
     private val reviewCacheStatsStore: ReviewCacheStatsStore,
     private val conventionContextService: ConventionContextService,
     private val observabilityPort: ObservabilityPort,
+    private val claimVerifier: ClaimVerifier,
+    private val ragProperties: RagProperties,
 ) : ReviewUseCase, Logging {
 
     override suspend fun reviewCode(
@@ -108,13 +111,20 @@ class DefaultReviewService(
                 filePath = it,
             )
         }
-        return aiReviewPort.reviewCode(diff, provider, mode, reviewContext = null, modelName = modelName,
+        val rawReview = aiReviewPort.reviewCode(diff, provider, mode, reviewContext = null, modelName = modelName,
             conventionContext = conventionContext)
-            .also { result ->
-                // 캐시 저장 실패는 리뷰 결과 반환에 영향을 주지 않는다 (best-effort)
-                runCatching { reviewCacheStore.put(key, result) }
-                    .onFailure { e -> logger.warn("캐시 저장 실패 (무시): {}", e.message) }
-            }
+        // C-1 Method 3: claimVerifyEnabled=true 시 컨벤션 컨텍스트 기반으로 issues 사후 검증/필터링
+        val finalReview = if (ragProperties.claimVerifyEnabled && !conventionContext.isNullOrBlank()) {
+            val verifiedIssues = claimVerifier.verify(rawReview.issues, conventionContext)
+            rawReview.copy(issues = verifiedIssues)
+        } else {
+            rawReview
+        }
+        return finalReview.also { result ->
+            // 캐시 저장 실패는 리뷰 결과 반환에 영향을 주지 않는다 (best-effort)
+            runCatching { reviewCacheStore.put(key, result) }
+                .onFailure { e -> logger.warn("캐시 저장 실패 (무시): {}", e.message) }
+        }
     }
 
     // Semaphore로 동시 호출 수를 제한하며 병렬 LLM 호출 후 결과 집계

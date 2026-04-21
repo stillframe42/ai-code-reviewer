@@ -25,4 +25,8 @@ data class RagProperties(
     // Multi-query Retrieval 활성화 — true 시 원본 쿼리를 LLM으로 3가지 변형 후 각각 검색 → 결과 통합 RRF.
     // production default false, 측정/실험 단계에서만 true. Phase 4에서 적용 여부 결정.
     val multiQueryEnabled: Boolean = false,
+    // 리뷰 응답의 클레임을 별도 LLM 호출로 사후 검증 (C-1 Method 3).
+    // verified만 통과시키고 rejected는 필터링 — Faithfulness 개선 목적.
+    // production default false, 측정/실험 단계에서만 true. Step C 종합 후 적용 여부 결정.
+    val claimVerifyEnabled: Boolean = false,
 )
