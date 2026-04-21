@@ -45,7 +45,7 @@ app:
           input-per-1k: 0.000150
           output-per-1k: 0.000600
   prompt:
-    review-system: classpath:prompts/review-system-v10.st  # v10: v9 기반 + BeanOutputConverter format 스키마 주입
+    review-system: classpath:prompts/review-system-v11.st  # v11: v10 기반 + Faithfulness 개선 (C-1 Method 1 채택, 2026-04-24)
     chat-system: classpath:prompts/chat-system.st
     chat-user: classpath:prompts/chat-user.st
 

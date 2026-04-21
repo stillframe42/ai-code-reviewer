@@ -17,6 +17,8 @@
 | v8 | review-system-v8.st | 2026-04-01 | v7 기반 + Tool Calling 사용 지침 추가 (diff 외부 타입 참조 시 도구 호출 명시) |
 | v9 | review-system-v9.st | 2026-04-15 | v8 기반 + RAG 컨벤션 컨텍스트 주입 (`{convention_section}`) |
 | v10 | review-system-v10.st | 2026-04-14 | v9 기반 + BeanOutputConverter format 스키마 주입 (`{format}`) |
+| **v11 (활성)** | review-system-v11.st | 2026-04-24 | v10 기반 + Faithfulness 개선 Method 1: 컨벤션 외 주장 자제 명시 — **C-1 채택, production 적용** |
+| v12 (미채택) | review-system-v12.st | 2026-04-24 | v11 기반 + Faithfulness 개선 Method 2: CoT (issue.reasoning) — **C-1 미채택** |
 
 ## 버전 전환 방법
 
@@ -30,7 +32,42 @@ app:
     # review-system: classpath:prompts/review-system-v3.st  # v3 (기본)
 ```
 
+## 다음 버전 작성 가이드
+
+새 프롬프트(v13 이상)를 만들 때는 **현재 활성(production) 버전을 베이스로 분기**한다.
+
+- **현재 활성: v11** (`review-system-v11.st`)
+- v12는 C-1 Method 2 실험으로 만들었으나 채택되지 않음 — **v12를 베이스로 사용 금지** (CoT 단계가 production에 적용되지 않으므로 후속 버전이 v12를 상속하면 의도치 않은 reasoning 강제가 따라옴)
+- C-2 Few-shot 등 후속 변형은 v11.st의 내용을 복사하여 시작
+
 ## 변경 이력
+
+### v12 (2026-04-24) — **C-1 미채택**
+
+- **변경 이유**: C-1 Method 2 실험 — CoT로 issue 도출 reasoning을 강제하여 환각 감소 + 추론 투명성 확보
+- **주요 변경**:
+  - v11을 베이스로 유지
+  - "추론 단계 (Chain-of-Thought)" 섹션 추가 — issue.reasoning에 ① 컨벤션 인용 ② 충돌 매칭 ③ 개선 방법 3단계
+  - `CodeIssue` 도메인 모델에 옵셔널 `reasoning: String?` 필드 추가 (다른 버전에서는 null)
+- **C-1 측정 결과** (sweep-results/c1-method2-result.json):
+  - Faithfulness 0.050 (Method 1과 동일), Precision 0.290 (Method 1 대비 -0.080), Relevancy 0.690 (-0.020)
+  - reasoning 작성 토큰이 issue 본문 품질을 일부 희석 — Method 1보다 모든 면에서 열등
+- **결론**: 미채택. 후속 버전 작성 시 v12를 베이스로 사용 금지 — 항상 현재 활성(v11)에서 분기.
+  CodeIssue.reasoning 필드는 옵셔널 null로 호환 보존 (향후 다른 활용 여지)
+
+### v11 (2026-04-24) — **C-1 채택, production 적용**
+
+- **변경 이유**: 베이스라인 측정에서 Faithfulness 0.000 (컨벤션에 근거하지 않은 환각성 주장 다수). 명시적 제약으로 환각률 감소 시도 (C-1 Method 1)
+- **주요 변경**:
+  - v10을 베이스로 유지
+  - 원칙 6번 추가: "[참고 컨벤션 문서]가 제공된 경우, 그 안에서 근거를 찾을 수 없는 주장은 하지 마십시오. 컨벤션이 다루지 않는 영역은 일반 원칙으로 짧게 언급하되 단정적이지 않게 표현합니다."
+- **C-1 측정 결과** (sweep-results/c1-method1-result.json, 4차 baseline 대비):
+  - Faithfulness 0.000 → 0.050 (+0.050)
+  - Precision 0.250 → 0.370 (+0.120)
+  - Recall 0.425 → 0.400 (-0.025, 환각 자제로 정답 일부도 차단)
+  - Relevancy 0.670 → 0.710 (+0.040)
+  - 추가 비용 0 (프롬프트 1줄 추가)
+- **결론**: 채택. application-ai.yml의 `app.prompt.review-system`을 v11로 전환 (2026-04-24).
 
 ### v10 (2026-04-14)
 
