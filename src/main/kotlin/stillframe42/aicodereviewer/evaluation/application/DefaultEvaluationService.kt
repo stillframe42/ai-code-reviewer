@@ -19,13 +19,24 @@ class DefaultEvaluationService(
     private val reviewUseCase: ReviewUseCase,
 ) : EvaluationUseCase, Logging {
 
-    override suspend fun evaluateAll(cases: List<GoldenCase>): List<EvaluationResult> =
+    override suspend fun evaluateAll(
+        cases: List<GoldenCase>,
+        topK: Int,
+        threshold: Double,
+    ): List<EvaluationResult> =
         cases.mapIndexed { index, case ->
-            logger.info("평가 진행: [{}/{}] {}", index + 1, cases.size, case.id)
-            evaluateCase(case)
+            logger.info(
+                "평가 진행: [{}/{}] {} (topK={}, threshold={})",
+                index + 1, cases.size, case.id, topK, threshold,
+            )
+            evaluateCase(case, topK, threshold)
         }
 
-    private suspend fun evaluateCase(case: GoldenCase): EvaluationResult {
+    private suspend fun evaluateCase(
+        case: GoldenCase,
+        topK: Int,
+        threshold: Double,
+    ): EvaluationResult {
         return runCatching {
             // 1. patch 파일 로드
             val patchContent = javaClass.classLoader
@@ -38,7 +49,12 @@ class DefaultEvaluationService(
             val category = FileCategoryMapper.selectCategory(fileName)
 
             // 3. 컨벤션 검색 — 프로덕션(ConventionContextService)과 동일하게 파일명을 쿼리로 사용
-            val retrievedDocs = hybridSearchService.search(fileName, topK = 5, category = category)
+            val retrievedDocs = hybridSearchService.search(
+                query = fileName,
+                topK = topK,
+                category = category,
+                threshold = threshold,
+            )
 
             // 4. 코드 리뷰 생성
             val codeReview = reviewUseCase.reviewCode(patchContent, AiProvider.ANTHROPIC)
@@ -56,7 +72,15 @@ class DefaultEvaluationService(
                 ragEvaluationPort.evaluateAnswerRelevancy(patchContent, case.expectedIssues, generatedReviewText),
             )
 
-            EvaluationResult(caseId = case.id, scores = scores, executedAt = Instant.now())
+            // 7. 컨텍스트 토큰 추정 — 검색된 doc들의 text 길이 합 / 4
+            val tokenEstimate = retrievedDocs.sumOf { (it.text?.length ?: 0) } / 4
+
+            EvaluationResult(
+                caseId = case.id,
+                scores = scores,
+                executedAt = Instant.now(),
+                contextTokenEstimate = tokenEstimate,
+            )
         }.getOrElse { e ->
             logger.error("평가 실패: caseId={}, error={}", case.id, e.message, e)
             EvaluationResult(
