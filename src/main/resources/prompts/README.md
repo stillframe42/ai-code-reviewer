@@ -17,8 +17,9 @@
 | v8 | review-system-v8.st | 2026-04-01 | v7 기반 + Tool Calling 사용 지침 추가 (diff 외부 타입 참조 시 도구 호출 명시) |
 | v9 | review-system-v9.st | 2026-04-15 | v8 기반 + RAG 컨벤션 컨텍스트 주입 (`{convention_section}`) |
 | v10 | review-system-v10.st | 2026-04-14 | v9 기반 + BeanOutputConverter format 스키마 주입 (`{format}`) |
-| **v11 (활성)** | review-system-v11.st | 2026-04-24 | v10 기반 + Faithfulness 개선 Method 1: 컨벤션 외 주장 자제 명시 — **C-1 채택, production 적용** |
+| v11 | review-system-v11.st | 2026-04-24 | v10 기반 + Faithfulness 개선 Method 1: 컨벤션 외 주장 자제 명시 — C-1 채택 |
 | v12 (미채택) | review-system-v12.st | 2026-04-24 | v11 기반 + Faithfulness 개선 Method 2: CoT (issue.reasoning) — **C-1 미채택** |
+| **v13 (활성)** | review-system-v13.st | 2026-04-24 | v11 기반 + Few-shot 예시 3개 (SEC-002·ARCH-001·STYLE-001) — **C-2 채택, production 적용** |
 
 ## 버전 전환 방법
 
@@ -34,13 +35,29 @@ app:
 
 ## 다음 버전 작성 가이드
 
-새 프롬프트(v13 이상)를 만들 때는 **현재 활성(production) 버전을 베이스로 분기**한다.
+새 프롬프트를 만들 때는 **현재 활성(production) 버전을 베이스로 분기**한다.
 
-- **현재 활성: v11** (`review-system-v11.st`)
+- **현재 활성: v13** (`review-system-v13.st`) — C-2 Few-shot 채택본 (v11 + 3개 예시)
 - v12는 C-1 Method 2 실험으로 만들었으나 채택되지 않음 — **v12를 베이스로 사용 금지** (CoT 단계가 production에 적용되지 않으므로 후속 버전이 v12를 상속하면 의도치 않은 reasoning 강제가 따라옴)
-- C-2 Few-shot 등 후속 변형은 v11.st의 내용을 복사하여 시작
+- 향후 v14 등 신규 변형은 v13.st를 베이스로 분기
 
 ## 변경 이력
+
+### v13 (2026-04-24) — **C-2 채택, production 적용**
+
+- **변경 이유**: C-2 Few-shot — Answer Relevancy 추가 개선을 위해 4차 baseline + C-1 측정 결과 중 (Faithfulness + Relevancy)/2 상위 케이스를 카테고리별로 1개씩 선별하여 예시로 추가
+- **베이스**: v11 (C-1 채택본)
+- **주요 변경**:
+  - "[좋은 리뷰 예시]" 섹션 추가 (3개 케이스: SEC-002 평문 비밀번호, ARCH-001 N+1 쿼리, STYLE-001 장함수 SRP)
+  - 각 예시는 입력 발췌(5-10줄) + 좋은 응답의 핵심 issue 1건 (description·suggestion 포함)
+  - 토큰 추가: 시스템 프롬프트 ~400-500 토큰 증가 (매 요청)
+- **C-2 측정 결과** (sweep-results/few-shot-result.json, v11 대비):
+  - Faithfulness 0.050 (변화 없음 — 평가 LLM 한계)
+  - Precision 0.370 → 0.400 (+0.030)
+  - Recall 0.400 (변화 없음)
+  - Relevancy 0.710 → 0.770 (+0.060)
+  - 카테고리별 Relevancy: SEC +0.040, **ARCH +0.220 (큰 개선)**, STYLE -0.020, API ±0
+- **결론**: 채택. application-ai.yml의 `app.prompt.review-system`을 v13으로 전환 (2026-04-24).
 
 ### v12 (2026-04-24) — **C-1 미채택**
 
