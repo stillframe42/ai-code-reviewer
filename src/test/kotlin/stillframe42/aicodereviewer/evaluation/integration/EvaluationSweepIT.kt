@@ -156,4 +156,23 @@ class EvaluationSweepIT {
         check(cases.size == 20) { "골든 데이터셋 케이스가 20개여야 합니다 (실제: ${cases.size})" }
         println("[Sweep] 인덱싱 + 골든 데이터셋 ${cases.size}개 로드 확인")
     }
+
+    // B-1: TopK Sweep — TopK ∈ {3, 5, 7}, threshold=0.0 고정
+    // 비용/시간: ~24분, ~$3-6 (3회 × 8분, $1-2)
+    @Test
+    fun `B-1 TopK Sweep`() = runBlocking {
+        conventionIndexUseCase.reindex()
+        val cases = loadGoldenCases()
+
+        listOf(3, 5, 7).forEach { topK ->
+            println("\n=== TopK Sweep: topK=$topK ===")
+            val results = evaluationUseCase.evaluateAll(cases, topK = topK, threshold = 0.0)
+            writeRunResult(
+                sweepFile = "topk-sweep.json",
+                runLabel = "topK=$topK",
+                params = mapOf("topK" to topK, "threshold" to 0.0),
+                results = results,
+            )
+        }
+    }
 }
