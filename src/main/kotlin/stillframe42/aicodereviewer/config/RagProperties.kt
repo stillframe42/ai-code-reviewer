@@ -14,4 +14,7 @@ data class RagProperties(
     // RRF 혼합 검색에서는 후보를 충분히 넓게 수집해야 하므로 0.0(필터링 없음)을 기본값으로 사용한다.
     // 순수 벡터 검색 단독 사용 시에는 호출 지점에서 명시적으로 0.7 등을 전달한다.
     val similarityThreshold: Double = 0.0,
+    // STYLE 카테고리는 범용 룰이라 카테고리 필터링이 검색 풀을 과도하게 좁힘.
+    // 측정/실험 단계에서 활성화하여 효과 검증 후 production 적용 여부 결정 (Phase 4).
+    val styleFilterBypass: Boolean = false,
 )
