@@ -34,8 +34,9 @@ class HybridConventionSearchService(
         query: String,
         topK: Int = 5,
         category: ConventionCategory? = null,
+        threshold: Double = ragProperties.similarityThreshold,
     ): List<Document> {
-        val rawResults = searchRaw(query, topK, category)
+        val rawResults = searchRaw(query, topK, category, threshold)
         if (category == ConventionCategory.ARCH) return rawResults
         return contextCompressor.compress(query, rawResults)
     }
@@ -46,6 +47,7 @@ class HybridConventionSearchService(
         query: String,
         topK: Int = 5,
         category: ConventionCategory? = null,
+        threshold: Double = ragProperties.similarityThreshold,
     ): List<Document> {
         // STYLE 카테고리는 범용 룰이라 필터링이 검색 풀을 과도하게 좁힘 (Step A-4).
         // styleFilterBypass=true 시 STYLE만 카테고리 필터를 우회한다.
@@ -59,6 +61,7 @@ class HybridConventionSearchService(
                 "topK" to topK,
                 "category" to (category?.name ?: "ALL"),
                 "effectiveCategory" to (effectiveCategory?.name ?: "ALL"),
+                "threshold" to threshold,
             ),
         )
         return try {
@@ -66,7 +69,7 @@ class HybridConventionSearchService(
 
             // ConventionVectorPort.search()는 suspend가 아닌 블로킹 함수 — IO 스레드풀에서 실행
             val vectorResults = withContext(Dispatchers.IO) {
-                vectorPort.search(query, candidateSize, effectiveCategory, ragProperties.similarityThreshold)
+                vectorPort.search(query, candidateSize, effectiveCategory, threshold)
             }
             // 벡터·키워드 동일한 effectiveCategory 범위로 검색하여 RRF 결과의 카테고리 일관성 보장
             val keywordResults = keywordPort.search(query, candidateSize, effectiveCategory)
