@@ -27,7 +27,8 @@ class ConventionContextService(
             },
         ) {
             val category = filePath?.let { FileCategoryMapper.selectCategory(it) }
-            val docs = hybridSearchService.search(query, topK = 5, category = category)
+            // topK·threshold는 RagProperties default(B-1·B-2 sweep 결과 채택값) 사용
+            val docs = hybridSearchService.search(query, category = category)
             if (docs.isEmpty()) "" else docs.joinToString("\n\n---\n\n") { it.text ?: "" }
         }
     }

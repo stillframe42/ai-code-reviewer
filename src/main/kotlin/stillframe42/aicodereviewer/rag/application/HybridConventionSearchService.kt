@@ -34,7 +34,7 @@ class HybridConventionSearchService(
     // 다른 카테고리(API/SECURITY/STYLE)는 압축 유지 — 토큰 절감 효과 유지.
     suspend fun search(
         query: String,
-        topK: Int = 5,
+        topK: Int = ragProperties.topK,
         category: ConventionCategory? = null,
         threshold: Double = ragProperties.similarityThreshold,
     ): List<Document> {
@@ -54,7 +54,7 @@ class HybridConventionSearchService(
     // Phase 4 압축 전/후 비교 측정용 — 프로덕션 코드는 search()를 사용한다.
     suspend fun searchRaw(
         query: String,
-        topK: Int = 5,
+        topK: Int = ragProperties.topK,
         category: ConventionCategory? = null,
         threshold: Double = ragProperties.similarityThreshold,
     ): List<Document> {
