@@ -38,6 +38,9 @@ class EvaluationSweepIT {
         val postgres: PostgreSQLContainer = AbstractIntegrationTest.postgres
         val redis: GenericContainer<*> = AbstractIntegrationTest.redis
 
+        // B-1 결과 (sweep-results/topk-decision.md): R+P 합 최댓값(0.775) + 토큰 절감(355)
+        const val OPTIMAL_TOPK_FROM_B1 = 3
+
         @JvmStatic
         @DynamicPropertySource
         fun overrideProperties(registry: DynamicPropertyRegistry) {
@@ -171,6 +174,29 @@ class EvaluationSweepIT {
                 sweepFile = "topk-sweep.json",
                 runLabel = "topK=$topK",
                 params = mapOf("topK" to topK, "threshold" to 0.0),
+                results = results,
+            )
+        }
+    }
+
+    // B-2: Threshold Sweep — Threshold ∈ {0.5, 0.6, 0.7, 0.8}, TopK=3 고정 (B-1 결정값)
+    // 비용/시간: ~32분, ~$4-8 (4회 × 8분, $1-2)
+    @Test
+    fun `B-2 Threshold Sweep`() = runBlocking {
+        conventionIndexUseCase.reindex()
+        val cases = loadGoldenCases()
+
+        listOf(0.5, 0.6, 0.7, 0.8).forEach { threshold ->
+            println("\n=== Threshold Sweep: threshold=$threshold (topK=$OPTIMAL_TOPK_FROM_B1) ===")
+            val results = evaluationUseCase.evaluateAll(
+                cases,
+                topK = OPTIMAL_TOPK_FROM_B1,
+                threshold = threshold,
+            )
+            writeRunResult(
+                sweepFile = "threshold-sweep.json",
+                runLabel = "threshold=$threshold",
+                params = mapOf("topK" to OPTIMAL_TOPK_FROM_B1, "threshold" to threshold),
                 results = results,
             )
         }
