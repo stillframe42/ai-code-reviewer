@@ -139,16 +139,31 @@ class SpringAiEvaluationAdapter(
         }
     }
 
-    // LLM 응답에서 JSON 객체를 추출 — 코드 펜스, 앞뒤 텍스트 제거
-    private fun extractJson(raw: String): String {
-        val stripped = raw
-            .replace(Regex("```json\\s*"), "")
-            .replace(Regex("```\\s*"), "")
-            .trim()
-        // 첫 번째 { 부터 마지막 } 까지 추출
-        val start = stripped.indexOf('{')
-        val end = stripped.lastIndexOf('}')
-        if (start < 0 || end < 0 || end <= start) return stripped
-        return stripped.substring(start, end + 1)
+    companion object {
+        // LLM 응답에서 JSON 객체를 추출 — 코드 펜스/앞뒤 텍스트 제거 + bracket counter로
+        // 한국어 문장 안의 중괄호도 안전하게 처리한다.
+        // 인스턴스 상태에 의존하지 않으므로 companion object로 노출 (단위 테스트 용이).
+        internal fun extractJson(raw: String): String {
+            val stripped = raw.replace(Regex("```(json)?\\s*"), "").trim()
+            val start = stripped.indexOf('{')
+            if (start < 0) return stripped
+            var depth = 0
+            var inString = false
+            var escape = false
+            for (i in start until stripped.length) {
+                val c = stripped[i]
+                when {
+                    escape -> escape = false
+                    c == '\\' && inString -> escape = true
+                    c == '"' -> inString = !inString
+                    !inString && c == '{' -> depth++
+                    !inString && c == '}' -> {
+                        depth--
+                        if (depth == 0) return stripped.substring(start, i + 1)
+                    }
+                }
+            }
+            return stripped.substring(start)
+        }
     }
 }

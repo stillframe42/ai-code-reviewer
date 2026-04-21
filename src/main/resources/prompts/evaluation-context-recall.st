@@ -11,4 +11,4 @@
 {documents}
 
 응답 형식 (JSON만 출력, 다른 텍스트 금지):
-{"score": 0.0~1.0, "reason": "평가 요약", "details": {"covered_issues": ["커버된 이슈"], "missed_issues": ["누락된 이슈"]}}
+{"score": 0.0~1.0, "reason": "평가 요약"}

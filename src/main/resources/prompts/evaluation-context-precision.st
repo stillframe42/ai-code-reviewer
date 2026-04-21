@@ -15,4 +15,4 @@
 {documents}
 
 응답 형식 (JSON만 출력, 다른 텍스트 금지):
-{"score": 0.0~1.0, "reason": "평가 요약", "details": {"relevant_doc_count": 0, "total_doc_count": 0, "irrelevant_docs": ["불필요한 문서 ID"]}}
+{"score": 0.0~1.0, "reason": "평가 요약"}
