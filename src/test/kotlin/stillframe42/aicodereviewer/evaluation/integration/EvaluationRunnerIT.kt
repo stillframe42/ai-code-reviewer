@@ -45,6 +45,9 @@ class EvaluationRunnerIT {
             registry.add("langfuse.host") { "http://localhost:${wireMock.port()}" }
             registry.add("spring.data.redis.host") { redis.host }
             registry.add("spring.data.redis.port") { redis.getMappedPort(6379).toString() }
+            // STYLE 카테고리 필터 우회 — 측정마다 명시적으로 토글 (default false 보존)
+            // 4차 baseline 이후 측정에서 STEP_A_STYLE_BYPASS=true로 켜고 측정한다.
+            registry.add("app.rag.style-filter-bypass") { System.getenv("STEP_A_STYLE_BYPASS") ?: "false" }
             // spring.ai.*.base-url 미설정 → 실제 API 엔드포인트 사용
             val secrets = readSecrets()
             secrets["openai"]?.let { key ->
