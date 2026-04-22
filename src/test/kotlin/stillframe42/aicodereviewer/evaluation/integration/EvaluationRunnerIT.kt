@@ -97,7 +97,8 @@ class EvaluationRunnerIT {
         val root = objectMapper.readTree(json)
         val cases: List<GoldenCase> = objectMapper.readValue(root["cases"].toString())
 
-        val results = evaluationUseCase.evaluateAll(cases)
+        // B2-2: production RagProperties default와 동일한 값을 명시 전달 (interface default 제거 후)
+        val results = evaluationUseCase.evaluateAll(cases, topK = 3, threshold = 0.7)
 
         assertThat(results).hasSize(20)
 
