@@ -19,15 +19,11 @@ import stillframe42.aicodereviewer.integration.AbstractIntegrationTest
 import java.io.File
 import java.time.Instant
 
-// Sub-plan A: GT 10 case로 evaluator 단계별 측정.
-// 단계는 환경변수로 결정:
-//  - 단계 1 (Few-shot mini): EVAL_FAITHFULNESS_FEWSHOT=true
-//  - 단계 2 (gpt-4o):       APP_RAG_EVALUATION_MODEL=gpt-4o
-//  - 단계 3 (둘 다):         두 환경변수 모두 set
-//  - baseline (단계 표시):  둘 다 unset
-//
-// 결과는 plans/202604-3w/sweep-results/evaluator-calibration-<stage>.json에 저장.
-// success criteria: GOOD avg ≥ 0.7, HALL avg ≤ 0.3, gap ≥ 0.4.
+// GT 10 case (GOOD 5 + HALL 5) 로 Faithfulness 평가기 변형별 측정.
+// 환경변수로 variant 선택: EVAL_FAITHFULNESS_PROMPT=d-v1|d-v2|d-v3|fewshot|baseline,
+// APP_RAG_EVALUATION_MODEL=gpt-4o-mini|gpt-4o.
+// 결과: plans/202604-3w/sweep-results/evaluator-calibration-<stage>.json
+// success criteria: goodAvg ≥ 0.7, hallAvg ≤ 0.3, gap ≥ 0.4.
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("integration-test")
 @EnabledIfEnvironmentVariable(named = "EVAL_MANUAL_TEST", matches = "true")

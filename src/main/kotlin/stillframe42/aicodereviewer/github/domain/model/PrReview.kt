@@ -12,7 +12,7 @@ data class PrReview(
 // GitHub PR Review 이벤트 타입
 enum class PrReviewEvent { COMMENT, APPROVE, REQUEST_CHANGES }
 
-// 인라인 라인 코멘트 도메인 모델 — Phase 2에서 CodeIssue로부터 매핑된다
+// 인라인 라인 코멘트 도메인 모델 — CodeIssue로부터 매핑된다
 data class PrReviewLineComment(
     val path: String,
     val position: Int,  // diff position (1-based, hunk 내 순서)

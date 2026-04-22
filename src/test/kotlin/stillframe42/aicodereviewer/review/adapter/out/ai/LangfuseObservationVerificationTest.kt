@@ -14,8 +14,8 @@ import stillframe42.aicodereviewer.integration.support.WireMockStubs
 import stillframe42.aicodereviewer.review.domain.model.ReviewContext
 import stillframe42.aicodereviewer.review.domain.model.ReviewMode
 
-// Phase 3 추적 항목 통합 검증 — Langfuse로 전송되는 페이로드를 WireMock으로 캡처해 검증
-// langfuse.enabled=true로 오버라이드하여 LangfuseObservationHandler + LangfuseToolSpanAdapter 활성화
+// Langfuse 추적 항목 통합 검증 — WireMock 으로 페이로드 캡처해 검증.
+// langfuse.enabled=true 오버라이드로 LangfuseObservationHandler + LangfuseToolSpanAdapter 활성화.
 @TestPropertySource(properties = ["langfuse.enabled=true"])
 class LangfuseObservationVerificationTest : AbstractIntegrationTest() {
 

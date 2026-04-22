@@ -23,7 +23,7 @@ import stillframe42.aicodereviewer.rag.domain.port.`in`.ConventionIndexUseCase
 import java.io.File
 import java.time.Instant
 
-// C-1 Method 1: 프롬프트 명시적 제약 (review-system-v11) 측정
+// v11 프롬프트 명시적 제약 측정
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("integration-test")
 @TestPropertySource(properties = ["app.prompt.review-system=classpath:prompts/review-system-v11.st"])

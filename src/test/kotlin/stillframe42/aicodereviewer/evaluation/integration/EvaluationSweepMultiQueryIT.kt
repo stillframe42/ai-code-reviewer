@@ -34,7 +34,7 @@ class EvaluationSweepMultiQueryIT {
         val postgres: PostgreSQLContainer = AbstractIntegrationTest.postgres
         val redis: GenericContainer<*> = AbstractIntegrationTest.redis
 
-        // B-1·B-2 결정값
+        // sweep 채택값 (topK/threshold)
         const val OPTIMAL_TOPK = 3
         const val OPTIMAL_THRESHOLD = 0.7
 
@@ -48,7 +48,7 @@ class EvaluationSweepMultiQueryIT {
             registry.add("langfuse.host") { "http://localhost:${wireMock.port()}" }
             registry.add("spring.data.redis.host") { redis.host }
             registry.add("spring.data.redis.port") { redis.getMappedPort(6379).toString() }
-            // 4차 baseline + Step B와 동일 환경 + Multi-query 활성화
+            // Multi-query 활성화 + STYLE 카테고리 필터 우회
             registry.add("app.rag.style-filter-bypass") { "true" }
             registry.add("app.rag.multi-query-enabled") { "true" }
             // spring.ai.*.base-url 미설정 → 실제 API 엔드포인트 사용

@@ -24,7 +24,7 @@ import stillframe42.aicodereviewer.rag.domain.port.`in`.ConventionIndexUseCase
 import stillframe42.aicodereviewer.rag.domain.service.FileCategoryMapper
 import stillframe42.aicodereviewer.rag.measureChunks
 
-// RAG 컨텍스트 압축 전/후 비교 측정 — Phase 4
+// RAG 컨텍스트 압축 전/후 비교 측정
 // 일반 빌드에서는 자동 스킵. 수동 실행:
 //   RAG_MANUAL_TEST=true ./gradlew test --tests "*RagContextCompressionComparisonIT*"
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)

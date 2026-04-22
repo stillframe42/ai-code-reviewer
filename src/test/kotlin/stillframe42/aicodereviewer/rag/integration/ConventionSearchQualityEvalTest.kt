@@ -206,7 +206,7 @@ class ConventionSearchQualityEvalTest : Logging {
                 appendLine()
             }
 
-            // Phase 3: 미흡 케이스 분석 (5점 이하)
+            // 미흡 케이스 분석 (5점 이하)
             if (lowScoreResults.isNotEmpty()) {
                 appendLine("## Phase 3: 미흡 케이스 분석 (5점 이하)")
                 appendLine()

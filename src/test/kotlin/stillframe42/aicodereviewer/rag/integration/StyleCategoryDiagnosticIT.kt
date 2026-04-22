@@ -13,13 +13,12 @@ import stillframe42.aicodereviewer.rag.domain.model.ConventionCategory
 import stillframe42.aicodereviewer.rag.domain.port.`in`.ConventionIndexUseCase
 import stillframe42.aicodereviewer.rag.domain.port.out.ConventionVectorPort
 
-// STYLE 카테고리 검색이 5/5 실패하는 원인을 진단한다 (Step A-3).
-// SQL로 청크 분포·내용을 확인하고, 실제 검색 결과에서 매칭되는 청크와 유사도를 출력.
-// 결과는 stdout에 표시되며 사람이 분석하여 A-4(styleFilterBypass) 적용 여부를 결정한다.
+// STYLE 카테고리 검색 실패 원인 진단 — SQL 로 청크 분포·내용 확인 + 검색 결과의 매칭 청크·유사도 출력.
+// 결과는 stdout 으로 나오며 사람 분석용이다 (styleFilterBypass 적용 여부 판단 참고).
 //
-// 제한 사항: AbstractIntegrationTest가 OpenAI /v1/embeddings를 WireMock으로 stub하고
-// 모든 임베딩을 동일한 0.1f 벡터로 반환하므로, part (3) 벡터 검색의 "의미적 유사도"는
-// 실제 환경과 다르다. Part (1)·(2) 메타데이터·청크 분포는 실제 인덱싱 결과이므로 의미 있음.
+// 제한: AbstractIntegrationTest 가 OpenAI /v1/embeddings 를 WireMock 으로 stub 하고 모든 임베딩을 동일한
+// 0.1f 벡터로 반환하므로 part (3) 벡터 검색의 "의미적 유사도" 는 실제 환경과 다르다. Part (1)·(2) 메타데이터·
+// 청크 분포는 실제 인덱싱 결과이므로 의미 있음.
 class StyleCategoryDiagnosticIT : AbstractIntegrationTest() {
 
     @Autowired
@@ -51,7 +50,7 @@ class StyleCategoryDiagnosticIT : AbstractIntegrationTest() {
         conventionIndexUseCase.reindex()
 
         println("\n${"=".repeat(80)}")
-        println("STYLE 카테고리 검색 진단 (Step A-3)")
+        println("STYLE 카테고리 검색 진단")
         println("=".repeat(80))
 
         // (1) 카테고리별 청크 분포

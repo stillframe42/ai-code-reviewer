@@ -22,7 +22,7 @@ import stillframe42.aicodereviewer.rag.domain.port.`in`.ConventionIndexUseCase
 import java.io.File
 import java.time.Instant
 
-// C-1 Method 3: ClaimVerifier 사후 검증 (review-system-v10 default + claimVerifyEnabled=true) 측정
+// ClaimVerifier 사후 검증 (v10 default + claimVerifyEnabled=true) 측정
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("integration-test")
 @EnabledIfEnvironmentVariable(named = "EVAL_MANUAL_TEST", matches = "true")
@@ -44,7 +44,7 @@ class EvaluationSweepC1Method3IT {
             registry.add("spring.data.redis.host") { redis.host }
             registry.add("spring.data.redis.port") { redis.getMappedPort(6379).toString() }
             registry.add("app.rag.style-filter-bypass") { "true" }
-            // C-1 Method 3: ClaimVerifier 활성화
+            // ClaimVerifier 활성화
             registry.add("app.rag.claim-verify-enabled") { "true" }
 
             val secrets = readSecrets()

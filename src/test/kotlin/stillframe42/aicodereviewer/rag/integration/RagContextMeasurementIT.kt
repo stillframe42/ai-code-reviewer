@@ -24,7 +24,7 @@ import stillframe42.aicodereviewer.rag.domain.port.`in`.ConventionIndexUseCase
 import stillframe42.aicodereviewer.rag.domain.service.FileCategoryMapper
 import stillframe42.aicodereviewer.rag.measureChunks
 
-// RAG 컨텍스트 베이스라인 측정 — 컨텍스트 압축(tasks_20260416.md Phase 2~5) 전 baseline 수집
+// RAG 컨텍스트 베이스라인 측정 — 컨텍스트 압축 전 baseline 수집
 // 일반 빌드에서는 자동 스킵. 수동 실행:
 //   RAG_MANUAL_TEST=true ./gradlew test --tests "*RagContextMeasurementIT*"
 // 공통 측정 인프라(SAMPLE_QUERIES, measureChunks 등)는 RagMeasurementSupport.kt에 정의

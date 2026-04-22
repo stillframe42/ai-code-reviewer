@@ -18,9 +18,8 @@ import stillframe42.aicodereviewer.rag.domain.model.ConventionCategory
 import stillframe42.aicodereviewer.rag.domain.port.`in`.ConventionIndexUseCase
 import stillframe42.aicodereviewer.rag.domain.service.FileCategoryMapper
 
-// Phase 3: 의도된 위반 fixture의 파일 경로가 FileCategoryMapper에 의해
-// 예상 카테고리로 매핑되고, HybridConventionSearchService.searchRaw 결과가
-// 모두 해당 카테고리에서 반환되는지 검증한다.
+// 의도된 위반 fixture 의 파일 경로가 FileCategoryMapper 로 예상 카테고리에 매핑되고,
+// HybridConventionSearchService.searchRaw 결과가 모두 해당 카테고리에서 반환되는지 검증.
 // - 압축 우회 경로(searchRaw)만 테스트한다 (검색 품질 자체 검증이 목적).
 // - RRF 병합 결과를 디버깅용으로 로그 출력한다.
 class HybridConventionSearchCategoryAssertionIT : AbstractIntegrationTest() {

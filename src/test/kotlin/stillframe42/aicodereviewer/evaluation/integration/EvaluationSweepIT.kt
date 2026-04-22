@@ -22,12 +22,10 @@ import stillframe42.aicodereviewer.rag.domain.port.`in`.ConventionIndexUseCase
 import java.io.File
 import java.time.Instant
 
-// Step B/C 검색·생성 sweep 측정 — 실제 API 호출 (비용/시간 큼)
+// TopK / Threshold sweep 측정 — 실 API 호출 (비용·시간 큼)
 // EVAL_MANUAL_TEST=true ./gradlew test --tests "*EvaluationSweepIT*"
-//
-// 결과는 plans/202604-3w/sweep-results/*.json에 incremental write로 누적됨.
-// 실 API 사용을 위해 spring.ai.*.base-url을 오버라이드하지 않는다 (EvaluationRunnerIT와 동일).
-// styleFilterBypass=true 고정 — 4차 baseline과 동일 측정 환경.
+// 결과는 plans/202604-3w/sweep-results/*.json 에 incremental write.
+// styleFilterBypass=true 고정 — STYLE 신호 확보용.
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("integration-test")
 @EnabledIfEnvironmentVariable(named = "EVAL_MANUAL_TEST", matches = "true")
@@ -38,7 +36,7 @@ class EvaluationSweepIT {
         val postgres: PostgreSQLContainer = AbstractIntegrationTest.postgres
         val redis: GenericContainer<*> = AbstractIntegrationTest.redis
 
-        // B-1 결과 (sweep-results/topk-decision.md): R+P 합 최댓값(0.775) + 토큰 절감(355)
+        // TopK sweep 결과 채택값 — Threshold sweep 에서 이 값 고정
         const val OPTIMAL_TOPK_FROM_B1 = 3
 
         @JvmStatic
@@ -51,7 +49,7 @@ class EvaluationSweepIT {
             registry.add("langfuse.host") { "http://localhost:${wireMock.port()}" }
             registry.add("spring.data.redis.host") { redis.host }
             registry.add("spring.data.redis.port") { redis.getMappedPort(6379).toString() }
-            // Step B/C는 4차 baseline과 같은 측정 환경 — STYLE 신호 확보를 위해 bypass=true 고정
+            // STYLE 신호 확보를 위해 카테고리 필터 우회 고정
             registry.add("app.rag.style-filter-bypass") { "true" }
             // spring.ai.*.base-url 미설정 → 실제 API 엔드포인트 사용
 
@@ -160,8 +158,7 @@ class EvaluationSweepIT {
         println("[Sweep] 인덱싱 + 골든 데이터셋 ${cases.size}개 로드 확인")
     }
 
-    // B-1: TopK Sweep — TopK ∈ {3, 5, 7}, threshold=0.0 고정
-    // 비용/시간: ~24분, ~$3-6 (3회 × 8분, $1-2)
+    // TopK Sweep — TopK ∈ {3, 5, 7}, threshold=0.0 고정. 비용/시간: ~24분, ~$3-6.
     @Test
     fun `B-1 TopK Sweep`() = runBlocking {
         conventionIndexUseCase.reindex()
@@ -179,7 +176,7 @@ class EvaluationSweepIT {
         }
     }
 
-    // B-2: Threshold Sweep — Threshold ∈ {0.5, 0.6, 0.7, 0.8}, TopK=3 고정 (B-1 결정값)
+    // Threshold Sweep — Threshold ∈ {0.5, 0.6, 0.7, 0.8}, TopK=OPTIMAL_TOPK_FROM_B1 고정
     // 비용/시간: ~32분, ~$4-8 (4회 × 8분, $1-2)
     @Test
     fun `B-2 Threshold Sweep`() = runBlocking {

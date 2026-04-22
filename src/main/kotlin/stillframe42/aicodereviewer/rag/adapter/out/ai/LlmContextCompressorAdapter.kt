@@ -17,9 +17,8 @@ import stillframe42.aicodereviewer.common.observability.ObservabilityPort
 import stillframe42.aicodereviewer.config.RagCompressionProperties
 import stillframe42.aicodereviewer.rag.domain.port.out.ContextCompressorPort
 
-// gpt-4o-mini 기반 추출 압축 어댑터 — ContextCompressorPort 구현
-// Phase 1 인사이트 반영: 임계값 이하 청크는 LLM 호출 없이 우회
-// per-chunk fail-open: 한 청크 압축 실패 시 해당 청크는 원본 그대로 통과
+// gpt-4o-mini 기반 추출 압축 어댑터 — ContextCompressorPort 구현.
+// 임계값 이하 청크는 LLM 호출 없이 우회. per-chunk fail-open: 한 청크 실패 시 해당 청크만 원본 통과.
 @Component
 class LlmContextCompressorAdapter(
     @param:Qualifier("openAiChatClient") private val chatClient: ChatClient,
@@ -68,7 +67,7 @@ class LlmContextCompressorAdapter(
         val text = doc.text ?: return null
         val tokens = tokenEstimator.estimate(text)
 
-        // 작은 청크는 압축 우회 (Phase 1: 작은 청크 = 단일 토픽 = 노이즈 적음)
+        // 작은 청크는 압축 우회 (단일 토픽으로 노이즈 적음)
         if (tokens <= properties.compressionThresholdTokens) return doc
 
         return runCatching {

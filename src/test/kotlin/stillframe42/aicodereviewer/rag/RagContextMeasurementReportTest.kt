@@ -57,7 +57,7 @@ class RagContextMeasurementReportTest {
 
     @Test
     fun `measureChunks는 빈 docs에 대해 빈 측정 결과를 반환한다`() {
-        // Phase 4 비교 테스트에서 압축 후 모든 청크가 제외되는 케이스를 지원
+        // 압축 후 모든 청크가 제외되는 케이스 지원 (비교 테스트용)
         val query = SampleQuery("test", "Test.kt", "Test.kt", ARCH)
 
         val result = measureChunks(query, emptyList())

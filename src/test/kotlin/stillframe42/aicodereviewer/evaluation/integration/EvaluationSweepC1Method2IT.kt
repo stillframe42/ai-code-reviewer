@@ -23,7 +23,7 @@ import stillframe42.aicodereviewer.rag.domain.port.`in`.ConventionIndexUseCase
 import java.io.File
 import java.time.Instant
 
-// C-1 Method 2: Chain-of-Thought (review-system-v12 + CodeIssue.reasoning) 측정
+// v12 Chain-of-Thought (CodeIssue.reasoning) 측정
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("integration-test")
 @TestPropertySource(properties = ["app.prompt.review-system=classpath:prompts/review-system-v12.st"])

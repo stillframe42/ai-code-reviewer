@@ -24,7 +24,7 @@ class ReviewResultEntity(
     @Column(name = "summary", columnDefinition = "TEXT")
     val summary: String? = null,
 
-    // CodeIssue 목록을 JSON 직렬화하여 저장 — 역직렬화는 Phase 6 어댑터에서 처리
+    // CodeIssue 목록을 JSON 직렬화하여 저장
     @Column(name = "issues_json", columnDefinition = "TEXT")
     val issuesJson: String? = null,
 

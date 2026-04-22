@@ -22,7 +22,7 @@ import stillframe42.aicodereviewer.rag.domain.port.`in`.ConventionIndexUseCase
 import java.io.File
 import java.time.Instant
 
-// Sub-plan B1 — STYLE 5 케이스 전용 escalation sweep.
+// STYLE 5 케이스 전용 escalation sweep.
 // 각 전략 단계별 run 라벨(S0 baseline-rerun, S1 code-body-query, ...)로 incremental write.
 // 실행: EVAL_MANUAL_TEST=true ./gradlew test --tests "*StyleSearchSweepIT*"
 // 결과: plans/202604-3w/sweep-results/style-escalation-sweep.json
@@ -46,7 +46,7 @@ class StyleSearchSweepIT {
             registry.add("langfuse.host") { "http://localhost:${wireMock.port()}" }
             registry.add("spring.data.redis.host") { redis.host }
             registry.add("spring.data.redis.port") { redis.getMappedPort(6379).toString() }
-            // 4차 baseline과 같은 측정 환경 — STYLE 신호 확보를 위해 bypass=true 고정
+            // STYLE 신호 확보를 위해 카테고리 필터 우회 고정 (범용 룰 풀이 과도하게 좁아지는 문제 회피)
             registry.add("app.rag.style-filter-bypass") { "true" }
 
             val secrets = readSecrets()

@@ -107,7 +107,6 @@ class DefaultReviewService(
         reviewMetrics.recordCacheMiss()
         reviewCacheStatsStore.incrementMiss()
         // 캐시 미스 시에만 RAG 호출 (캐시 히트는 이미 컨벤션 컨텍스트가 반영된 결과)
-        // B1 전략 1: 파일명 문자열 대신 patch의 추가 코드 라인을 검색 쿼리로 사용 (STYLE recall 개선 목적)
         val conventionContext = filePath?.let {
             conventionContextService.buildContext(
                 query = patchQueryExtractor.extract(diff, filePath = it),
@@ -116,7 +115,7 @@ class DefaultReviewService(
         }
         val rawReview = aiReviewPort.reviewCode(diff, provider, mode, reviewContext = null, modelName = modelName,
             conventionContext = conventionContext)
-        // C-1 Method 3: claimVerifyEnabled=true 시 컨벤션 컨텍스트 기반으로 issues 사후 검증/필터링
+        // claimVerifyEnabled 시 컨벤션 컨텍스트 기반으로 issues 사후 검증·필터링
         val finalReview = if (ragProperties.claimVerifyEnabled && !conventionContext.isNullOrBlank()) {
             val verifiedIssues = claimVerifier.verify(rawReview.issues, conventionContext)
             rawReview.copy(issues = verifiedIssues)

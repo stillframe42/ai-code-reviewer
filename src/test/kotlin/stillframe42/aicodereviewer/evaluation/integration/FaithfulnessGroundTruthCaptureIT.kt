@@ -22,8 +22,8 @@ import stillframe42.aicodereviewer.rag.domain.service.FileCategoryMapper
 import stillframe42.aicodereviewer.review.domain.port.`in`.ReviewUseCase
 import java.io.File
 
-// Sub-plan A 데이터 캡처 — Few-shot 5 patch + GT 5 patch에 대해 (RAG context + v13 review_text) 추출.
-// 결과는 plans/202604-3w/sweep-results/faithfulness-capture.json에 저장 (이후 task에서 사용).
+// Faithfulness GT 데이터 캡처 — Few-shot 5 patch + GT 5 patch 에서 (RAG context + v13 review_text) 추출.
+// 결과: plans/202604-3w/sweep-results/faithfulness-capture.json
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("integration-test")
 @EnabledIfEnvironmentVariable(named = "EVAL_MANUAL_TEST", matches = "true")

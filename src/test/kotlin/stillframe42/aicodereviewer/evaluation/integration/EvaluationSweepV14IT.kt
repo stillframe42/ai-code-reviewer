@@ -22,8 +22,8 @@ import stillframe42.aicodereviewer.rag.domain.port.`in`.ConventionIndexUseCase
 import java.io.File
 import java.time.Instant
 
-// Sub-plan B2-1 — v14 프롬프트(v13 + API 예시) 전체 20 case 측정.
-// v14 프롬프트 경로는 @DynamicPropertySource로 override (application-ai.yml 변경 없이 테스트).
+// v14 프롬프트 (v13 + API 예시) 전체 20 case 측정.
+// @DynamicPropertySource 로 프롬프트 경로 override — application-ai.yml 변경 없이 테스트.
 // 실행: EVAL_MANUAL_TEST=true ./gradlew test --tests "*EvaluationSweepV14IT*"
 // 결과: plans/202604-3w/sweep-results/v14-result.json
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
@@ -46,7 +46,7 @@ class EvaluationSweepV14IT {
             registry.add("langfuse.host") { "http://localhost:${wireMock.port()}" }
             registry.add("spring.data.redis.host") { redis.host }
             registry.add("spring.data.redis.port") { redis.getMappedPort(6379).toString() }
-            // B2-1 v14 프롬프트 override (production application-ai.yml은 v13 유지)
+            // v14 프롬프트 override (production application-ai.yml은 v13 유지)
             registry.add("app.prompt.review-system") { "classpath:prompts/review-system-v14.st" }
 
             val secrets = readSecrets()

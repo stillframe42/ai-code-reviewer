@@ -76,9 +76,8 @@ private val tokenEstimator: TokenCountEstimator = JTokkitTokenCountEstimator()
 // 텍스트의 토큰 수를 반환 (cl100k_base 기준)
 internal fun countTokens(text: String): Int = tokenEstimator.estimate(text)
 
-// 검색된 Document 리스트로부터 청크별 + 종합 측정값 계산
-// 빈 List는 빈 측정 결과(totalTokens=0, joinedTokens=0)를 반환한다 —
-// Phase 4 비교 테스트에서 압축 후 모든 청크가 제외되는 케이스를 지원하기 위함.
+// 검색된 Document 리스트로부터 청크별 + 종합 측정값 계산.
+// 빈 List 는 빈 측정 결과(totalTokens=0, joinedTokens=0) 반환 — 압축 후 모든 청크 제외 케이스 지원.
 internal fun measureChunks(query: SampleQuery, docs: List<Document>): QueryMeasurement {
     val chunks = docs.mapIndexed { idx, doc ->
         val text = doc.text ?: ""

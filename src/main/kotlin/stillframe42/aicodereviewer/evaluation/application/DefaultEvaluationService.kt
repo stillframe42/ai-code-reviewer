@@ -50,8 +50,7 @@ class DefaultEvaluationService(
             val fileName = extractFileName(patchContent)
             val category = FileCategoryMapper.selectCategory(fileName)
 
-            // 3. 컨벤션 검색 — 프로덕션(DefaultReviewService)과 동일한 PatchQueryExtractor 사용
-            // B1 전략 1: 파일명 대신 patch에 추가된 코드 본문 첫 N줄을 쿼리로 사용
+            // 3. 컨벤션 검색 — 프로덕션(DefaultReviewService)과 동일한 PatchQueryExtractor 로 쿼리 생성 (drift 방지)
             val query = patchQueryExtractor.extract(patchContent, filePath = fileName)
             val retrievedDocs = hybridSearchService.search(
                 query = query,

@@ -41,11 +41,9 @@ class StyleFilterBypassIT : AbstractIntegrationTest() {
     fun `bypass=true 시 STYLE 쿼리 호출이 정상 응답한다`(): Unit = runBlocking {
         conventionIndexUseCase.reindex()
 
-        // bypass=true 분기로 effectiveCategory=null이 되어 카테고리 필터 없이 검색됨.
-        // 의미적 매칭 효과 검증(STYLE 외 카테고리 청크 실제 회수)은 WireMock 임베딩 stub 한계로 불가 —
-        // 모든 임베딩이 동일 벡터(0.1f)라 pgvector가 insertion order로 결과를 결정함.
-        // 실제 효과는 Step A-5 4차 baseline 측정(real OpenAI)에서 검증.
-        // 본 테스트는 코드 경로의 회귀 방지 smoke test 역할.
+        // bypass=true 분기로 effectiveCategory=null 이 되어 카테고리 필터 없이 검색됨.
+        // WireMock 임베딩 stub 한계(모든 임베딩 동일 벡터 0.1f)로 실제 의미 매칭 효과는 검증 불가 —
+        // 본 테스트는 코드 경로의 회귀 방지 smoke test 역할. 실제 효과는 real OpenAI 측정에서 검증.
         val results = hybridSearchService.searchRaw(
             query = "ReportFormatter.kt",
             topK = 10,

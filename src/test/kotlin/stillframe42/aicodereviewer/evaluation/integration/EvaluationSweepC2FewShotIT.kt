@@ -23,7 +23,7 @@ import stillframe42.aicodereviewer.rag.domain.port.`in`.ConventionIndexUseCase
 import java.io.File
 import java.time.Instant
 
-// C-2 Few-shot: review-system-v13 (v11 + 3개 예시) 측정
+// v13 Few-shot (v11 + 3개 예시) 측정
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("integration-test")
 @TestPropertySource(properties = ["app.prompt.review-system=classpath:prompts/review-system-v13.st"])

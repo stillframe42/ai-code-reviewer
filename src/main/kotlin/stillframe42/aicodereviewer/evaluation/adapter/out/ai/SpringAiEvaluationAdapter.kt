@@ -37,8 +37,6 @@ class SpringAiEvaluationAdapter(
         generatedReview: String,
     ): EvaluationScore {
         val contextText = context.joinToString("\n\n---\n\n") { it.text ?: "" }
-        // Sub-plan D: EvaluationProperties.faithfulnessPrompt 경로로 프롬프트 파일 동적 로드.
-        // variant 추가 시 Adapter 코드 변경 없이 application.yml 한 줄만 바꾸면 됨.
         val promptResource = resourceLoader.getResource(evaluationProperties.faithfulnessPrompt)
         val prompt = promptResource.getContentAsString(Charsets.UTF_8)
             .replace("{context}", contextText)
