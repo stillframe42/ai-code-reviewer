@@ -20,6 +20,7 @@
 | v11 | review-system-v11.st | 2026-04-24 | v10 기반 + Faithfulness 개선 Method 1: 컨벤션 외 주장 자제 명시 — C-1 채택 |
 | v12 (미채택) | review-system-v12.st | 2026-04-24 | v11 기반 + Faithfulness 개선 Method 2: CoT (issue.reasoning) — **C-1 미채택** |
 | **v13 (활성)** | review-system-v13.st | 2026-04-24 | v11 기반 + Few-shot 예시 3개 (SEC-002·ARCH-001·STYLE-001) — **C-2 채택, production 적용** |
+| v14 (미채택) | review-system-v14.st | 2026-04-22 | v13 기반 + API 카테고리 Few-shot 예시 1개 (API-002 에러 응답 혼재) — **B2-1 미채택, 인프라 보존** |
 
 ## 버전 전환 방법
 
@@ -42,6 +43,24 @@ app:
 - 향후 v14 등 신규 변형은 v13.st를 베이스로 분기
 
 ## 변경 이력
+
+### v14 (2026-04-22) — **B2-1 미채택, 인프라 보존**
+
+- **변경 이유**: v13 이후 API 카테고리 Relevancy 정체 (0.66) — v13 예시가 SEC·ARCH·STYLE 3개만 포함하여 API 카테고리 few-shot 가이드 부재. v13 측정 중 API-002(inconsistent-error-response)가 가장 높은 품질(Recall 1.0, Relevancy 1.0)을 보여 Few-shot 예시 소재로 선정.
+- **베이스**: v13 (C-2 채택본)
+- **주요 변경**:
+  - "예시 4 — API (에러 응답 형식 혼재)" 섹션 추가
+  - 입력 발췌: API-002 patch의 3가지 ExceptionHandler 구조 (약 22줄)
+  - 좋은 응답: issue 2건 (API 에러 스키마 혼재 + SECURITY stackTrace 노출) — 한 patch에서 복수 카테고리 발견 가능성을 학습시키는 의도
+  - 토큰 추가: 시스템 프롬프트 ~300-400 토큰 증가 (매 요청)
+- **B2-1 측정 결과** (sweep-results/v14-result.json, v13 대비):
+  - Faithfulness 평균: 0.050 → 0.100 (Δ +0.050)
+  - Precision 평균: 0.400 → 0.350 (Δ -0.050)
+  - Recall 평균: 0.400 → 0.350 (Δ -0.050)
+  - Relevancy 평균: 0.770 → 0.775 (Δ +0.005)
+  - 카테고리별 Relevancy: SEC 0.920→0.920 (0), ARCH 0.840→0.800 (-0.040), STYLE 0.660→0.800 (+0.140 — B1 code-body-query production 적용 효과로 추정, v14 본질 효과 아님), **API 0.660→0.580 (-0.080 — 목표와 반대 방향)**
+  - API 케이스별 Relevancy Δ: API-001 +0.3, API-002 0 (예시 소스), API-003 -0.2, API-004 -0.1, API-005 -0.4
+- **결론**: 미채택. API Few-shot 1개 추가가 의도(API Relevancy +)와 반대 효과 (Δ -0.080). API-002 예시가 너무 특정 패턴이라 다른 API 케이스를 "예시 기준과 불일치"로 필터링한 것으로 추정. `review-system-v14.st` 파일은 향후 Few-shot 재실험(다른 API 예시 선정 또는 균형 조정)을 위해 보존. application-ai.yml은 v13 유지.
 
 ### v13 (2026-04-24) — **C-2 채택, production 적용**
 
