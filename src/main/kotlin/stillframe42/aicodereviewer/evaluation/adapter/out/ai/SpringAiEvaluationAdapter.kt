@@ -10,6 +10,7 @@ import org.springframework.ai.openai.OpenAiChatOptions
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.core.io.Resource
+import org.springframework.core.io.ResourceLoader
 import org.springframework.stereotype.Component
 import stillframe42.aicodereviewer.common.Logging
 import stillframe42.aicodereviewer.config.EvaluationProperties
@@ -22,10 +23,7 @@ class SpringAiEvaluationAdapter(
     @param:Qualifier("openAiChatClient") private val chatClient: ChatClient,
     private val evaluationProperties: EvaluationProperties,
     private val objectMapper: ObjectMapper,
-    @param:Value("classpath:prompts/evaluation-faithfulness.st")
-    private val faithfulnessPrompt: Resource,
-    @param:Value("classpath:prompts/evaluation-faithfulness-fewshot.st")
-    private val faithfulnessFewshotPrompt: Resource,
+    private val resourceLoader: ResourceLoader,
     @param:Value("classpath:prompts/evaluation-context-precision.st")
     private val contextPrecisionPrompt: Resource,
     @param:Value("classpath:prompts/evaluation-context-recall.st")
@@ -39,9 +37,9 @@ class SpringAiEvaluationAdapter(
         generatedReview: String,
     ): EvaluationScore {
         val contextText = context.joinToString("\n\n---\n\n") { it.text ?: "" }
-        // Sub-plan A 토글: faithfulnessFewshot=true 시 Few-shot 예시 프롬프트 사용
-        val promptResource = if (evaluationProperties.faithfulnessFewshot) faithfulnessFewshotPrompt
-                             else faithfulnessPrompt
+        // Sub-plan D: EvaluationProperties.faithfulnessPrompt 경로로 프롬프트 파일 동적 로드.
+        // variant 추가 시 Adapter 코드 변경 없이 application.yml 한 줄만 바꾸면 됨.
+        val promptResource = resourceLoader.getResource(evaluationProperties.faithfulnessPrompt)
         val prompt = promptResource.getContentAsString(Charsets.UTF_8)
             .replace("{context}", contextText)
             .replace("{review}", generatedReview)

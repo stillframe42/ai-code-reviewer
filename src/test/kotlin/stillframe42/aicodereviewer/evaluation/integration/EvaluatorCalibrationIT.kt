@@ -49,8 +49,16 @@ class EvaluatorCalibrationIT {
             registry.add("spring.data.redis.host") { redis.host }
             registry.add("spring.data.redis.port") { redis.getMappedPort(6379).toString() }
             // 환경변수 → property 명시적 매핑
-            registry.add("app.rag.evaluation.faithfulness-fewshot") {
-                System.getenv("EVAL_FAITHFULNESS_FEWSHOT") ?: "false"
+            // D: EVAL_FAITHFULNESS_PROMPT 로 프롬프트 variant 선택
+            // 값: d-v1|d-v2|d-v3|fewshot|baseline (기본 baseline = 원본 프롬프트)
+            registry.add("app.rag.evaluation.faithfulness-prompt") {
+                when (System.getenv("EVAL_FAITHFULNESS_PROMPT")) {
+                    "d-v1" -> "classpath:prompts/evaluation-faithfulness-d-v1.st"
+                    "d-v2" -> "classpath:prompts/evaluation-faithfulness-d-v2.st"
+                    "d-v3" -> "classpath:prompts/evaluation-faithfulness-d-v3.st"
+                    "fewshot" -> "classpath:prompts/evaluation-faithfulness-fewshot.st"
+                    else -> "classpath:prompts/evaluation-faithfulness.st"
+                }
             }
             registry.add("app.rag.evaluation.model") {
                 System.getenv("APP_RAG_EVALUATION_MODEL") ?: "gpt-4o-mini"
@@ -155,12 +163,15 @@ class EvaluatorCalibrationIT {
 
     // 환경변수로 단계 식별 (파일명용)
     private fun inferStage(): String {
-        val fewshot = (System.getenv("EVAL_FAITHFULNESS_FEWSHOT") ?: "false").toBoolean()
+        val prompt = System.getenv("EVAL_FAITHFULNESS_PROMPT") ?: "baseline"
         val model = System.getenv("APP_RAG_EVALUATION_MODEL") ?: "gpt-4o-mini"
         return when {
-            fewshot && model == "gpt-4o-mini" -> "stage1"
-            !fewshot && model == "gpt-4o" -> "stage2"
-            fewshot && model == "gpt-4o" -> "stage3"
+            prompt == "d-v1" -> "d-v1"
+            prompt == "d-v2" -> "d-v2"
+            prompt == "d-v3" -> "d-v3"
+            prompt == "fewshot" && model == "gpt-4o-mini" -> "stage1"
+            prompt == "fewshot" && model == "gpt-4o" -> "stage3"
+            prompt == "baseline" && model == "gpt-4o" -> "stage2"
             else -> "baseline"
         }
     }
