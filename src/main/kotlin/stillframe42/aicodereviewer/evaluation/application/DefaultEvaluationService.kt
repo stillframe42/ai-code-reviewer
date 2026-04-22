@@ -9,6 +9,7 @@ import stillframe42.aicodereviewer.evaluation.domain.port.`in`.EvaluationUseCase
 import stillframe42.aicodereviewer.evaluation.domain.port.out.RagEvaluationPort
 import stillframe42.aicodereviewer.rag.application.HybridConventionSearchService
 import stillframe42.aicodereviewer.rag.domain.service.FileCategoryMapper
+import stillframe42.aicodereviewer.rag.domain.service.PatchQueryExtractor
 import stillframe42.aicodereviewer.review.domain.port.`in`.ReviewUseCase
 import java.time.Instant
 
@@ -17,6 +18,7 @@ class DefaultEvaluationService(
     private val ragEvaluationPort: RagEvaluationPort,
     private val hybridSearchService: HybridConventionSearchService,
     private val reviewUseCase: ReviewUseCase,
+    private val patchQueryExtractor: PatchQueryExtractor,
 ) : EvaluationUseCase, Logging {
 
     override suspend fun evaluateAll(
@@ -48,9 +50,11 @@ class DefaultEvaluationService(
             val fileName = extractFileName(patchContent)
             val category = FileCategoryMapper.selectCategory(fileName)
 
-            // 3. 컨벤션 검색 — 프로덕션(ConventionContextService)과 동일하게 파일명을 쿼리로 사용
+            // 3. 컨벤션 검색 — 프로덕션(DefaultReviewService)과 동일한 PatchQueryExtractor 사용
+            // B1 전략 1: 파일명 대신 patch에 추가된 코드 본문 첫 N줄을 쿼리로 사용
+            val query = patchQueryExtractor.extract(patchContent, filePath = fileName)
             val retrievedDocs = hybridSearchService.search(
-                query = fileName,
+                query = query,
                 topK = topK,
                 category = category,
                 threshold = threshold,

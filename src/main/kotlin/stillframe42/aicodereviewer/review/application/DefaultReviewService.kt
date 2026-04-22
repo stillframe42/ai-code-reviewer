@@ -22,6 +22,7 @@ import stillframe42.aicodereviewer.review.domain.port.out.AiReviewPort
 import stillframe42.aicodereviewer.review.domain.port.out.ReviewCacheStore
 import stillframe42.aicodereviewer.config.RagProperties
 import stillframe42.aicodereviewer.rag.application.ConventionContextService
+import stillframe42.aicodereviewer.rag.domain.service.PatchQueryExtractor
 import stillframe42.aicodereviewer.review.domain.port.out.ReviewCacheStatsStore
 import stillframe42.aicodereviewer.review.domain.service.DiffPreprocessor
 import stillframe42.aicodereviewer.review.domain.service.PrImportanceAnalyzer
@@ -38,6 +39,7 @@ class DefaultReviewService(
     private val reviewMetrics: ReviewMetrics,
     private val reviewCacheStatsStore: ReviewCacheStatsStore,
     private val conventionContextService: ConventionContextService,
+    private val patchQueryExtractor: PatchQueryExtractor,
     private val observabilityPort: ObservabilityPort,
     private val claimVerifier: ClaimVerifier,
     private val ragProperties: RagProperties,
@@ -105,9 +107,10 @@ class DefaultReviewService(
         reviewMetrics.recordCacheMiss()
         reviewCacheStatsStore.incrementMiss()
         // 캐시 미스 시에만 RAG 호출 (캐시 히트는 이미 컨벤션 컨텍스트가 반영된 결과)
+        // B1 전략 1: 파일명 문자열 대신 patch의 추가 코드 라인을 검색 쿼리로 사용 (STYLE recall 개선 목적)
         val conventionContext = filePath?.let {
             conventionContextService.buildContext(
-                query = it.substringAfterLast("/"),
+                query = patchQueryExtractor.extract(diff, filePath = it),
                 filePath = it,
             )
         }
