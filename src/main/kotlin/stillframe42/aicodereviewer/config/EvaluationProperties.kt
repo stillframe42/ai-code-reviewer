@@ -8,5 +8,5 @@ data class EvaluationProperties(
     // 평가용 LLM 모델명 — 비용 절감 위해 mini 기본값
     val model: String = "gpt-4o-mini",
     // Faithfulness 평가 프롬프트 Classpath 경로. variant 교체는 이 값만 바꾸면 된다.
-    val faithfulnessPrompt: String = "classpath:prompts/evaluation-faithfulness.st",
+    val faithfulnessPrompt: String = "classpath:prompts/evaluation/evaluation-faithfulness.st",
 )

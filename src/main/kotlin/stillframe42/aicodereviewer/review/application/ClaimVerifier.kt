@@ -18,7 +18,7 @@ import stillframe42.aicodereviewer.review.domain.model.CodeIssue
 @Component
 class ClaimVerifier(
     @param:Qualifier("anthropicChatClient") private val chatClient: ChatClient,
-    @param:Value("classpath:prompts/review-claim-verification.st") private val promptResource: Resource,
+    @param:Value("classpath:prompts/review/review-claim-verification.st") private val promptResource: Resource,
     private val objectMapper: ObjectMapper,
 ) : Logging {
 

@@ -26,7 +26,7 @@ import java.time.Instant
 // v11 프롬프트 명시적 제약 측정
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("integration-test")
-@TestPropertySource(properties = ["app.prompt.review-system=classpath:prompts/review-system-v11.st"])
+@TestPropertySource(properties = ["app.prompt.review-system=classpath:prompts/review/review-system-v11.st"])
 @EnabledIfEnvironmentVariable(named = "EVAL_MANUAL_TEST", matches = "true")
 class EvaluationSweepC1Method1IT {
 

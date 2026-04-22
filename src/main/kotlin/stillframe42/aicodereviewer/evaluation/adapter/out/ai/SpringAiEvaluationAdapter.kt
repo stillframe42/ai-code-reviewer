@@ -24,11 +24,11 @@ class SpringAiEvaluationAdapter(
     private val evaluationProperties: EvaluationProperties,
     private val objectMapper: ObjectMapper,
     private val resourceLoader: ResourceLoader,
-    @param:Value("classpath:prompts/evaluation-context-precision.st")
+    @param:Value("classpath:prompts/evaluation/evaluation-context-precision.st")
     private val contextPrecisionPrompt: Resource,
-    @param:Value("classpath:prompts/evaluation-context-recall.st")
+    @param:Value("classpath:prompts/evaluation/evaluation-context-recall.st")
     private val contextRecallPrompt: Resource,
-    @param:Value("classpath:prompts/evaluation-answer-relevancy.st")
+    @param:Value("classpath:prompts/evaluation/evaluation-answer-relevancy.st")
     private val answerRelevancyPrompt: Resource,
 ) : RagEvaluationPort, Logging {
 

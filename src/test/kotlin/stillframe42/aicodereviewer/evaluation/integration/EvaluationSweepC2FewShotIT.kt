@@ -26,7 +26,7 @@ import java.time.Instant
 // v13 Few-shot (v11 + 3개 예시) 측정
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("integration-test")
-@TestPropertySource(properties = ["app.prompt.review-system=classpath:prompts/review-system-v13.st"])
+@TestPropertySource(properties = ["app.prompt.review-system=classpath:prompts/review/review-system-v13.st"])
 @EnabledIfEnvironmentVariable(named = "EVAL_MANUAL_TEST", matches = "true")
 class EvaluationSweepC2FewShotIT {
 

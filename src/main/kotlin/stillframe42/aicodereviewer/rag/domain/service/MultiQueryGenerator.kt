@@ -17,7 +17,7 @@ import stillframe42.aicodereviewer.common.Logging
 @Component
 class MultiQueryGenerator(
     @param:Qualifier("anthropicChatClient") private val chatClient: ChatClient,
-    @param:Value("classpath:prompts/rag-multi-query.st") private val promptResource: Resource,
+    @param:Value("classpath:prompts/rag/rag-multi-query.st") private val promptResource: Resource,
     private val objectMapper: ObjectMapper,
 ) : Logging {
 

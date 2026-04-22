@@ -44,7 +44,7 @@ class SpringAiReviewAdapter(
     @param:Value("\${app.prompt.review-system}")
     private val systemPromptResource: Resource,
 
-    @param:Value("classpath:prompts/review-user.st")
+    @param:Value("classpath:prompts/review/review-user.st")
     private val userPromptResource: Resource,
 ) : AiReviewPort, Logging {
 

@@ -47,7 +47,7 @@ class EvaluationSweepV14IT {
             registry.add("spring.data.redis.host") { redis.host }
             registry.add("spring.data.redis.port") { redis.getMappedPort(6379).toString() }
             // v14 프롬프트 override (production application-ai.yml은 v13 유지)
-            registry.add("app.prompt.review-system") { "classpath:prompts/review-system-v14.st" }
+            registry.add("app.prompt.review-system") { "classpath:prompts/review/review-system-v14.st" }
 
             val secrets = readSecrets()
             secrets["openai"]?.let { key ->

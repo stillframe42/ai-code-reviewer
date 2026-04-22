@@ -29,9 +29,9 @@
 ```yaml
 app:
   prompt:
-    review-system: classpath:prompts/review-system-v1.st  # v1으로 전환
-    # review-system: classpath:prompts/review-system-v2.st  # v2
-    # review-system: classpath:prompts/review-system-v3.st  # v3 (기본)
+    review-system: classpath:prompts/review/review-system-v1.st  # v1으로 전환
+    # review-system: classpath:prompts/review/review-system-v2.st  # v2
+    # review-system: classpath:prompts/review/review-system-v3.st  # v3 (기본)
 ```
 
 ## 다음 버전 작성 가이드

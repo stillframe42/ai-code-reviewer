@@ -26,7 +26,7 @@ import java.time.Instant
 // v12 Chain-of-Thought (CodeIssue.reasoning) 측정
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("integration-test")
-@TestPropertySource(properties = ["app.prompt.review-system=classpath:prompts/review-system-v12.st"])
+@TestPropertySource(properties = ["app.prompt.review-system=classpath:prompts/review/review-system-v12.st"])
 @EnabledIfEnvironmentVariable(named = "EVAL_MANUAL_TEST", matches = "true")
 class EvaluationSweepC1Method2IT {
 

@@ -45,9 +45,9 @@ app:
           input-per-1k: 0.000150
           output-per-1k: 0.000600
   prompt:
-    review-system: classpath:prompts/review-system-v13.st  # v13: v11 기반 + Few-shot 3 예시 (C-2 채택, 2026-04-24)
-    chat-system: classpath:prompts/chat-system.st
-    chat-user: classpath:prompts/chat-user.st
+    review-system: classpath:prompts/review/review-system-v13.st  # v13: v11 기반 + Few-shot 3 예시 (C-2 채택, 2026-04-24)
+    chat-system: classpath:prompts/chat/chat-system.st
+    chat-user: classpath:prompts/chat/chat-user.st
 
 rag:
   enabled: true

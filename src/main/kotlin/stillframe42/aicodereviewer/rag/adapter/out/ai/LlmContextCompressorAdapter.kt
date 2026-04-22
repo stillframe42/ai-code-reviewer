@@ -23,7 +23,7 @@ import stillframe42.aicodereviewer.rag.domain.port.out.ContextCompressorPort
 class LlmContextCompressorAdapter(
     @param:Qualifier("openAiChatClient") private val chatClient: ChatClient,
     private val properties: RagCompressionProperties,
-    @param:Value("classpath:prompts/context-compressor.st")
+    @param:Value("classpath:prompts/rag/context-compressor.st")
     private val promptResource: Resource,
     private val observabilityPort: ObservabilityPort,
 ) : ContextCompressorPort, Logging {
