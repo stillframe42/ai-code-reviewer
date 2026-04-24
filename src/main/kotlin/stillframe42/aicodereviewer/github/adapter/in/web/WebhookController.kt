@@ -46,17 +46,11 @@ class WebhookController(
         }
 
         // 3단계: JSON 파싱 및 도메인 변환 — 지원하지 않는 action이면 무시
-        val dto = try {
-            objectMapper.readValue(body, WebhookPayloadDto::class.java)
-        } catch (e: JacksonException) {
-            logger.warn("Webhook payload 파싱 실패: {}", e.message)
-            return ResponseEntity.badRequest().build()
-        }
+        val dto = parsePayloadOrNull(body) ?: return ResponseEntity.badRequest().build()
         val event = dto.toDomain() ?: run {
             logger.debug("지원하지 않는 PR action 무시: {}", dto.action)
             return ResponseEntity.ok().build()
         }
-
         logger.info(
             "Webhook 수신: event={}, action={}, repo={}, pr={}",
             eventType, event.action, event.repositoryFullName, event.pullRequestNumber,
@@ -74,6 +68,14 @@ class WebhookController(
         }
 
         return ResponseEntity.accepted().build()
+    }
+
+    // Webhook 바디를 DTO로 역직렬화한다. 파싱 실패 시 WARN 로그 후 null 반환.
+    private fun parsePayloadOrNull(body: String): WebhookPayloadDto? = try {
+        objectMapper.readValue(body, WebhookPayloadDto::class.java)
+    } catch (e: JacksonException) {
+        logger.warn("Webhook payload 파싱 실패: {}", e.message)
+        null
     }
 
 }
