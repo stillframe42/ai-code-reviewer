@@ -13,7 +13,7 @@ import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.http.MediaType
 import stillframe42.aicodereviewer.config.GitHubProperties
-import stillframe42.aicodereviewer.github.adapter.`in`.web.HmacSignatureVerifier
+import stillframe42.aicodereviewer.github.adapter.`in`.web.computeSignature
 import stillframe42.aicodereviewer.github.adapter.out.persistence.ProcessedPullRequestEventRepository
 import stillframe42.aicodereviewer.integration.AbstractIntegrationTest
 import stillframe42.aicodereviewer.integration.support.AnthropicResponseFixtures
@@ -53,7 +53,7 @@ class MetricsIntegrationTest : AbstractIntegrationTest() {
     """.trimIndent()
 
     private fun sign(body: String) =
-        "sha256=${HmacSignatureVerifier.computeSignature(body.toByteArray(Charsets.UTF_8), properties.app.webhookSecret)}"
+        "sha256=${computeSignature(body.toByteArray(Charsets.UTF_8), properties.app.webhookSecret)}"
 
     @BeforeEach
     fun stubExternalApis() {

@@ -6,16 +6,20 @@ import java.security.MessageDigest
 import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
 
+// HMAC 알고리즘 식별자
+private const val HMAC_ALGORITHM = "HmacSHA256"
+
+// GitHub X-Hub-Signature-256 헤더의 고정 prefix
+private const val SIGNATURE_PREFIX = "sha256="
+
 // GitHub Webhook HMAC-SHA256 서명 검증 컴포넌트
 @Component
 class HmacSignatureVerifier(private val properties: GitHubProperties) {
 
-    // GitHub가 전송한 X-Hub-Signature-256 헤더와 페이로드를 검증한다
-    // MessageDigest.isEqual()로 타이밍 공격을 방지한다
     fun verify(payload: ByteArray, signatureHeader: String?): Boolean {
-        if (signatureHeader == null || !signatureHeader.startsWith("sha256=")) return false
+        if (signatureHeader == null || !signatureHeader.startsWith(SIGNATURE_PREFIX)) return false
 
-        val expected = signatureHeader.removePrefix("sha256=")
+        val expected = signatureHeader.removePrefix(SIGNATURE_PREFIX)
         val actual = computeSignature(payload, properties.app.webhookSecret)
 
         // 상수 시간 비교 — 타이밍 공격 방지
@@ -24,13 +28,12 @@ class HmacSignatureVerifier(private val properties: GitHubProperties) {
             expected.toByteArray(Charsets.UTF_8),
         )
     }
+}
 
-    companion object {
-        // 테스트 코드에서 재사용할 수 있도록 internal로 노출
-        internal fun computeSignature(data: ByteArray, secret: String): String {
-            val mac = Mac.getInstance("HmacSHA256")
-            mac.init(SecretKeySpec(secret.toByteArray(Charsets.UTF_8), "HmacSHA256"))
-            return mac.doFinal(data).joinToString("") { "%02x".format(it) }
-        }
-    }
+// HMAC-SHA256 서명을 hex 문자열로 반환한다.
+// 테스트 코드에서 서명 생성 용도로 재사용하기 위해 internal로 노출한다.
+internal fun computeSignature(data: ByteArray, secret: String): String {
+    val mac = Mac.getInstance(HMAC_ALGORITHM)
+    mac.init(SecretKeySpec(secret.toByteArray(Charsets.UTF_8), HMAC_ALGORITHM))
+    return mac.doFinal(data).joinToString("") { "%02x".format(it) }
 }

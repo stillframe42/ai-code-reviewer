@@ -15,7 +15,7 @@ class WebhookControllerTest : AbstractIntegrationTest() {
 
     // 설정에서 주입받은 secret으로 서명을 계산해 설정값 변경에도 테스트가 깨지지 않도록 한다
     private fun sign(payload: String): String =
-        "sha256=${HmacSignatureVerifier.computeSignature(payload.toByteArray(Charsets.UTF_8), properties.app.webhookSecret)}"
+        "sha256=${computeSignature(payload.toByteArray(Charsets.UTF_8), properties.app.webhookSecret)}"
 
     private val pullRequestPayload = """
         {

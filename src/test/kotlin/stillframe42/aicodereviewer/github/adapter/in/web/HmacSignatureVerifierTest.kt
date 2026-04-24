@@ -20,7 +20,7 @@ class HmacSignatureVerifierTest {
     )
 
     private fun sign(payload: String): String =
-        "sha256=${HmacSignatureVerifier.computeSignature(payload.toByteArray(Charsets.UTF_8), secret)}"
+        "sha256=${computeSignature(payload.toByteArray(Charsets.UTF_8), secret)}"
 
     @Test
     fun `올바른 서명이면 true를 반환한다`() {

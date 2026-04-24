@@ -9,7 +9,7 @@ import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.http.MediaType
 import stillframe42.aicodereviewer.config.GitHubProperties
-import stillframe42.aicodereviewer.github.adapter.`in`.web.HmacSignatureVerifier
+import stillframe42.aicodereviewer.github.adapter.`in`.web.computeSignature
 import stillframe42.aicodereviewer.github.adapter.out.persistence.ProcessedPullRequestEventEntity
 import stillframe42.aicodereviewer.github.adapter.out.persistence.ProcessedPullRequestEventRepository
 import stillframe42.aicodereviewer.integration.support.AnthropicResponseFixtures
@@ -59,7 +59,7 @@ class WebhookFlowIntegrationTest : AbstractIntegrationTest() {
 
     // 설정에서 주입받은 secret으로 서명 계산 — 설정값 변경에도 테스트가 깨지지 않도록 한다
     private fun sign(payload: String): String =
-        "sha256=${HmacSignatureVerifier.computeSignature(payload.toByteArray(Charsets.UTF_8), properties.app.webhookSecret)}"
+        "sha256=${computeSignature(payload.toByteArray(Charsets.UTF_8), properties.app.webhookSecret)}"
 
     @AfterEach
     fun cleanDb() {
