@@ -59,8 +59,8 @@ class HybridConventionSearchService(
             input = mapOf(
                 "query" to query,
                 "topK" to topK,
-                "category" to (category?.name ?: "ALL"),
-                "effectiveCategory" to (effectiveCategory?.name ?: "ALL"),
+                "category" to category.nameOrAll(),
+                "effectiveCategory" to effectiveCategory.nameOrAll(),
                 "threshold" to threshold,
             ),
         )

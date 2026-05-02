@@ -21,7 +21,7 @@ class ConventionContextService(
             input = mapOf("query" to query, "filePath" to (filePath ?: "")),
             outputMapper = { result: String ->
                 mapOf(
-                    "category" to (category?.name ?: "ALL"),
+                    "category" to category.nameOrAll(),
                     "documentCount" to if (result.isEmpty()) 0 else result.split("\n\n---\n\n").size,
                     "contextLength" to result.length,
                 )
