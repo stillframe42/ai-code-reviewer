@@ -8,7 +8,6 @@ import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
 import org.springframework.stereotype.Service
 import stillframe42.aicodereviewer.common.Logging
-import stillframe42.aicodereviewer.common.metrics.ReviewMetrics
 import stillframe42.aicodereviewer.common.observability.ObservabilityPort
 import stillframe42.aicodereviewer.common.observability.withSpan
 import stillframe42.aicodereviewer.review.domain.service.AiModelSelector
@@ -24,7 +23,6 @@ import stillframe42.aicodereviewer.review.domain.port.out.ReviewCacheStore
 import stillframe42.aicodereviewer.config.RagProperties
 import stillframe42.aicodereviewer.rag.application.ConventionContextService
 import stillframe42.aicodereviewer.rag.domain.service.PatchQueryExtractor
-import stillframe42.aicodereviewer.review.domain.port.out.ReviewCacheStatsStore
 import stillframe42.aicodereviewer.review.domain.service.DiffPreprocessor
 import stillframe42.aicodereviewer.review.domain.service.PrImportanceAnalyzer
 
@@ -37,8 +35,6 @@ class DefaultReviewService(
     private val prImportanceAnalyzer: PrImportanceAnalyzer,
     private val aiModelSelector: AiModelSelector,
     private val reviewCacheStore: ReviewCacheStore,
-    private val reviewMetrics: ReviewMetrics,
-    private val reviewCacheStatsStore: ReviewCacheStatsStore,
     private val conventionContextService: ConventionContextService,
     private val patchQueryExtractor: PatchQueryExtractor,
     private val observabilityPort: ObservabilityPort,
@@ -90,6 +86,7 @@ class DefaultReviewService(
     }
 
     // 캐시 조회 → 히트 시 즉시 반환, 미스 시 RAG 호출 후 AI 호출 후 캐시 저장
+    // 메트릭/로그/저장 best-effort 처리는 MeteredReviewCacheStore 데코레이터에 위임한다.
     private suspend fun reviewWithCache(
         diff: String,
         provider: AiProvider,
@@ -98,16 +95,8 @@ class DefaultReviewService(
         filePath: String? = null,
     ): CodeReview {
         val key = cacheKey(diff, provider, modelName, mode)
-        val cached = reviewCacheStore.get(key)
-        if (cached != null) {
-            logger.debug("캐시 히트: key={}", key)
-            reviewMetrics.recordCacheHit()
-            reviewCacheStatsStore.incrementHit()
-            return cached
-        }
-        logger.debug("캐시 미스: key={}", key)
-        reviewMetrics.recordCacheMiss()
-        reviewCacheStatsStore.incrementMiss()
+        reviewCacheStore.get(key)?.let { return it }
+
         // 캐시 미스 시에만 RAG 호출 (캐시 히트는 이미 컨벤션 컨텍스트가 반영된 결과)
         val conventionContext = filePath?.let {
             conventionContextService.buildContext(
@@ -115,8 +104,10 @@ class DefaultReviewService(
                 filePath = it,
             )
         }
-        val rawReview = aiReviewPort.reviewCode(diff, provider, mode, reviewContext = null, modelName = modelName,
-            conventionContext = conventionContext)
+        val rawReview = aiReviewPort.reviewCode(
+            diff, provider, mode, reviewContext = null, modelName = modelName,
+            conventionContext = conventionContext,
+        )
         // claimVerifyEnabled 시 컨벤션 컨텍스트 기반으로 issues 사후 검증·필터링
         val finalReview = if (ragProperties.claimVerifyEnabled && !conventionContext.isNullOrBlank()) {
             val verifiedIssues = claimVerifier.verify(rawReview.issues, conventionContext)
@@ -124,11 +115,7 @@ class DefaultReviewService(
         } else {
             rawReview
         }
-        return finalReview.also { result ->
-            // 캐시 저장 실패는 리뷰 결과 반환에 영향을 주지 않는다 (best-effort)
-            runCatching { reviewCacheStore.put(key, result) }
-                .onFailure { e -> logger.warn("캐시 저장 실패 (무시): {}", e.message) }
-        }
+        return finalReview.also { reviewCacheStore.put(key, it) }
     }
 
     // Semaphore로 동시 호출 수를 제한하며 병렬 LLM 호출 후 결과 집계
