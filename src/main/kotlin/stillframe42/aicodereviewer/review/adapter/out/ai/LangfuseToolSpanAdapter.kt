@@ -3,8 +3,10 @@ package stillframe42.aicodereviewer.review.adapter.out.ai
 import java.time.Instant
 import java.util.UUID
 import kotlin.coroutines.CoroutineContext
+import kotlin.coroutines.EmptyCoroutineContext
 import stillframe42.aicodereviewer.common.Logging
 import stillframe42.aicodereviewer.common.langfuse.LangfuseClient
+import stillframe42.aicodereviewer.common.langfuse.LangfuseSpanContextHolder
 import stillframe42.aicodereviewer.common.langfuse.LangfuseTraceContextHolder
 import stillframe42.aicodereviewer.common.observability.SpanHandle
 import stillframe42.aicodereviewer.review.domain.port.out.ToolObservationPort
@@ -23,9 +25,14 @@ class LangfuseToolSpanAdapter(
         return LangfuseTraceContextHolder.asElement(traceId)
     }
 
+    override fun spanContext(spanId: String): CoroutineContext =
+        if (spanId.isEmpty()) EmptyCoroutineContext
+        else LangfuseSpanContextHolder.asElement(spanId)
+
     // ObservabilityPort — SpanHandle 반환
     override fun startSpan(name: String, input: Map<String, Any>, metadata: Map<String, Any>): SpanHandle {
         val traceId = LangfuseTraceContextHolder.get() ?: return SpanHandle(spanId = "", traceId = "")
+        val parentSpanId = LangfuseSpanContextHolder.get()
         val spanId = UUID.randomUUID().toString()
         // timestamp와 startTime에 동일한 시각 값을 사용하기 위해 단 한 번만 캡처
         val now = Instant.now().toString()
@@ -37,6 +44,7 @@ class LangfuseToolSpanAdapter(
             "input" to input,
         )
         if (metadata.isNotEmpty()) body["metadata"] = metadata
+        parentSpanId?.let { body["parentObservationId"] = it }
         try {
             langfuseClient.ingest(
                 listOf(

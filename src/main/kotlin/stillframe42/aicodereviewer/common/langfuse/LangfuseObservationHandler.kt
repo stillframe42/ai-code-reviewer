@@ -135,18 +135,22 @@ class LangfuseObservationHandler(
             ?.joinToString("\n") { "${it.messageType}: ${it.text.orEmpty()}" }
             .orEmpty()
 
+        val parentSpanId = LangfuseSpanContextHolder.get()
+        val body = mutableMapOf<String, Any>(
+            "id" to generationId,
+            "traceId" to traceId,
+            "name" to "chat-model",
+            "startTime" to startTime,
+            "input" to promptText,
+            "metadata" to metadata,
+        )
+        parentSpanId?.let { body["parentObservationId"] = it }
+
         return mapOf(
             "type" to "generation-create",
             "id" to UUID.randomUUID().toString(),
             "timestamp" to startTime,
-            "body" to mapOf(
-                "id" to generationId,
-                "traceId" to traceId,
-                "name" to "chat-model",
-                "startTime" to startTime,
-                "input" to promptText,
-                "metadata" to metadata,
-            ),
+            "body" to body,
         )
     }
 

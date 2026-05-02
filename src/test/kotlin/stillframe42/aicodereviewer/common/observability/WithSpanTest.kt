@@ -1,5 +1,8 @@
 package stillframe42.aicodereviewer.common.observability
 
+import kotlin.coroutines.CoroutineContext
+import kotlin.coroutines.EmptyCoroutineContext
+import kotlinx.coroutines.asContextElement
 import kotlinx.coroutines.test.runTest
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
@@ -50,15 +53,36 @@ class WithSpanTest {
         assertThat(recorder.ended).hasSize(1)
         assertThat(recorder.ended[0].second).containsEntry("count", 42)
     }
+
+    @Test
+    fun `중첩된 withSpan 안에서 시작된 자식 span 은 부모 spanId 를 활성 부모로 인식한다`() = runTest {
+        val recorder = RecordingObservabilityAdapter()
+
+        recorder.withSpan("parent.span") {
+            recorder.withSpan("child.span") { "result" }
+        }
+
+        assertThat(recorder.started.map { it.first }).containsExactly("parent.span", "child.span")
+        assertThat(recorder.parentSpanIdsAtStart[0]).isNull()
+        assertThat(recorder.parentSpanIdsAtStart[1]).isEqualTo("test-span-1")
+    }
 }
 
 class RecordingObservabilityAdapter : ObservabilityPort {
     val started = mutableListOf<Pair<String, Map<String, Any>>>()
     val ended = mutableListOf<Pair<SpanHandle, Map<String, Any>>>()
     val errors = mutableListOf<Pair<SpanHandle, String>>()
+    val parentSpanIdsAtStart = mutableListOf<String?>()
+
+    private val activeSpanId: ThreadLocal<String?> = ThreadLocal.withInitial { null }
+
+    override fun spanContext(spanId: String): CoroutineContext =
+        if (spanId.isEmpty()) EmptyCoroutineContext
+        else activeSpanId.asContextElement(spanId)
 
     override fun startSpan(name: String, input: Map<String, Any>, metadata: Map<String, Any>): SpanHandle {
         started.add(name to input)
+        parentSpanIdsAtStart.add(activeSpanId.get())
         return SpanHandle(spanId = "test-span-${started.size}", traceId = "test-trace")
     }
 

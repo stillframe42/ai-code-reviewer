@@ -10,6 +10,9 @@ interface ObservabilityPort {
     // withContext(traceContext()) 로 감싸면 하위 모든 코루틴에 traceId 가 전파된다
     fun traceContext(): CoroutineContext = EmptyCoroutineContext
 
+    // 활성 부모 spanId 를 코루틴 컨텍스트 요소로 전파한다 — WithSpan 헬퍼가 내부적으로 호출한다
+    fun spanContext(spanId: String): CoroutineContext = EmptyCoroutineContext
+
     fun startSpan(name: String, input: Map<String, Any> = emptyMap(), metadata: Map<String, Any> = emptyMap()): SpanHandle
     fun endSpan(handle: SpanHandle, output: Map<String, Any> = emptyMap(), metadata: Map<String, Any> = emptyMap())
     fun endSpanWithError(handle: SpanHandle, error: String)
