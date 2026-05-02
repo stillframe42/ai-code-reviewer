@@ -14,11 +14,12 @@ class ConventionContextService(
 ) {
     suspend fun buildContext(query: String, filePath: String? = null): String {
         if (!ragEnabled) return ""
+
+        val category = filePath?.let { FileCategoryMapper.selectCategory(it) }
         return observabilityPort.withSpan(
             name = "rag.context",
             input = mapOf("query" to query, "filePath" to (filePath ?: "")),
             outputMapper = { result: String ->
-                val category = filePath?.let { FileCategoryMapper.selectCategory(it) }
                 mapOf(
                     "category" to (category?.name ?: "ALL"),
                     "documentCount" to if (result.isEmpty()) 0 else result.split("\n\n---\n\n").size,
@@ -26,8 +27,7 @@ class ConventionContextService(
                 )
             },
         ) {
-            val category = filePath?.let { FileCategoryMapper.selectCategory(it) }
-            val docs = hybridSearchService.search(query, category = category)
+            val docs = hybridSearchService.search(query = query, category = category)
             if (docs.isEmpty()) "" else docs.joinToString("\n\n---\n\n") { it.text ?: "" }
         }
     }
