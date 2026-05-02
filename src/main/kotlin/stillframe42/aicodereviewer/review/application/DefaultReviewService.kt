@@ -12,6 +12,7 @@ import stillframe42.aicodereviewer.common.metrics.ReviewMetrics
 import stillframe42.aicodereviewer.common.observability.ObservabilityPort
 import stillframe42.aicodereviewer.common.observability.withSpan
 import stillframe42.aicodereviewer.review.domain.service.AiModelSelector
+import stillframe42.aicodereviewer.config.AiReviewerProperties
 import stillframe42.aicodereviewer.config.ReviewProperties
 import stillframe42.aicodereviewer.core.AiProvider
 import stillframe42.aicodereviewer.review.domain.model.CodeReview
@@ -43,6 +44,7 @@ class DefaultReviewService(
     private val observabilityPort: ObservabilityPort,
     private val claimVerifier: ClaimVerifier,
     private val ragProperties: RagProperties,
+    private val aiReviewerProperties: AiReviewerProperties,
 ) : ReviewUseCase, Logging {
 
     override suspend fun reviewCode(
@@ -95,7 +97,7 @@ class DefaultReviewService(
         modelName: String?,
         filePath: String? = null,
     ): CodeReview {
-        val key = cacheKey(diff)
+        val key = cacheKey(diff, provider, modelName, mode)
         val cached = reviewCacheStore.get(key)
         if (cached != null) {
             logger.debug("캐시 히트: key={}", key)
@@ -181,10 +183,27 @@ class DefaultReviewService(
                 .firstOrNull { it.startsWith("+++ b/") }
                 ?.removePrefix("+++ b/")
 
-    // diff 내용의 SHA-256 해시로 캐시 키 생성
-    // 동일 파일 + 동일 headSha → diff 내용 동일 → 해시 동일 (의미상 repoFullName:filePath:headSha와 동등)
-    private fun cacheKey(diff: String): String {
-        val digest = MessageDigest.getInstance("SHA-256").digest(diff.toByteArray(Charsets.UTF_8))
-        return "review:cache:" + digest.joinToString("") { "%02x".format(it) }
+    // 결과에 영향을 주는 모든 결정 변수를 해시 입력에 포함하여 캐시 키를 생성한다.
+    // - diff: 입력 코드 자체
+    // - provider / modelName: 동일 diff라도 모델이 다르면 결과가 다르므로 분리해야 한다
+    // - mode 종류: Simple vs WithGitHubTools — Tool Calling 활성 여부에 따라 결과가 달라진다
+    //   (mode 안의 installationId는 결과에 영향 없으므로 키에 포함하지 않는다)
+    // prefix 의 keyVersion 은 키 외부 결정 요인(프롬프트, RAG 인덱스 등)이 바뀔 때
+    // 운영자가 수동으로 올려 기존 캐시를 일괄 무효화하기 위한 손잡이다.
+    private fun cacheKey(
+        diff: String,
+        provider: AiProvider,
+        modelName: String?,
+        mode: ReviewMode,
+    ): String {
+        val payload = buildString {
+            append(diff)
+            append("|provider=").append(provider.name)
+            append("|model=").append(modelName ?: "default")
+            append("|mode=").append(mode::class.simpleName ?: "Unknown")
+        }
+        val digest = MessageDigest.getInstance("SHA-256").digest(payload.toByteArray(Charsets.UTF_8))
+        val version = aiReviewerProperties.cache.keyVersion
+        return "review:cache:$version:" + digest.joinToString("") { "%02x".format(it) }
     }
 }

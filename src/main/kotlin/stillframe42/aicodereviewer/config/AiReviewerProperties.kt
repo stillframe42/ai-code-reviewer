@@ -20,5 +20,7 @@ data class AiReviewerProperties(
     data class CacheConfig(
         // 캐시 항목 TTL — application-ai.yml의 app.ai.reviewer.cache.ttl (ISO-8601)
         val ttl: Duration = Duration.ofHours(1),
+        // 캐시 키 prefix 버전
+        val keyVersion: String = "v1",
     )
 }

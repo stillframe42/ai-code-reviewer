@@ -3,11 +3,13 @@ package stillframe42.aicodereviewer.review.application
 import com.github.tomakehurst.wiremock.client.WireMock.exactly
 import com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor
 import com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo
+import kotlinx.coroutines.reactor.awaitSingle
 import kotlinx.coroutines.runBlocking
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
+import stillframe42.aicodereviewer.config.AiReviewerProperties
 import stillframe42.aicodereviewer.core.AiProvider
 import stillframe42.aicodereviewer.integration.AbstractIntegrationTest
 import stillframe42.aicodereviewer.integration.support.WireMockStubs
@@ -24,6 +26,9 @@ class DefaultReviewServiceCacheTest : AbstractIntegrationTest() {
 
     @Autowired
     private lateinit var reviewCacheStatsStore: ReviewCacheStatsStore
+
+    @Autowired
+    private lateinit var aiReviewerProperties: AiReviewerProperties
 
     @BeforeEach
     fun setUpCacheTest() {
@@ -99,6 +104,31 @@ class DefaultReviewServiceCacheTest : AbstractIntegrationTest() {
 
         // 임베딩 API는 캐시 미스 시 1회만 호출되어야 한다
         wireMock.verify(exactly(1), postRequestedFor(urlPathEqualTo("/v1/embeddings")))
+    }
+
+    @Test
+    fun `캐시 키는 설정된 keyVersion prefix를 포함하여 저장된다`(): Unit = runBlocking {
+        val diff = """
+            diff --git a/src/main/kotlin/Versioned.kt b/src/main/kotlin/Versioned.kt
+            --- a/src/main/kotlin/Versioned.kt
+            +++ b/src/main/kotlin/Versioned.kt
+            @@ -1,1 +1,2 @@
+             class Versioned
+            +    // keyVersion prefix 검증용 고유 변경
+        """.trimIndent()
+
+        reviewUseCase.reviewCode(
+            code = diff,
+            provider = AiProvider.ANTHROPIC,
+            diffOptions = DiffFilterOptions(),
+        )
+
+        // 현재 설정된 keyVersion (기본 v1) prefix 를 그대로 사용한 키만 조회되어야 한다
+        val expectedPrefix = "review:cache:${aiReviewerProperties.cache.keyVersion}:"
+        val versionedKeys = redisTemplate.keys("$expectedPrefix*").collectList().awaitSingle()
+        assertThat(versionedKeys)
+            .hasSize(1)
+            .allSatisfy { key -> assertThat(key).startsWith(expectedPrefix) }
     }
 
     @Test

@@ -32,7 +32,8 @@ app:
         - "**/*Config*"
         - "build.gradle.kts"
       cache:
-        ttl: PT1H    # java.time.Duration ISO-8601 형식, 1시간 TTL
+        ttl: PT1H        # java.time.Duration ISO-8601 형식, 1시간 TTL
+        key-version: v1  # 키 prefix 버전 — 프롬프트/RAG 인덱스 변경 시 올려 기존 캐시 일괄 무효화
     cost:
       models:
         claude-haiku-4-5-20251001:
