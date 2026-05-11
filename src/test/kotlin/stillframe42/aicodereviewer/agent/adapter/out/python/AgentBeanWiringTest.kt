@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Autowired
 import stillframe42.aicodereviewer.agent.domain.model.AgentAnalysisCommand
 import stillframe42.aicodereviewer.agent.domain.port.out.AgentAnalysisPort
 import stillframe42.aicodereviewer.integration.AbstractIntegrationTest
+import stillframe42.aicodereviewer.integration.support.WireMockStubs
 
 class AgentBeanWiringTest : AbstractIntegrationTest() {
 
@@ -19,7 +20,9 @@ class AgentBeanWiringTest : AbstractIntegrationTest() {
     }
 
     @Test
-    fun `application-agent_yml 프로퍼티 로딩 후 스텁 호출이 정상 동작한다`() = runTest {
+    fun `pythonAgentWebClient 가 주입되고 WireMock 응답을 도메인 결과로 매핑한다`() = runTest {
+        WireMockStubs.stubPythonAgentAnalyze(wireMock)
+
         val result = agentPort.requestDeepAnalysis(
             AgentAnalysisCommand(
                 prNumber = 99,
@@ -29,7 +32,8 @@ class AgentBeanWiringTest : AbstractIntegrationTest() {
         )
 
         assertThat(result.status).isEqualTo("DONE")
-        assertThat(result.analysisId).startsWith("stub-")
+        assertThat(result.analysisId).isEqualTo("agent-analysis-stub")
         assertThat(result.findings).hasSize(1)
+        assertThat(result.findings[0].description).isEqualTo("라우팅 회귀 검증 finding")
     }
 }
