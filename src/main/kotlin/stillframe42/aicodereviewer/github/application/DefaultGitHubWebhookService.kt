@@ -3,9 +3,12 @@ package stillframe42.aicodereviewer.github.application
 import kotlinx.coroutines.CancellationException
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
+import stillframe42.aicodereviewer.agent.application.AgentReviewService
+import stillframe42.aicodereviewer.agent.domain.service.SecurityFileDetector
 import stillframe42.aicodereviewer.common.Logging
 import stillframe42.aicodereviewer.common.metrics.event.ReviewCompletedEvent
 import stillframe42.aicodereviewer.core.AiProvider
+import stillframe42.aicodereviewer.github.domain.model.PrFile
 import stillframe42.aicodereviewer.github.domain.model.PrReview
 import stillframe42.aicodereviewer.github.domain.model.PrReviewEvent
 import stillframe42.aicodereviewer.github.domain.model.PrReviewLineComment
@@ -33,6 +36,7 @@ class DefaultGitHubWebhookService(
     private val diffPositionResolver: DiffPositionResolver,
     private val reviewPersistencePort: ReviewPersistencePort,
     private val eventPublisher: ApplicationEventPublisher,
+    private val agentReviewService: AgentReviewService,
 ) : GitHubWebhookUseCase, Logging {
 
     // diff position 매핑 + 포맷팅이 완료된 PR 코멘트 구성용 출력
@@ -78,6 +82,13 @@ class DefaultGitHubWebhookService(
             return
         }
 
+        // 보안 파일 감지를 위한 PR 변경 파일 목록 조회 — agent 라우팅 분기 입력
+        val prFiles = gitHubApiPort.getPrFiles(
+            repositoryFullName = event.repositoryFullName,
+            pullRequestNumber = event.pullRequestNumber,
+            installationId = event.installationId,
+        )
+
         // diff 확인 후 시작 시각 기록 — 의미 있는 리뷰 플로우 전체 시간을 측정한다
         val startNanos = System.nanoTime()
 
@@ -98,7 +109,7 @@ class DefaultGitHubWebhookService(
         }
 
         // 4단계: AI 코드 리뷰 실행 — 실패 시 null 반환, 4단계에서 에러 코멘트 등록
-        val review = runAiReview(event, prDiff)
+        val review = runAiReview(event, prDiff, prFiles)
 
         // 5단계: 리뷰 결과 저장 — 성공: DONE + 결과, 실패: FAILED
         // saveReviewResult 실패 시에도 상태 업데이트(DONE)가 반드시 실행되도록 블록을 분리한다
@@ -176,8 +187,39 @@ class DefaultGitHubWebhookService(
         )
     }
 
-    // AI 리뷰 실행 — 실패 시 null 반환, 에러 코멘트 등록으로 이어진다
-    private suspend fun runAiReview(event: PullRequestEvent, prDiff: String): CodeReview? =
+    // AI 리뷰 실행 — 보안 파일 포함 시 agent 경로 우선, 실패 시 Spring AI 경로로 fallback
+    private suspend fun runAiReview(
+        event: PullRequestEvent,
+        prDiff: String,
+        prFiles: List<PrFile>,
+    ): CodeReview? {
+        if (SecurityFileDetector.hasSecurityFile(prFiles)) {
+            try {
+                return agentReviewService.review(
+                    repositoryFullName = event.repositoryFullName,
+                    pullRequestNumber = event.pullRequestNumber,
+                    prDiff = prDiff,
+                    prFiles = prFiles,
+                ).also {
+                    logger.info(
+                        "Agent path 리뷰 완료: repo={}, pr={}, score={}",
+                        event.repositoryFullName, event.pullRequestNumber, it.overallScore,
+                    )
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                logger.warn(
+                    "Agent path 실패, Spring AI 경로로 fallback: repo={}, pr={}",
+                    event.repositoryFullName, event.pullRequestNumber, e,
+                )
+            }
+        }
+        return runDefaultReview(event, prDiff)
+    }
+
+    // Spring AI 기본 리뷰 경로 — agent 가 비활성화되거나 실패한 경우 사용
+    private suspend fun runDefaultReview(event: PullRequestEvent, prDiff: String): CodeReview? =
         try {
             reviewUseCase.reviewCode(
                 code = prDiff,
