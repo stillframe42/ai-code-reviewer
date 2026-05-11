@@ -66,17 +66,18 @@ class AgentRoutingIntegrationTest : AbstractIntegrationTest() {
         WireMockStubs.stubPrDiff(wireMock, repo, prNumber, AnthropicResponseFixtures.SIMPLE_DIFF)
         stubPrFilesWithSecurity(repo, prNumber)
         WireMockStubs.stubOpenAiEmbedding(wireMock)
+        WireMockStubs.stubPythonAgentAnalyze(wireMock)
         WireMockStubs.stubPostPrReview(wireMock, repo, prNumber, reviewId = 9901L)
 
         postWebhook(repo, prNumber, headSha, installationId)
 
         // Agent 경로 응답: summary = "Python 에이전트 심층 분석 결과 ...",
-        //                  issue description = "Python 에이전트 연동 전 임시 응답"
+        //                  issue description = "라우팅 회귀 검증 finding" (실어댑터 → WireMock)
         await.atMost(15, SECONDS).untilAsserted {
             wireMock.verify(
                 postRequestedFor(urlPathEqualTo("/repos/$repo/pulls/$prNumber/reviews"))
                     .withRequestBody(containing("Python 에이전트 심층 분석 결과"))
-                    .withRequestBody(containing("Python 에이전트 연동 전 임시 응답")),
+                    .withRequestBody(containing("라우팅 회귀 검증 finding")),
             )
         }
     }
@@ -109,6 +110,11 @@ class AgentRoutingIntegrationTest : AbstractIntegrationTest() {
             0,
             postRequestedFor(urlPathEqualTo("/repos/$repo/pulls/$prNumber/reviews"))
                 .withRequestBody(containing("Python 에이전트 심층 분석 결과")),
+        )
+        // 일반 PR 은 Python 에이전트 호출 0회
+        wireMock.verify(
+            0,
+            postRequestedFor(urlPathEqualTo("/agent/analyze")),
         )
     }
 
