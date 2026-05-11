@@ -46,139 +46,165 @@ class DefaultGitHubWebhookService(
         val hasNoIssues: Boolean,
     )
 
+    // PR 처리 입력 — diff + 변경 파일 목록
+    private data class PrInputs(
+        val diff: String,
+        val files: List<PrFile>,
+    )
+
     override suspend fun handlePullRequestEvent(event: PullRequestEvent) {
         logger.info(
             "PR 이벤트 처리 시작: repo={}, pr={}, action={}",
             event.repositoryFullName, event.pullRequestNumber, event.action,
         )
 
-        // 0단계: 중복 처리 방지 — 동일 (레포, PR번호, SHA) 조합은 스킵
-        if (processedEventPort.isAlreadyProcessed(
+        if (skipIfAlreadyProcessed(event)) return
+        val inputs = fetchPrInputsOrNull(event) ?: return
+
+        val startNanos = System.nanoTime()
+        val reviewRequestId = startPersistedReview(event)
+        val review = runAiReview(event, inputs.diff, inputs.files)
+        finalizePersistedReview(reviewRequestId, review)
+
+        dismissPreviousReview(event)
+        val newReviewId = submitReviewToGitHub(event, review, inputs.diff)
+        publishCompletedEvent(event, review, startNanos)
+
+        if (review == null) return
+        markProcessed(event, newReviewId)
+    }
+
+    // 0단계: 중복 처리 방지 — 동일 (레포, PR번호, SHA) 조합은 스킵
+    private suspend fun skipIfAlreadyProcessed(event: PullRequestEvent): Boolean {
+        if (!processedEventPort.isAlreadyProcessed(
                 repositoryFullName = event.repositoryFullName,
                 pullRequestNumber = event.pullRequestNumber,
                 headSha = event.headSha,
             )
-        ) {
-            logger.info(
-                "이미 처리된 이벤트, 스킵: repo={}, pr={}, sha={}",
-                event.repositoryFullName, event.pullRequestNumber, event.headSha,
-            )
-            return
-        }
+        ) return false
 
-        // 1단계: PR diff 및 변경 파일 목록 조회
+        logger.info(
+            "이미 처리된 이벤트, 스킵: repo={}, pr={}, sha={}",
+            event.repositoryFullName, event.pullRequestNumber, event.headSha,
+        )
+        return true
+    }
+
+    // 1단계: PR diff + 변경 파일 목록 조회. diff 가 비어 있으면 null 반환 (메타데이터만 변경된 PR)
+    private suspend fun fetchPrInputsOrNull(event: PullRequestEvent): PrInputs? {
         val prDiff = gitHubApiPort.getPrDiff(
             repositoryFullName = event.repositoryFullName,
             pullRequestNumber = event.pullRequestNumber,
             installationId = event.installationId,
         )
 
-        // diff가 비어있으면 리뷰 불가 — 코드 변경이 없는 PR (예: 메타데이터만 변경)
         if (prDiff.isBlank()) {
             logger.warn(
                 "PR diff가 비어 있어 리뷰를 건너뜁니다: repo={}, pr={}",
                 event.repositoryFullName, event.pullRequestNumber,
             )
-            return
+            return null
         }
 
-        // 보안 파일 감지를 위한 PR 변경 파일 목록 조회 — agent 라우팅 분기 입력
         val prFiles = gitHubApiPort.getPrFiles(
             repositoryFullName = event.repositoryFullName,
             pullRequestNumber = event.pullRequestNumber,
             installationId = event.installationId,
         )
 
-        // diff 확인 후 시작 시각 기록 — 의미 있는 리뷰 플로우 전체 시간을 측정한다
-        val startNanos = System.nanoTime()
+        return PrInputs(prDiff, prFiles)
+    }
 
-        // 2단계: 리뷰 요청 저장 (PENDING) — 저장 실패가 리뷰 흐름을 중단시키지 않도록 격리
+    // 2~3단계: 리뷰 요청 PENDING 저장 후 PROCESSING 으로 전환. 저장 실패가 리뷰 흐름을 중단시키지 않도록 격리
+    private suspend fun startPersistedReview(event: PullRequestEvent): Long? {
         val reviewRequestId = runOrWarn("리뷰 요청 저장 실패 (리뷰는 계속 진행)") {
             reviewPersistencePort.saveReviewRequest(
                 repoFullName = event.repositoryFullName,
                 prNumber = event.pullRequestNumber,
                 headSha = event.headSha,
             )
+        } ?: return null
+
+        runOrWarn("리뷰 상태 업데이트 실패") {
+            reviewPersistencePort.updateReviewStatus(reviewRequestId, ReviewRequestStatus.PROCESSING)
         }
+        return reviewRequestId
+    }
 
-        // 3단계: PROCESSING 상태 업데이트
-        reviewRequestId?.let { id ->
-            runOrWarn("리뷰 상태 업데이트 실패") {
-                reviewPersistencePort.updateReviewStatus(id, ReviewRequestStatus.PROCESSING)
+    // 5단계: 리뷰 결과 저장 + 상태 종료. saveReviewResult 실패 시에도 상태 업데이트(DONE)가 반드시 실행되도록 블록을 분리한다
+    private suspend fun finalizePersistedReview(reviewRequestId: Long?, review: CodeReview?) {
+        if (reviewRequestId == null) return
+        val now = Instant.now()
+        val status = if (review != null) {
+            runOrWarn("리뷰 결과 저장 실패") {
+                reviewPersistencePort.saveReviewResult(reviewRequestId, review, review.modelName)
             }
+            ReviewRequestStatus.DONE
+        } else {
+            ReviewRequestStatus.FAILED
         }
-
-        // 4단계: AI 코드 리뷰 실행 — 실패 시 null 반환, 4단계에서 에러 코멘트 등록
-        val review = runAiReview(event, prDiff, prFiles)
-
-        // 5단계: 리뷰 결과 저장 — 성공: DONE + 결과, 실패: FAILED
-        // saveReviewResult 실패 시에도 상태 업데이트(DONE)가 반드시 실행되도록 블록을 분리한다
-        reviewRequestId?.let { id ->
-            val now = Instant.now()
-            val status = if (review != null) {
-                runOrWarn("리뷰 결과 저장 실패") { reviewPersistencePort.saveReviewResult(id, review, review.modelName) }
-                ReviewRequestStatus.DONE
-            } else {
-                ReviewRequestStatus.FAILED
-            }
-            runOrWarn("리뷰 상태 $status 업데이트 실패") {
-                reviewPersistencePort.updateReviewStatus(id, status, now)
-            }
+        runOrWarn("리뷰 상태 $status 업데이트 실패") {
+            reviewPersistencePort.updateReviewStatus(reviewRequestId, status, now)
         }
+    }
 
-        // 6단계: 이전 리뷰 dismiss — 실패해도 새 리뷰 등록은 계속 진행
-        processedEventPort.findLatestReviewId(
+    // 6단계: 이전 리뷰 dismiss — 실패해도 새 리뷰 등록은 계속 진행
+    private suspend fun dismissPreviousReview(event: PullRequestEvent) {
+        val previousReviewId = processedEventPort.findLatestReviewId(
             repositoryFullName = event.repositoryFullName,
             pullRequestNumber = event.pullRequestNumber,
-        )?.let { previousReviewId ->
-            runOrWarn(
-                "이전 리뷰 dismiss 실패 (새 리뷰 등록은 계속 진행): " +
-                    "repo=${event.repositoryFullName}, pr=${event.pullRequestNumber}, reviewId=$previousReviewId",
-            ) {
-                gitHubApiPort.dismissPrReview(
-                    repositoryFullName = event.repositoryFullName,
-                    pullRequestNumber = event.pullRequestNumber,
-                    reviewId = previousReviewId,
-                    installationId = event.installationId,
-                )
-            }
+        ) ?: return
+
+        runOrWarn(
+            "이전 리뷰 dismiss 실패 (새 리뷰 등록은 계속 진행): " +
+                "repo=${event.repositoryFullName}, pr=${event.pullRequestNumber}, reviewId=$previousReviewId",
+        ) {
+            gitHubApiPort.dismissPrReview(
+                repositoryFullName = event.repositoryFullName,
+                pullRequestNumber = event.pullRequestNumber,
+                reviewId = previousReviewId,
+                installationId = event.installationId,
+            )
         }
+    }
 
-        // 7단계: diff position 매핑 + 출력 구성
-        val reviewOutput = review?.let { buildReviewOutput(it, prDiff) }
+    // 7~8단계: PR Reviews API 등록. 리뷰 실패 시 에러 안내 코멘트로 등록
+    private suspend fun submitReviewToGitHub(
+        event: PullRequestEvent,
+        review: CodeReview?,
+        prDiff: String,
+    ): Long {
+        val prReview = review?.let { buildReviewOutput(it, prDiff) }?.let { output ->
+            PrReview(
+                body = output.body,
+                event = if (output.hasNoIssues) PrReviewEvent.APPROVE else PrReviewEvent.REQUEST_CHANGES,
+                lineComments = output.lineComments,
+                commitId = event.headSha,
+            )
+        } ?: PrReview(body = "⚠️ 코드 리뷰 생성 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.")
 
-        // 8단계: PR Reviews API로 등록 — 이슈 유무에 따라 이벤트 타입 결정
-        val newReviewId = gitHubApiPort.postPrReview(
+        return gitHubApiPort.postPrReview(
             repositoryFullName = event.repositoryFullName,
             pullRequestNumber = event.pullRequestNumber,
-            review = if (reviewOutput != null) {
-                PrReview(
-                    body = reviewOutput.body,
-                    event = if (reviewOutput.hasNoIssues) PrReviewEvent.APPROVE else PrReviewEvent.REQUEST_CHANGES,
-                    lineComments = reviewOutput.lineComments,
-                    commitId = event.headSha,
-                )
-            } else {
-                PrReview(body = "⚠️ 코드 리뷰 생성 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.")
-            },
+            review = prReview,
             installationId = event.installationId,
         )
+    }
 
-        // 리뷰 완료 이벤트 발행 — 메트릭 기록은 MetricsEventListener가 담당
-        val status = if (review != null) "DONE" else "FAILED"
+    // 8단계 끝: 메트릭 기록은 MetricsEventListener가 담당
+    private fun publishCompletedEvent(event: PullRequestEvent, review: CodeReview?, startNanos: Long) {
         eventPublisher.publishEvent(
             ReviewCompletedEvent(
                 repo = event.repositoryFullName,
-                status = status,
+                status = if (review != null) "DONE" else "FAILED",
                 issues = review?.issues ?: emptyList(),
                 durationNanos = System.nanoTime() - startNanos,
             )
         )
+    }
 
-        // 리뷰 실패 시 markAsProcessed 호출 안 함 — 다음 이벤트에서 재처리 허용
-        if (review == null) return
-
-        // 9단계: 처리 완료 기록 (중복 방지) — review_id 포함하여 저장
+    // 9단계: 처리 완료 기록 (중복 방지) — review_id 포함하여 저장. 리뷰 실패 시 호출 안 함 (다음 이벤트에서 재처리 허용)
+    private suspend fun markProcessed(event: PullRequestEvent, newReviewId: Long) {
         processedEventPort.markAsProcessed(
             repositoryFullName = event.repositoryFullName,
             pullRequestNumber = event.pullRequestNumber,
