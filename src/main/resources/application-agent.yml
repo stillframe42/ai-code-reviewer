@@ -1,3 +1,6 @@
 agent:
   python:
     url: ${PYTHON_AGENT_URL:http://localhost:8081}
+    connect-timeout: 3s
+    read-timeout: 60s
+    max-in-memory-size: 10MB
