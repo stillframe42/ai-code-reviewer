@@ -312,4 +312,31 @@ object WireMockStubs {
                 .willReturn(aResponse().withStatus(500).withBody("Internal Server Error"))
         )
     }
+
+    // Python Agent /agent/analyze 응답 — PythonAgentClient 실어댑터 통합 테스트용
+    // description 마커("라우팅 회귀 검증 finding") 로 라우팅 회귀 검증
+    fun stubPythonAgentAnalyze(wireMock: WireMockServer) {
+        wireMock.stubFor(
+            post(urlPathEqualTo("/agent/analyze"))
+                .willReturn(
+                    okJson(
+                        """
+                        {
+                          "analysis_id": "agent-analysis-stub",
+                          "status": "DONE",
+                          "issues": [
+                            {
+                              "severity": "HIGH",
+                              "type": "SECURITY",
+                              "location": "src/main/kotlin/SecurityConfig.kt:1",
+                              "description": "라우팅 회귀 검증 finding",
+                              "suggestion": "WireMock 스텁 응답"
+                            }
+                          ]
+                        }
+                        """.trimIndent(),
+                    ),
+                ),
+        )
+    }
 }

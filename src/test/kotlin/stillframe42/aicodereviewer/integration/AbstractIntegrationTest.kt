@@ -59,6 +59,8 @@ abstract class AbstractIntegrationTest {
             registry.add("spring.ai.openai.base-url") { "http://localhost:${wireMock.port()}" }
             // Langfuse API → WireMock
             registry.add("langfuse.host") { "http://localhost:${wireMock.port()}" }
+            // Python Agent → WireMock
+            registry.add("agent.python.url") { "http://localhost:${wireMock.port()}" }
             // Redis → Testcontainers
             registry.add("spring.data.redis.host") { redis.host }
             registry.add("spring.data.redis.port") { redis.getMappedPort(6379).toString() }
