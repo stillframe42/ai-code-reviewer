@@ -339,4 +339,47 @@ object WireMockStubs {
                 ),
         )
     }
+
+    // POST /agent/analyze 즉시 PROCESSING + analysisId 응답 — 폴링 시나리오 시작점
+    fun stubAgentAnalyzeAccepted(wireMock: WireMockServer, analysisId: String) {
+        wireMock.stubFor(
+            post(urlPathEqualTo("/agent/analyze"))
+                .willReturn(
+                    aResponse()
+                        .withStatus(202)
+                        .withHeader("Content-Type", "application/json")
+                        .withBody(
+                            """{"analysis_id":"$analysisId","status":"PROCESSING","issues":[]}""",
+                        ),
+                ),
+        )
+    }
+
+    // GET /agent/analyze/{id} 호출 순서대로 다른 status 반환 — Scenario API 활용
+    // 예: statuses = listOf("PROCESSING", "PROCESSING", "DONE") 이면 3번째 호출에서 DONE
+    fun stubAgentPollSequence(
+        wireMock: WireMockServer,
+        analysisId: String,
+        statuses: List<String>,
+        finalIssuesJson: String = "[]",
+        finalError: String? = null,
+    ) {
+        val scenarioName = "agent-poll-$analysisId"
+        statuses.forEachIndexed { idx, status ->
+            val from = if (idx == 0) Scenario.STARTED else "after-poll-$idx"
+            val next = "after-poll-${idx + 1}"
+            val body = when (status) {
+                "DONE" -> """{"analysis_id":"$analysisId","status":"DONE","issues":$finalIssuesJson}"""
+                "FAILED" -> """{"analysis_id":"$analysisId","status":"FAILED","issues":[],"error":"${finalError ?: "agent error"}"}"""
+                else -> """{"analysis_id":"$analysisId","status":"$status","issues":[]}"""
+            }
+            wireMock.stubFor(
+                get(urlPathEqualTo("/agent/analyze/$analysisId"))
+                    .inScenario(scenarioName)
+                    .whenScenarioStateIs(from)
+                    .willReturn(okJson(body))
+                    .willSetStateTo(next),
+            )
+        }
+    }
 }
