@@ -211,7 +211,7 @@ management:
       exposure:
         include: health, info, prometheus  # 필요한 것만 노출
   server:
-    port: 8081  # 별도 포트로 분리
+    port: 9001  # 별도 포트로 분리
 
 # ❌ 모든 Actuator 엔드포인트 노출 — 금지
 management:
