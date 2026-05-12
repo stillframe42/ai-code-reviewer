@@ -1,13 +1,12 @@
 package stillframe42.aicodereviewer.agent.adapter.`in`.web.dto
 
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
-import com.fasterxml.jackson.module.kotlin.readValue
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
+import tools.jackson.databind.json.JsonMapper
 
 class AgentCallbackResultDtoTest {
 
-    private val mapper = jacksonObjectMapper()
+    private val mapper = JsonMapper.builder().build()
 
     @Test
     fun `snake_case JSON 이 camelCase 필드로 매핑된다`() {
@@ -27,7 +26,7 @@ class AgentCallbackResultDtoTest {
             }
         """.trimIndent()
 
-        val result: AgentCallbackResult = mapper.readValue(json)
+        val result = mapper.readValue(json, AgentCallbackResult::class.java)
 
         assertThat(result.analysisId).isEqualTo("abc-123")
         assertThat(result.status).isEqualTo("DONE")
