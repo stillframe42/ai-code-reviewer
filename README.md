@@ -332,6 +332,18 @@ curl http://localhost:8080/api/reviews/stats
 
 ---
 
+## 내부 콜백 endpoint
+
+`POST /internal/agent/callback` 은 Python 에이전트의 비동기 분석 결과를 push 받는 임시 골격 endpoint 다.
+**현재 라우팅 (`AgentReviewService` → `AgentPoller`) 은 이 endpoint 를 호출하지 않는다** —
+Kafka 도입 전까지 인터페이스만 박제된 상태로 유지한다.
+
+- 외부 노출 차단: `X-Internal-Auth` 헤더 토큰 검증 (컨트롤러 단 가드)
+- 토큰 환경변수: `INTERNAL_AGENT_CALLBACK_TOKEN` (미설정 시 모든 요청 401)
+- OpenAPI 명세 (`docs/openapi.yml`) 미포함: `/internal/*` 경로는 외부 공개 명세 대상 아님
+
+---
+
 ## 데이터베이스 스키마
 
 Flyway로 마이그레이션을 관리합니다. `src/main/resources/db/migration/` 에 버전별 SQL이 있습니다.

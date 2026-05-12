@@ -211,3 +211,30 @@ flowchart TD
     Critical --> ReviewSvc
     Normal --> ReviewSvc
 ```
+
+## 6. Agent 결과 회수 방식
+
+Python 에이전트의 비동기 분석 결과 회수는 두 방식이 있다:
+
+| 방식 | 메커니즘 | 상태 |
+|---|---|---|
+| **A. 폴링 (현재)** | Spring Boot 가 `GET /agent/analyze/{id}` 반복 호출 (`AgentPoller`) | 운영 중 |
+| **B. 콜백 (골격)** | Python 이 Spring Boot 의 `POST /internal/agent/callback` push | Kafka 도입 시 활성화 예정 |
+
+### 방식 B 골격 구조
+
+- **`AgentCallbackUseCase`** (in 포트) — 미래 Kafka consumer 어댑터도 동일 인터페이스 호출 가능
+- **`DefaultAgentCallbackHandler`** — 콜백 수신 흔적만 INFO 로그 (실 구현은 Kafka 통합 시 같은 클래스에 추가 예정)
+- **`AgentCallbackController`** — `X-Internal-Auth` 토큰 가드 + UseCase 위임
+
+### 보안 가드 정책
+
+Spring Security 미도입 환경의 최소 가드:
+- `X-Internal-Auth` 헤더 토큰을 컨트롤러 단에서 검증
+- 토큰 미설정 시 모든 요청 거부 (운영 안전 default)
+- 미래 Spring Security 도입 시 Filter 단으로 이전 검토
+
+### 현재 라우팅과의 관계
+
+방식 A (폴링) 만 운영 트래픽을 처리한다. 방식 B endpoint 는 기동되지만 호출되지 않는다 (트래픽 0).
+이는 Kafka 도입 전 인터페이스 골격을 박제해 미래 push 어댑터를 추가할 때의 변경 비용을 0 으로 만들기 위한 의도된 설계.
