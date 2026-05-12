@@ -97,6 +97,10 @@ tasks.withType<Test> {
         showStandardStreams = true
     }
 
+    // 통합 테스트 다중 propertySource 로 별도 Spring 컨텍스트가 누적될 때 default heap (512MB) 부족
+    // pgvector 의 BatchingStrategy bean 생성에서 OOM 발생을 방지
+    maxHeapSize = "4g"
+
     // byte-buddy(Mockito) 동적 에이전트 로딩 경고 억제 (JDK 21+)
     jvmArgs("-XX:+EnableDynamicAgentLoading")
 

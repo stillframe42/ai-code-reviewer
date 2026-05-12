@@ -29,8 +29,12 @@ abstract class AbstractIntegrationTest {
     companion object {
         // Singleton — JVM당 컨테이너/서버 1개만 기동
         // also { it.start() }: 클래스 로드 시점에 즉시 기동 → @DynamicPropertySource 호출 전 준비 완료
+        // max_connections 200 — 통합 테스트가 다중 propertySource 로 별도 Spring 컨텍스트를 띄울 때
+        // 누적 HikariPool 컨넥션이 default 100 을 넘어 "too many clients already" 발생하는 것을 방지
         val postgres: PostgreSQLContainer =
-            PostgreSQLContainer("pgvector/pgvector:pg16").also { it.start() }
+            PostgreSQLContainer("pgvector/pgvector:pg16")
+                .withCommand("postgres", "-c", "max_connections=200")
+                .also { it.start() }
 
         val wireMock: WireMockServer =
             WireMockServer(
