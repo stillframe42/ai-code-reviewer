@@ -3,14 +3,18 @@ package stillframe42.aicodereviewer.agent.application
 import com.github.tomakehurst.wiremock.client.WireMock.aResponse
 import com.github.tomakehurst.wiremock.client.WireMock.containing
 import com.github.tomakehurst.wiremock.client.WireMock.get
+import com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor
 import com.github.tomakehurst.wiremock.client.WireMock.okJson
 import com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor
 import com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo
+import com.github.tomakehurst.wiremock.client.WireMock.urlPathMatching
 import org.awaitility.kotlin.await
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.http.MediaType
+import org.springframework.test.context.DynamicPropertyRegistry
+import org.springframework.test.context.DynamicPropertySource
 import stillframe42.aicodereviewer.config.GitHubProperties
 import stillframe42.aicodereviewer.github.adapter.`in`.web.computeSignature
 import stillframe42.aicodereviewer.github.adapter.out.persistence.ProcessedPullRequestEventRepository
@@ -27,6 +31,14 @@ import java.util.concurrent.TimeUnit.SECONDS
 // - 보안 파일 포함 PR → AgentReviewService 경로 (agent stub 마커 포함)
 // - 일반 파일만 포함 PR → DefaultReviewService 경로 (agent stub 마커 없음)
 class AgentRoutingIntegrationTest : AbstractIntegrationTest() {
+
+    companion object {
+        @JvmStatic
+        @DynamicPropertySource
+        fun pollOverrides(registry: DynamicPropertyRegistry) {
+            registry.add("agent.python.poll.interval") { "10ms" }
+        }
+    }
 
     @Autowired
     private lateinit var properties: GitHubProperties
@@ -62,11 +74,18 @@ class AgentRoutingIntegrationTest : AbstractIntegrationTest() {
         val prNumber = 201
         val headSha = "sec111abc"
 
+        val analysisId = "agent-analysis-stub"
         WireMockStubs.stubInstallationToken(wireMock, installationId)
         WireMockStubs.stubPrDiff(wireMock, repo, prNumber, AnthropicResponseFixtures.SIMPLE_DIFF)
         stubPrFilesWithSecurity(repo, prNumber)
         WireMockStubs.stubOpenAiEmbedding(wireMock)
-        WireMockStubs.stubPythonAgentAnalyze(wireMock)
+        WireMockStubs.stubAgentAnalyzeAccepted(wireMock, analysisId)
+        WireMockStubs.stubAgentPollSequence(
+            wireMock = wireMock,
+            analysisId = analysisId,
+            statuses = listOf("DONE"),
+            finalIssuesJson = """[{"severity":"HIGH","type":"SECURITY","location":"src/main/kotlin/SecurityConfig.kt:1","description":"라우팅 회귀 검증 finding","suggestion":"WireMock 스텁 응답"}]""",
+        )
         WireMockStubs.stubPostPrReview(wireMock, repo, prNumber, reviewId = 9901L)
 
         postWebhook(repo, prNumber, headSha, installationId)
@@ -111,10 +130,14 @@ class AgentRoutingIntegrationTest : AbstractIntegrationTest() {
             postRequestedFor(urlPathEqualTo("/repos/$repo/pulls/$prNumber/reviews"))
                 .withRequestBody(containing("Python 에이전트 심층 분석 결과")),
         )
-        // 일반 PR 은 Python 에이전트 호출 0회
+        // 일반 PR 은 Python 에이전트 호출 0회 (POST analyze + GET polling 모두)
         wireMock.verify(
             0,
             postRequestedFor(urlPathEqualTo("/agent/analyze")),
+        )
+        wireMock.verify(
+            0,
+            getRequestedFor(urlPathMatching("/agent/analyze/.*")),
         )
     }
 
