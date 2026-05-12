@@ -24,7 +24,13 @@ class PythonAgentClient(
     override suspend fun requestDeepAnalysis(
         command: AgentAnalysisCommand,
     ): AgentAnalysisResult {
-        logger.info("Agent analyze requested for PR #{}", command.prNumber)
+        logger.info(
+            "Agent analyze requested: pr={}, ragChunks={}, ragChars={}, diffChars={}",
+            command.prNumber,
+            command.ragContext.size,
+            command.ragContext.sumOf { it.length },
+            command.diff.length,
+        )
         val request = command.toDto()
         val response: AgentAnalysisResponse = webClient.post()
             .uri("/agent/analyze")
