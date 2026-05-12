@@ -12,6 +12,7 @@ import stillframe42.aicodereviewer.review.domain.model.CodeReview
 @Service
 class AgentReviewService(
     private val agentAnalysisPort: AgentAnalysisPort,
+    private val agentPoller: AgentPoller,
     private val conventionContextService: ConventionContextService,
 ) {
 
@@ -37,11 +38,8 @@ class AgentReviewService(
             analysisType = "SECURITY",
         )
 
-        val result = agentAnalysisPort.requestDeepAnalysis(command)
-
-        if (result.error != null) {
-            error("Agent analysis returned error: ${result.error}")
-        }
+        val initial = agentAnalysisPort.requestDeepAnalysis(command)
+        val result = agentPoller.pollUntilComplete(initial.analysisId)
 
         return AgentFindingMapper.toCodeReview(result)
     }
