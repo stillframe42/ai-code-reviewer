@@ -25,6 +25,7 @@ class AgentPollerTest {
         readTimeout = Duration.ofSeconds(1),
         maxInMemorySize = DataSize.ofMegabytes(1),
         poll = PythonAgentProperties.PollProperties(maxAttempts, interval, timeout),
+        callback = PythonAgentProperties.CallbackProperties(internalAuthToken = ""),
     )
 
     private class FakeAgentAnalysisPort(

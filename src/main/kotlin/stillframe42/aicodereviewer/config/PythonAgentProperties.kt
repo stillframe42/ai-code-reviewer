@@ -11,10 +11,15 @@ data class PythonAgentProperties(
     val readTimeout: Duration,
     val maxInMemorySize: DataSize,
     val poll: PollProperties,
+    val callback: CallbackProperties,
 ) {
     data class PollProperties(
         val maxAttempts: Int,
         val interval: Duration,
         val timeout: Duration,
+    )
+
+    data class CallbackProperties(
+        val internalAuthToken: String,
     )
 }

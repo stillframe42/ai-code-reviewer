@@ -8,3 +8,5 @@ agent:
       max-attempts: 30          # 논리적 polling 횟수 상한 (안전장치)
       interval: 2s              # polling 간격
       timeout: 60s              # wall-clock 강제 종료 (delay 변동성 방어)
+    callback:
+      internal-auth-token: ${INTERNAL_AGENT_CALLBACK_TOKEN:}   # 빈 값이면 endpoint 비활성
