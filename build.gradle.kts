@@ -84,6 +84,20 @@ dependencyManagement {
     }
 }
 
+sourceSets {
+    val evaluationTest by creating {
+        compileClasspath += sourceSets["test"].output + sourceSets["main"].output
+        runtimeClasspath += sourceSets["test"].output + sourceSets["main"].output
+    }
+}
+
+val evaluationTestImplementation by configurations.getting {
+    extendsFrom(configurations["testImplementation"])
+}
+val evaluationTestRuntimeOnly by configurations.getting {
+    extendsFrom(configurations["testRuntimeOnly"])
+}
+
 tasks.withType<KotlinCompile> {
     compilerOptions {
         freeCompilerArgs.addAll("-Xjsr305=strict")
@@ -124,6 +138,15 @@ fun registerExperimentTask(name: String, tag: String, description: String) {
         classpath = sourceSets["test"].runtimeClasspath
         useJUnitPlatform { includeTags(tag) }
     }
+}
+
+tasks.register<Test>("evaluationTest") {
+    description = "평가/벤치마크/실험성 IT 실행 (수동/주기 워크플로 전용 — 실제 API 키 필요)"
+    group = "verification"
+    testClassesDirs = sourceSets["evaluationTest"].output.classesDirs
+    classpath = sourceSets["evaluationTest"].runtimeClasspath
+    useJUnitPlatform()
+    shouldRunAfter("test")
 }
 
 // 실행: ./gradlew experimentTest      — 실제 OpenAI API 키(sk-*) 필요
