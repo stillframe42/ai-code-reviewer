@@ -67,7 +67,7 @@ class PythonAgentClientIntegrationTest : AbstractIntegrationTest() {
                 prNumber = 7,
                 repo = "owner/repo",
                 diff = "d",
-                ragContext = listOf("ctx-1"),
+                contextIds = listOf("ctx-1"),
                 analysisType = "SECURITY",
                 sessionId = "sess-1",
             ),
@@ -82,7 +82,7 @@ class PythonAgentClientIntegrationTest : AbstractIntegrationTest() {
                           "pr_number": 7,
                           "repo": "owner/repo",
                           "diff": "d",
-                          "rag_context": ["ctx-1"],
+                          "context_ids": ["ctx-1"],
                           "analysis_type": "SECURITY",
                           "session_id": "sess-1"
                         }

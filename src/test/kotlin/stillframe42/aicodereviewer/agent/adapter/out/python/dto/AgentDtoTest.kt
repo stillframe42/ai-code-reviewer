@@ -16,7 +16,7 @@ class AgentDtoTest {
             prNumber = 42,
             repo = "owner/repo",
             diff = "diff --git a/foo b/foo",
-            ragContext = listOf("convention-1"),
+            contextIds = listOf("convention-1"),
             analysisType = "SECURITY",
             sessionId = "session-123",
         )
@@ -28,12 +28,12 @@ class AgentDtoTest {
             "pr_number",
             "repo",
             "diff",
-            "rag_context",
+            "context_ids",
             "analysis_type",
             "session_id",
         )
         assertThat(tree.get("pr_number").asInt()).isEqualTo(42)
-        assertThat(tree.get("rag_context").get(0).asText()).isEqualTo("convention-1")
+        assertThat(tree.get("context_ids").get(0).asText()).isEqualTo("convention-1")
         assertThat(tree.get("analysis_type").asText()).isEqualTo("SECURITY")
         assertThat(tree.get("session_id").asText()).isEqualTo("session-123")
     }
@@ -86,7 +86,7 @@ class AgentDtoTest {
             mapper.readValue(mapper.writeValueAsString(originalRequest))
 
         assertThat(roundTrippedRequest).isEqualTo(originalRequest)
-        assertThat(roundTrippedRequest.ragContext).isEmpty()
+        assertThat(roundTrippedRequest.contextIds).isEmpty()
         assertThat(roundTrippedRequest.analysisType).isEqualTo("GENERAL")
         assertThat(roundTrippedRequest.sessionId).isNull()
 

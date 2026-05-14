@@ -27,8 +27,8 @@ class PythonAgentClient(
         logger.info(
             "Agent analyze requested: pr={}, ragChunks={}, ragChars={}, diffChars={}",
             command.prNumber,
-            command.ragContext.size,
-            command.ragContext.sumOf { it.length },
+            command.contextIds.size,
+            command.contextIds.sumOf { it.length },
             command.diff.length,
         )
         val request = command.toDto()
@@ -59,7 +59,7 @@ private fun AgentAnalysisCommand.toDto(): AgentAnalysisRequest =
         prNumber = prNumber,
         repo = repo,
         diff = diff,
-        ragContext = ragContext,
+        contextIds = contextIds,
         analysisType = analysisType,
         sessionId = sessionId,
     )

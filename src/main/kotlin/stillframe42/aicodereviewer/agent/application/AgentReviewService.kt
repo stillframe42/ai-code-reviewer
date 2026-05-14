@@ -34,7 +34,7 @@ class AgentReviewService(
             prNumber = pullRequestNumber,
             repo = repositoryFullName,
             diff = prDiff,
-            ragContext = ragContext,
+            contextIds = ragContext,   // Task 3 에서 buildContextIds 결과로 교체 예정
             analysisType = "SECURITY",
         )
 
