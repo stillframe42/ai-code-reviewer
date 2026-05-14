@@ -327,6 +327,7 @@ paths:
         - name: X-Internal-Auth
           in: header
           required: true
+          description: 내부 인증 토큰 (INTERNAL_AGENT_CALLBACK_TOKEN 환경변수 값)
           schema:
             type: string
       responses:
@@ -789,3 +790,4 @@ components:
         content:
           type: string
           description: pgvector vector_store 의 해당 row 본문 (joined 텍스트 1개 — 청크 1개)
+          example: "## 코루틴 규칙\n- 단일 응답 반환: suspend fun\n- 스트리밍: Flow<T>\n..."
