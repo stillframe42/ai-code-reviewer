@@ -37,7 +37,7 @@ class GlobalExceptionHandler {
     // 도메인 단건 조회 결과 미존재 시 404 Not Found 반환
     @ExceptionHandler(NotFoundException::class)
     fun handleNotFoundException(ex: NotFoundException): ResponseEntity<Map<String, String>> =
-        ResponseEntity.status(HttpStatus.NOT_FOUND).body(mapOf("error" to (ex.message ?: "not found")))
+        ResponseEntity.status(HttpStatus.NOT_FOUND).body(mapOf("error" to (ex.message ?: "리소스를 찾을 수 없습니다")))
 
     // 잘못된 인자 예외 — 400 Bad Request 반환 (500 catch-all과 구분하기 위해 먼저 선언)
     @ExceptionHandler(IllegalArgumentException::class)
