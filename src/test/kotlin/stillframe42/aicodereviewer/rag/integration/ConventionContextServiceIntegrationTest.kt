@@ -100,7 +100,7 @@ class ConventionContextServiceIntegrationTest : AbstractIntegrationTest() {
         assertThat(ids).isNotEmpty()
         // pgvector row id는 UUID 형식
         assertThat(ids).allSatisfy { id ->
-            assertThat(id).matches("^[0-9a-f-]{36}$")
+            assertThat(id).matches("^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")
         }
     }
 }
