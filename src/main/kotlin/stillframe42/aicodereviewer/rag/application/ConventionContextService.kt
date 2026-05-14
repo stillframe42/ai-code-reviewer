@@ -31,4 +31,18 @@ class ConventionContextService(
             if (docs.isEmpty()) "" else docs.joinToString("\n\n---\n\n") { it.text ?: "" }
         }
     }
+
+    suspend fun buildContextIds(query: String, filePath: String? = null): List<String> {
+        if (!ragEnabled) return emptyList()
+        val category = filePath?.let { FileCategoryMapper.selectCategory(it) }
+        return observabilityPort.withSpan(
+            name = "rag.context.ids",
+            input = mapOf("query" to query, "filePath" to (filePath ?: "")),
+            outputMapper = { result: List<String> ->
+                mapOf("category" to category.nameOrAll(), "idCount" to result.size)
+            },
+        ) {
+            hybridSearchService.search(query = query, category = category).map { it.id!! }
+        }
+    }
 }

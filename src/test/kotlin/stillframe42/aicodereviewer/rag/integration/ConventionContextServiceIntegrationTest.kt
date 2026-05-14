@@ -88,4 +88,19 @@ class ConventionContextServiceIntegrationTest : AbstractIntegrationTest() {
             assertThat(part).isNotBlank()
         }
     }
+
+    @Test
+    fun `buildContextIds — ragEnabled 상태에서 hybridSearch 결과의 Document id 리스트를 반환한다`() {
+        val ids = runBlocking {
+            conventionContextService.buildContextIds(
+                query = "security review for changed files",
+                filePath = "src/main/kotlin/stillframe42/SecurityConfig.kt",
+            )
+        }
+        assertThat(ids).isNotEmpty()
+        // pgvector row id는 UUID 형식
+        assertThat(ids).allSatisfy { id ->
+            assertThat(id).matches("^[0-9a-f-]{36}$")
+        }
+    }
 }
