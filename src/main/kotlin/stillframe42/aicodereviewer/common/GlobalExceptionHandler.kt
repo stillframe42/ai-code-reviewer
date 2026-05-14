@@ -9,6 +9,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.RestControllerAdvice
 import org.springframework.web.servlet.resource.NoResourceFoundException
+import stillframe42.aicodereviewer.common.exception.NotFoundException
 
 // 전역 예외 처리 핸들러 — Problem Details 자동 핸들러보다 높은 우선순위로 등록
 @Order(Ordered.HIGHEST_PRECEDENCE)
@@ -32,6 +33,11 @@ class GlobalExceptionHandler {
     fun handleNoResourceFound(ex: NoResourceFoundException): ResponseEntity<Map<String, String>> =
         ResponseEntity.status(HttpStatus.NOT_FOUND)
             .body(mapOf("error" to "요청한 경로를 찾을 수 없습니다: ${ex.resourcePath}"))
+
+    // 도메인 단건 조회 결과 미존재 시 404 Not Found 반환
+    @ExceptionHandler(NotFoundException::class)
+    fun handleNotFoundException(ex: NotFoundException): ResponseEntity<Map<String, String>> =
+        ResponseEntity.status(HttpStatus.NOT_FOUND).body(mapOf("error" to (ex.message ?: "not found")))
 
     // 잘못된 인자 예외 — 400 Bad Request 반환 (500 catch-all과 구분하기 위해 먼저 선언)
     @ExceptionHandler(IllegalArgumentException::class)
