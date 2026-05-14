@@ -13,7 +13,10 @@ import stillframe42.aicodereviewer.common.exception.NotFoundException
 import stillframe42.aicodereviewer.rag.adapter.`in`.web.dto.RagContextResponse
 import stillframe42.aicodereviewer.rag.domain.port.`in`.GetRagContextUseCase
 
-// X-Internal-Auth 헤더 토큰 검증 — AgentCallbackController 와 동일한 가드 패턴
+// Python 에이전트가 AgentAnalysisRequest 의 context_ids 로 컨벤션 컨텍스트를 lazy fetch 하는 엔드포인트.
+// 현재 sync HTTP flow 기준으로는 inline 전달 대비 net 네트워크 비용이 늘어난다 (POST 바디는 줄지만 GET 라운드트립 N 회 추가).
+// 이 구조의 진짜 이점은 Kafka 전환 후에 살아남 — 메시지 크기 한계(default 1MB) + 컨슈머 그룹 fan-out 시 N 배 증폭 회피.
+// X-Internal-Auth 헤더 토큰 검증 — AgentCallbackController 와 동일한 가드 패턴.
 @RestController
 @RequestMapping("/api/rag/context")
 class RagContextController(
