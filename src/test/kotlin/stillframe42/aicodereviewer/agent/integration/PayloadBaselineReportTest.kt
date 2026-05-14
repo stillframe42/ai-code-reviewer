@@ -95,6 +95,25 @@ class PayloadBaselineReportTest {
     }
 
     @Test
+    fun `영역별 비율은 평균 기준으로 정확히 계산된다`() {
+        val markdown = PayloadBaselineReport.format(
+            measurements = sampleMeasurements,
+            timestamp = "2026-05-14T10:00:00",
+            commit = "abc1234",
+            rawSnapshotSampleId = "security-sql",
+            rawSnapshotBody = "{}",
+        )
+
+        // 평균: total=4000, diff=1666, ragContext=2133, meta=200
+        // diff/total = 1666/4000 = 41%
+        // ragContext/total = 2133/4000 = 53%
+        // meta/total = 200/4000 = 5%
+        assertThat(markdown).contains("- diff: 41%")
+        assertThat(markdown).contains("- ragContext: 53%")
+        assertThat(markdown).contains("- meta: 5%")
+    }
+
+    @Test
     fun `raw payload snapshot 섹션에 지정된 본문이 포함된다`() {
         val markdown = PayloadBaselineReport.format(
             measurements = sampleMeasurements,

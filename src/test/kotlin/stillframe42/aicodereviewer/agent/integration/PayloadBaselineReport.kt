@@ -20,12 +20,15 @@ object PayloadBaselineReport {
         commit: String,
         rawSnapshotSampleId: String,
         rawSnapshotBody: String,
-    ): String = buildString {
-        appendMetadata(timestamp, commit)
-        appendPerSampleTable(measurements)
-        appendRatioSection(measurements)
-        appendPhase5ComparisonTable(measurements)
-        appendRawSnapshot(rawSnapshotSampleId, rawSnapshotBody)
+    ): String {
+        require(measurements.isNotEmpty()) { "measurements must not be empty" }
+        return buildString {
+            appendMetadata(timestamp, commit)
+            appendPerSampleTable(measurements)
+            appendRatioSection(measurements)
+            appendPhase5ComparisonTable(measurements)
+            appendRawSnapshot(rawSnapshotSampleId, rawSnapshotBody)
+        }
     }
 
     private fun StringBuilder.appendMetadata(timestamp: String, commit: String) {
