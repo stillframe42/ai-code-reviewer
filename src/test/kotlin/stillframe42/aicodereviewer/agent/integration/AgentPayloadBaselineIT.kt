@@ -120,6 +120,7 @@ class AgentPayloadBaselineIT {
         println("[AgentPayloadBaselineIT] baseline 보고서 생성: ${reportFile.absolutePath}")
         measurements.forEach { println("[AgentPayloadBaselineIT] $it") }
 
+        // 실패해도 보고서 파일은 남아 있어야 사람이 원인을 진단할 수 있다 — 그래서 저장 이후에 검증한다
         check(measurements.all { it.ragContextBytes > 0 }) {
             "ragContext 가 0 인 샘플이 있습니다 — vector_store 시드 또는 OpenAI 호출 실패 가능성"
         }
@@ -147,18 +148,15 @@ class AgentPayloadBaselineIT {
         val root = objectMapper.readTree(body)
         val diffBytes = root["diff"].asText().toByteArray(Charsets.UTF_8).size
         val ragArray = root["rag_context"]
-        val ragChunkCount = if (ragArray != null && ragArray.isArray) ragArray.size() else 0
-        val ragContextBytes = (0 until ragChunkCount).sumOf {
-            ragArray[it].asText().toByteArray(Charsets.UTF_8).size
-        }
-        val ragJoinedLen = if (ragChunkCount > 0) ragArray[0].asText().length else 0
+        val ragContextBytes = ragArray.sumOf { it.asText().toByteArray(Charsets.UTF_8).size }
+        val ragJoinedLen = if (ragArray.size() > 0) ragArray[0].asText().length else 0
         return Measurement(
             sampleId = sampleId,
             totalBytes = totalBytes,
             diffBytes = diffBytes,
             ragContextBytes = ragContextBytes,
             metaBytes = totalBytes - diffBytes - ragContextBytes,
-            ragChunkCount = ragChunkCount,
+            ragChunkCount = ragArray.size(),
             ragJoinedLen = ragJoinedLen,
         )
     }
