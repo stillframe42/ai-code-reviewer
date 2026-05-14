@@ -19,4 +19,7 @@ interface ConventionVectorPort {
         category: ConventionCategory? = null,
         similarityThreshold: Double = 0.0,
     ): List<Document>
+
+    // 단건 조회 — vector_store row id 로 Document 조회. 미존재/형식 오류 시 null.
+    fun findById(id: String): Document?
 }

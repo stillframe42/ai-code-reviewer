@@ -1,5 +1,7 @@
 package stillframe42.aicodereviewer.rag.adapter.out.ai
 
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.module.kotlin.readValue
 import org.springframework.ai.document.Document
 import org.springframework.ai.vectorstore.SearchRequest
 import org.springframework.ai.vectorstore.VectorStore
@@ -14,6 +16,7 @@ import stillframe42.aicodereviewer.rag.domain.port.out.ConventionVectorPort
 class SpringAiConventionVectorAdapter(
     private val vectorStore: VectorStore,
     private val jdbcTemplate: JdbcTemplate,
+    private val objectMapper: ObjectMapper,
 ) : ConventionVectorPort {
 
     override fun save(documents: List<Document>) {
@@ -43,4 +46,21 @@ class SpringAiConventionVectorAdapter(
                 .apply { category?.let { filterExpression("category == '${it.name}'") } }
                 .build()
         )
+
+    // pgvector vector_store 단건 조회 — Spring AI VectorStore 인터페이스에 단건 API 가 없어 JdbcTemplate 직접 사용
+    // runCatching: 0건(EmptyResultDataAccessException) + 잘못된 UUID 형식(PSQLException) 모두 null 로 매핑
+    override fun findById(id: String): Document? =
+        runCatching {
+            jdbcTemplate.queryForObject(
+                "SELECT id::text, content, metadata::text FROM vector_store WHERE id = ?::uuid",
+                { rs, _ ->
+                    Document(
+                        rs.getString("id"),
+                        rs.getString("content"),
+                        objectMapper.readValue<Map<String, Any>>(rs.getString("metadata")),
+                    )
+                },
+                id,
+            )
+        }.getOrNull()
 }
