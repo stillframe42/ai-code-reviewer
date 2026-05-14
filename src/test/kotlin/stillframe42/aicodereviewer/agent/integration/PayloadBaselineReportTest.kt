@@ -81,7 +81,11 @@ class PayloadBaselineReportTest {
     }
 
     @Test
-    fun `Phase 5 비교용 빈 표가 모든 샘플 행을 포함한다`() {
+    fun `Phase 5 비교 결과 표는 Baseline 매칭 샘플의 before·after·감소율을 채운다`() {
+        // Baseline.SAMPLES["security-sql"] = (5851, 4026)
+        // sampleMeasurements 의 security-sql 은 totalBytes=4000, ragContextBytes=2300
+        // total 감소율 = (5851 - 4000) / 5851 ≈ 31%
+        // ragContext 감소율 = (4026 - 2300) / 4026 ≈ 42%
         val markdown = PayloadBaselineReport.format(
             measurements = sampleMeasurements,
             timestamp = "2026-05-14T10:00:00",
@@ -90,8 +94,45 @@ class PayloadBaselineReportTest {
             rawSnapshotBody = "{}",
         )
 
-        assertThat(markdown).contains("## Phase 5 비교용 빈 표")
-        assertThat(markdown).contains("| security-sql | 4000 | - | - |")
+        assertThat(markdown).contains("## Phase 5 비교 결과")
+        assertThat(markdown).contains("| security-sql | 5851 | 4000 | 31% | 4026 | 2300 | 42% |")
+    }
+
+    @Test
+    fun `Baseline 에 없는 sampleId 는 before 컬럼이 dash 로 fallback`() {
+        val unknown = listOf(
+            Measurement(
+                sampleId = "unknown-sample",
+                totalBytes = 1234,
+                diffBytes = 100,
+                ragContextBytes = 500,
+                metaBytes = 634,
+                ragChunkCount = 1,
+                ragJoinedLen = 480,
+            ),
+        )
+        val markdown = PayloadBaselineReport.format(
+            measurements = unknown,
+            timestamp = "2026-05-14T10:00:00",
+            commit = "abc1234",
+            rawSnapshotSampleId = "unknown-sample",
+            rawSnapshotBody = "{}",
+        )
+
+        assertThat(markdown).contains("| unknown-sample | - | 1234 | - | - | 500 | - |")
+    }
+
+    @Test
+    fun `Phase 5 비교 결과 표 머리말이 before·after·감소율 컬럼을 명시한다`() {
+        val markdown = PayloadBaselineReport.format(
+            measurements = sampleMeasurements,
+            timestamp = "2026-05-14T10:00:00",
+            commit = "abc1234",
+            rawSnapshotSampleId = "security-sql",
+            rawSnapshotBody = "{}",
+        )
+
+        assertThat(markdown).contains("| 샘플 | before total | after total | 감소율 | before ragContext | after ragContext | 감소율 |")
     }
 
     @Test

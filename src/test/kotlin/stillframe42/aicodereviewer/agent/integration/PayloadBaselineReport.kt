@@ -67,14 +67,22 @@ object PayloadBaselineReport {
     }
 
     private fun StringBuilder.appendPhase5ComparisonTable(ms: List<Measurement>) {
-        appendLine("## Phase 5 비교용 빈 표")
+        appendLine("## Phase 5 비교 결과")
         appendLine()
-        appendLine("> Phase 5 가 동일 IT 를 재실행해 'after' 컬럼을 채운다. before 컬럼은 freeze.")
+        appendLine("> Baseline (before) 은 Phase 1 측정 시점의 freeze 값. after 는 IT 재실행 시점 측정값.")
         appendLine()
         appendLine("| 샘플 | before total | after total | 감소율 | before ragContext | after ragContext | 감소율 |")
         appendLine("|------|-------------:|------------:|------:|------------------:|-----------------:|------:|")
         ms.forEach {
-            appendLine("| ${it.sampleId} | ${it.totalBytes} | - | - | ${it.ragContextBytes} | - | - |")
+            val before = Baseline.SAMPLES[it.sampleId]
+            if (before != null) {
+                appendLine(
+                    "| ${it.sampleId} | ${before.totalBytes} | ${it.totalBytes} | ${reductionPct(before.totalBytes, it.totalBytes)}% " +
+                        "| ${before.ragContextBytes} | ${it.ragContextBytes} | ${reductionPct(before.ragContextBytes, it.ragContextBytes)}% |",
+                )
+            } else {
+                appendLine("| ${it.sampleId} | - | ${it.totalBytes} | - | - | ${it.ragContextBytes} | - |")
+            }
         }
         appendLine()
     }
@@ -110,3 +118,18 @@ private fun List<Measurement>.maxed(): Measurement = Measurement(
     ragChunkCount = maxOf { it.ragChunkCount },
     ragJoinedLen = maxOf { it.ragJoinedLen },
 )
+
+// Phase 1 측정 시점의 freeze 값 — Phase 5 비교표의 'before' 컬럼 소스
+// 갱신 시 baseline-payload.md 와 동시에 의도 명시 커밋
+private object Baseline {
+    data class Entry(val totalBytes: Int, val ragContextBytes: Int)
+
+    val SAMPLES: Map<String, Entry> = mapOf(
+        "security-sql" to Entry(totalBytes = 5851, ragContextBytes = 4026),
+        "arch-jpa"     to Entry(totalBytes = 2801, ragContextBytes = 1603),
+        "style-long"   to Entry(totalBytes = 5884, ragContextBytes = 1603),
+    )
+}
+
+private fun reductionPct(before: Int, after: Int): Int =
+    if (before <= 0) 0 else (((before - after).toLong() * 100) / before).toInt()
