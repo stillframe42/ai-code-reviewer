@@ -1,5 +1,6 @@
 package stillframe42.aicodereviewer.agent.integration
 
+import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.github.tomakehurst.wiremock.client.WireMock.get
 import com.github.tomakehurst.wiremock.client.WireMock.okJson
@@ -102,6 +103,8 @@ class AgentPayloadBaselineIT {
             val body = request.bodyAsString
             if (sample.id == "security-sql") rawSnapshotBody = body
 
+            assertContextIdsOnly(sample.id, objectMapper.readTree(body))
+
             decompose(sample.id, body)
         }
 
@@ -141,6 +144,17 @@ class AgentPayloadBaselineIT {
             get(urlPathMatching("/agent/analyze/.+"))
                 .willReturn(okJson("""{"analysis_id":"baseline","status":"DONE","issues":[]}""")),
         )
+    }
+
+    // Phase 2 의 "inline 텍스트 0" 가 회귀하지 않는지 — rag_context 키 부활 또는 context_ids 비어있음을 즉시 실패시킨다
+    private fun assertContextIdsOnly(sampleId: String, root: JsonNode) {
+        require(!root.has("rag_context")) {
+            "[$sampleId] rag_context 키가 부활했습니다 — Phase 2 회귀 (inline 텍스트가 다시 페이로드에 포함됨)"
+        }
+        val contextIds = root["context_ids"]
+        require(contextIds != null && contextIds.isArray && contextIds.size() >= 1) {
+            "[$sampleId] context_ids 가 비어 있습니다 — RAG 시드 또는 buildContextIds 호출 실패"
+        }
     }
 
     private fun decompose(sampleId: String, body: String): Measurement {
