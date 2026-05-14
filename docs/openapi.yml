@@ -13,6 +13,8 @@ tags:
     description: GitHub Webhook 수신 엔드포인트
   - name: reviews
     description: 리뷰 조회 엔드포인트
+  - name: rag
+    description: RAG 컨텍스트 조회 엔드포인트 (내부용)
 
 paths:
   /api/chat:
@@ -305,6 +307,53 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
               example:
                 error: "Webhook 서명 검증에 실패했습니다"
+
+  /api/rag/context/{contextId}:
+    get:
+      operationId: getRagContext
+      summary: RAG 컨벤션 컨텍스트 단건 조회 (내부용)
+      description: |
+        Python 에이전트가 contextIds lazy fetch 시 호출한다.
+        X-Internal-Auth 헤더 필수 — INTERNAL_AGENT_CALLBACK_TOKEN 과 일치해야 함.
+      tags:
+        - rag
+      parameters:
+        - name: contextId
+          in: path
+          required: true
+          schema:
+            type: string
+          example: "a1b2c3d4-e5f6-7890-abcd-ef0123456789"
+        - name: X-Internal-Auth
+          in: header
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 컨텍스트 단건 조회 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RagContextResponse'
+              example:
+                content: "코드 컨벤션 청크 본문..."
+        '401':
+          description: X-Internal-Auth 누락 또는 불일치
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "unauthorized"
+        '404':
+          description: contextId 미존재 또는 형식 오류
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "contextId=a1b2... not found"
 
 components:
   schemas:
@@ -707,3 +756,36 @@ components:
           example:
             message: "메시지를 입력해주세요"
             code: "코드를 입력해주세요"
+
+    # ── Agent 관련 스키마 ────────────────────────────────────────────────────
+
+    AgentAnalysisRequest:
+      type: object
+      description: Python 에이전트로 전달하는 분석 요청 페이로드
+      required:
+        - diff
+        - context_ids
+      properties:
+        diff:
+          type: string
+          description: 분석 대상 Git diff 문자열
+          example: "diff --git a/src/main.kt b/src/main.kt\n..."
+        context_ids:
+          type: array
+          items:
+            type: string
+          description: pgvector vector_store row id 목록. Python 측이 lazy fetch 로 본문 조회.
+          example:
+            - "a1b2c3d4-e5f6-7890-abcd-ef0123456789"
+            - "b2c3d4e5-f6a7-8901-bcde-f01234567890"
+
+    # ── RAG 관련 스키마 ──────────────────────────────────────────────────────
+
+    RagContextResponse:
+      type: object
+      required:
+        - content
+      properties:
+        content:
+          type: string
+          description: pgvector vector_store 의 해당 row 본문 (joined 텍스트 1개 — 청크 1개)
