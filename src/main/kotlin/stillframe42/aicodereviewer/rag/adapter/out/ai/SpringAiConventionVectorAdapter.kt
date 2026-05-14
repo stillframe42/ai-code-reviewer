@@ -11,7 +11,7 @@ import stillframe42.aicodereviewer.rag.domain.model.ConventionCategory
 import stillframe42.aicodereviewer.rag.domain.port.out.ConventionVectorPort
 
 // Spring AI VectorStore를 ConventionVectorPort로 감싸는 아웃바운드 어댑터
-// isEmpty()와 deleteAll()은 VectorStore API가 지원하지 않으므로 JdbcTemplate을 직접 사용한다.
+// VectorStore API가 지원하지 않는 경우 JdbcTemplate을 직접 사용한다.
 @Component
 class SpringAiConventionVectorAdapter(
     private val vectorStore: VectorStore,
@@ -29,8 +29,6 @@ class SpringAiConventionVectorAdapter(
             Long::class.java,
         ) ?: 0L) == 0L
 
-    // TRUNCATE를 사용하여 HNSW 인덱스를 완전히 초기화한다.
-    // DELETE는 dead tuple을 남겨 HNSW 그래프가 오염되고 검색 품질이 저하된다.
     override fun deleteAll() {
         jdbcTemplate.execute("TRUNCATE TABLE vector_store")
     }
@@ -47,8 +45,6 @@ class SpringAiConventionVectorAdapter(
                 .build()
         )
 
-    // pgvector vector_store 단건 조회 — Spring AI VectorStore 인터페이스에 단건 API 가 없어 JdbcTemplate 직접 사용
-    // runCatching: 0건(EmptyResultDataAccessException) + 잘못된 UUID 형식(PSQLException) 모두 null 로 매핑
     override fun findById(id: String): Document? =
         runCatching {
             jdbcTemplate.queryForObject(
