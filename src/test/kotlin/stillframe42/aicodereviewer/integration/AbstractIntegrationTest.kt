@@ -29,8 +29,8 @@ abstract class AbstractIntegrationTest {
     companion object {
         // Singleton — JVM당 컨테이너/서버 1개만 기동
         // also { it.start() }: 클래스 로드 시점에 즉시 기동 → @DynamicPropertySource 호출 전 준비 완료
-        // max_connections 200 — 통합 테스트가 다중 propertySource 로 별도 Spring 컨텍스트를 띄울 때
-        // 누적 HikariPool 컨넥션이 default 100 을 넘어 "too many clients already" 발생하는 것을 방지
+        // 통합 테스트 컨텍스트 수가 늘어도 한계 도달이 어려워지도록 풀 자체를 작게 유지 (@DynamicPropertySource 의 hikari.maximum-pool-size=5) 가 1차 방어선.
+        // max_connections=200 은 컨텍스트 다수일 때의 2차 방어선 — Spring 컨텍스트가 N개일 때 누적 연결이 한계를 못 넘도록.
         val postgres: PostgreSQLContainer =
             PostgreSQLContainer("pgvector/pgvector:pg16")
                 .withCommand("postgres", "-c", "max_connections=200")
@@ -56,6 +56,9 @@ abstract class AbstractIntegrationTest {
             registry.add("spring.datasource.url") { postgres.jdbcUrl }
             registry.add("spring.datasource.username") { postgres.username }
             registry.add("spring.datasource.password") { postgres.password }
+            // 컨텍스트 폭증 시에도 누적 연결이 작도록 풀 크기를 작게 — IT 의 DB 접근은 순차이고 5 connection 으로 충분
+            registry.add("spring.datasource.hikari.maximum-pool-size") { "5" }
+            registry.add("spring.datasource.hikari.minimum-idle") { "1" }
             // GitHub API → WireMock
             registry.add("github.api.base-url") { "http://localhost:${wireMock.port()}" }
             // Spring AI (Anthropic + OpenAI) → WireMock
