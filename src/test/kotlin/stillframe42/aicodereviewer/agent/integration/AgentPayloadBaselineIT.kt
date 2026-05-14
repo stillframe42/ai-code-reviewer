@@ -147,7 +147,9 @@ class AgentPayloadBaselineIT {
         val totalBytes = body.toByteArray(Charsets.UTF_8).size
         val root = objectMapper.readTree(body)
         val diffBytes = root["diff"].asText().toByteArray(Charsets.UTF_8).size
-        val ragArray = root["rag_context"]
+        // 키 이름은 'context_ids' 로 진화했지만 Measurement 의 라벨(ragContextBytes 등)은
+        // "RAG 전달에 쓰인 바이트" 의미 유지 — 표현 형식과 무관한 의미론적 안정성
+        val ragArray = root["context_ids"]
         val ragContextBytes = ragArray.sumOf { it.asText().toByteArray(Charsets.UTF_8).size }
         val ragJoinedLen = if (ragArray.size() > 0) ragArray[0].asText().length else 0
         return Measurement(

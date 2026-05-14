@@ -23,18 +23,16 @@ class AgentReviewService(
         prFiles: List<PrFile>,
     ): CodeReview {
         val securityFile = SecurityFileDetector.firstSecurityFile(prFiles)
-        val ragContext = listOf(
-            conventionContextService.buildContext(
-                query = SECURITY_QUERY,
-                filePath = securityFile?.filename,
-            ),
+        val contextIds = conventionContextService.buildContextIds(
+            query = SECURITY_QUERY,
+            filePath = securityFile?.filename,
         )
 
         val command = AgentAnalysisCommand(
             prNumber = pullRequestNumber,
             repo = repositoryFullName,
             diff = prDiff,
-            contextIds = ragContext,
+            contextIds = contextIds,
             analysisType = "SECURITY",
         )
 
