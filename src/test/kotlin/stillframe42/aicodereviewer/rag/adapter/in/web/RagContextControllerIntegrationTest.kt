@@ -9,6 +9,7 @@ import org.springframework.http.HttpStatus
 import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.test.context.TestPropertySource
 import stillframe42.aicodereviewer.integration.AbstractIntegrationTest
+import stillframe42.aicodereviewer.rag.adapter.`in`.web.dto.RagContextResponse
 
 @TestPropertySource(properties = ["agent.python.callback.internal-auth-token=test-rag-token"])
 class RagContextControllerIntegrationTest : AbstractIntegrationTest() {
@@ -28,10 +29,10 @@ class RagContextControllerIntegrationTest : AbstractIntegrationTest() {
             .header("X-Internal-Auth", "test-rag-token")
             .exchange()
             .expectStatus().isOk
-            .expectBody(Map::class.java)
+            .expectBody(RagContextResponse::class.java)
             .returnResult().responseBody!!
 
-        assertThat(response["content"]).isEqualTo("the chunk body")
+        assertThat(response.content).isEqualTo("the chunk body")
     }
 
     @Test
