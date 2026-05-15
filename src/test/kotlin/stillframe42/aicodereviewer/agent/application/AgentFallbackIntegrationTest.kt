@@ -96,6 +96,11 @@ class AgentFallbackIntegrationTest : AbstractIntegrationTest() {
             )
             assertThat(fallbackCount("unavailable")).isEqualTo(baseline + 1.0)
         }
+        wireMock.verify(
+            0,
+            postRequestedFor(urlPathEqualTo("/repos/${fixture.repo}/pulls/${fixture.prNumber}/reviews"))
+                .withRequestBody(containing("Python 에이전트 심층 분석 결과")),
+        )
     }
 
     @Test
