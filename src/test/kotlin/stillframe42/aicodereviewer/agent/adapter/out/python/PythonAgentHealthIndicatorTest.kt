@@ -19,7 +19,7 @@ class PythonAgentHealthIndicatorTest : AbstractIntegrationTest() {
     private lateinit var indicator: PythonAgentHealthIndicator
 
     @Test
-    fun `agent _health 200 응답 시 status UP`() {
+    fun `agent health endpoint 가 200 응답이면 status UP`() {
         wireMock.stubFor(
             get(urlPathEqualTo("/health"))
                 .willReturn(aResponse().withStatus(200)),
@@ -31,7 +31,7 @@ class PythonAgentHealthIndicatorTest : AbstractIntegrationTest() {
     }
 
     @Test
-    fun `agent _health 5xx 응답 시 status DOWN`() {
+    fun `agent health endpoint 가 5xx 응답이면 status DOWN`() {
         wireMock.stubFor(
             get(urlPathEqualTo("/health"))
                 .willReturn(aResponse().withStatus(503)),
@@ -43,7 +43,7 @@ class PythonAgentHealthIndicatorTest : AbstractIntegrationTest() {
     }
 
     @Test
-    fun `agent _health connection reset 시 status DOWN`() {
+    fun `agent health endpoint 가 connection reset 이면 status DOWN`() {
         wireMock.stubFor(
             get(urlPathEqualTo("/health"))
                 .willReturn(aResponse().withFault(Fault.CONNECTION_RESET_BY_PEER)),
