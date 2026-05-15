@@ -4,4 +4,4 @@ class AgentAnalysisTimeoutException(
     val analysisId: String,
     reason: String,
     cause: Throwable? = null,
-) : RuntimeException("Agent analysis timeout: id=$analysisId ($reason)", cause)
+) : AgentException("Agent analysis timeout: id=$analysisId ($reason)", cause)
