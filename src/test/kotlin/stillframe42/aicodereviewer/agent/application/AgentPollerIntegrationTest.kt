@@ -9,9 +9,9 @@ import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.test.context.DynamicPropertyRegistry
 import org.springframework.test.context.DynamicPropertySource
-import org.springframework.web.reactive.function.client.WebClientResponseException
 import stillframe42.aicodereviewer.agent.domain.exception.AgentAnalysisFailedException
 import stillframe42.aicodereviewer.agent.domain.exception.AgentAnalysisTimeoutException
+import stillframe42.aicodereviewer.agent.domain.exception.AgentUnavailableException
 import stillframe42.aicodereviewer.integration.AbstractIntegrationTest
 import stillframe42.aicodereviewer.integration.support.WireMockStubs
 
@@ -80,7 +80,7 @@ class AgentPollerIntegrationTest : AbstractIntegrationTest() {
     }
 
     @Test
-    fun `5xx 응답은 폴링 catch 통과 후 WebClientResponseException 그대로 전파`(): Unit = runBlocking {
+    fun `5xx 응답은 AgentUnavailableException 으로 매핑되어 전파된다`(): Unit = runBlocking {
         val analysisId = "int-test-4"
         wireMock.stubFor(
             get(urlPathEqualTo("/agent/analyze/$analysisId"))
@@ -89,6 +89,7 @@ class AgentPollerIntegrationTest : AbstractIntegrationTest() {
 
         val ex = runCatching { poller.pollUntilComplete(analysisId) }.exceptionOrNull()
 
-        assertThat(ex).isInstanceOf(WebClientResponseException::class.java)
+        assertThat(ex).isInstanceOf(AgentUnavailableException::class.java)
+        assertThat(ex).hasMessageContaining("503")
     }
 }
