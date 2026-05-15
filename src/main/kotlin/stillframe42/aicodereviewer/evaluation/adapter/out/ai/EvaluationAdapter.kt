@@ -19,7 +19,7 @@ import stillframe42.aicodereviewer.evaluation.domain.model.EvaluationScore
 import stillframe42.aicodereviewer.evaluation.domain.port.out.RagEvaluationPort
 
 @Component
-class SpringAiEvaluationAdapter(
+class EvaluationAdapter(
     @param:Qualifier("openAiChatClient") private val chatClient: ChatClient,
     private val evaluationProperties: EvaluationProperties,
     private val objectMapper: ObjectMapper,

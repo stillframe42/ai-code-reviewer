@@ -210,7 +210,7 @@ object WireMockStubs {
         )
     }
 
-    // Anthropic AI 오류 — 500 반환으로 SpringAiReviewAdapter 재시도 후 실패 유도
+    // Anthropic AI 오류 — 500 반환으로 ReviewAdapter 재시도 후 실패 유도
     fun stubAnthropicError(server: WireMockServer) {
         server.stubFor(
             post(urlPathEqualTo("/v1/messages"))

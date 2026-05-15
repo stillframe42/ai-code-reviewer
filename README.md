@@ -437,7 +437,7 @@ src/
 │   │   │   ├── application/DefaultChatService.kt
 │   │   │   └── adapter/
 │   │   │       ├── in/web/ChatController.kt
-│   │   │       └── out/ai/SpringAiChatAdapter.kt
+│   │   │       └── out/ai/ChatAdapter.kt
 │   │   ├── review/                             # 코드 리뷰 기능
 │   │   │   ├── domain/
 │   │   │   │   ├── model/                      # CodeReview, CodeIssue, DiffFilterOptions 등
@@ -461,7 +461,7 @@ src/
 │   │   │   └── adapter/
 │   │   │       ├── in/web/ReviewController.kt
 │   │   │       ├── in/web/ReviewQueryController.kt
-│   │   │       ├── out/ai/SpringAiReviewAdapter.kt
+│   │   │       ├── out/ai/ReviewAdapter.kt
 │   │   │       ├── out/cache/                 # Redis 캐시 어댑터
 │   │   │       │   ├── RedisReviewCacheAdapter.kt
 │   │   │       │   └── RedisReviewCacheStatsAdapter.kt
@@ -490,7 +490,7 @@ src/
 │   │   │       │   ├── web/ConventionAdminController.kt
 │   │   │       │   └── cli/ConventionIndexingRunner.kt
 │   │   │       └── out/ai/
-│   │   │           ├── SpringAiConventionVectorAdapter.kt
+│   │   │           ├── ConventionVectorAdapter.kt
 │   │   │           ├── LlmContextCompressorAdapter.kt  # gpt-4o-mini 기반 추출 압축
 │   │   │           ├── MarkdownHeaderSplitter.kt
 │   │   │           └── OverlappingTokenSplitter.kt

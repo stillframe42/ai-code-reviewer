@@ -110,7 +110,7 @@ app:
 - **변경 이유**: `buildVariables()`에서 `converter.getFormat()`을 주입하지 않아 AI가 `overall_score` 필드를 인지하지 못해 항상 0으로 반환되는 버그 수정
 - **주요 변경**:
   - v9를 베이스로 유지
-  - `{format}` 플레이스홀더 추가 — `SpringAiReviewAdapter`가 `BeanOutputConverter.getFormat()`을 주입하여 JSON 스키마 명세를 프롬프트에 포함
+  - `{format}` 플레이스홀더 추가 — `ReviewAdapter`가 `BeanOutputConverter.getFormat()`을 주입하여 JSON 스키마 명세를 프롬프트에 포함
 
 ### v9 (2026-04-15)
 
@@ -118,7 +118,7 @@ app:
 - **주요 변경**:
   - v8을 베이스로 유지
   - 첫 줄 페르소나 변경: "AI Code Reviewer" → "시니어 백엔드 엔지니어"
-  - `{convention_section}` 플레이스홀더 추가 — `SpringAiReviewAdapter`가 RAG 검색 결과를 "[참고 컨벤션 문서]\n{내용}" 형태로 주입. 검색 결과 없으면 빈 문자열로 치환되어 기존 동작 유지
+  - `{convention_section}` 플레이스홀더 추가 — `ReviewAdapter`가 RAG 검색 결과를 "[참고 컨벤션 문서]\n{내용}" 형태로 주입. 검색 결과 없으면 빈 문자열로 치환되어 기존 동작 유지
 
 ### v8 (2026-04-01)
 

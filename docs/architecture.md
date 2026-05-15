@@ -87,7 +87,7 @@ flowchart TB
     end
 
     subgraph Outbound["Outbound Adapters (adapter/out)"]
-        SpringAiAdapter["SpringAiReviewAdapter"]
+        ReviewAdapter["ReviewAdapter"]
         PersistAdapter["ReviewPersistenceAdapter"]
         CacheAdapter["RedisReviewCacheAdapter"]
         GitHubAdapter["GitHubApiAdapter"]
@@ -104,7 +104,7 @@ flowchart TB
     Inbound --> Application
     Application --> Domain
     PortOut --> Outbound
-    SpringAiAdapter --> LLM
+    ReviewAdapter --> LLM
     PersistAdapter --> PG
     CacheAdapter --> Redis
     GitHubAdapter --> GHAPI
@@ -121,7 +121,7 @@ flowchart TB
 | `domain/service` | 순수 도메인 로직 | `DiffPreprocessor`, `FileExtensionClassifier`, `AiModelSelector`, `PrImportanceAnalyzer`, `DiffPositionResolver` |
 | `application` | UseCase 구현체 — 포트 조합 | `DefaultChatService`, `DefaultReviewService`, `DefaultReviewQueryService`, `DefaultGitHubWebhookService` |
 | `adapter/in/web` | HTTP 컨트롤러 | `ChatController`, `ReviewController`, `ReviewQueryController`, `WebhookController` |
-| `adapter/out/ai` | AI API 클라이언트 | `SpringAiChatAdapter`, `SpringAiReviewAdapter` |
+| `adapter/out/ai` | AI API 클라이언트 | `ChatAdapter`, `ReviewAdapter` |
 | `adapter/out/github` | GitHub API 클라이언트 | `GitHubApiAdapter`, `GitHubAppTokenProvider`, `JwtSigner`, `RsaKeyLoader` |
 | `adapter/out/persistence` | DB 영속성 어댑터 | `ReviewPersistenceAdapter`, `ReviewQueryAdapter`, `CostLogAdapter`, `ProcessedEventAdapter` |
 | `adapter/out/cache` | Redis 캐시 어댑터 | `RedisReviewCacheAdapter`, `RedisReviewCacheStatsAdapter` |
@@ -174,7 +174,7 @@ sequenceDiagram
     participant Svc as DefaultReviewService
     participant Cache as RedisReviewCacheAdapter
     participant Stats as RedisReviewCacheStatsAdapter
-    participant LLM as SpringAiReviewAdapter
+    participant LLM as ReviewAdapter
 
     Svc->>Cache: get(repoFullName + prNumber + headSha)
     alt 캐시 히트

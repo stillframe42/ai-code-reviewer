@@ -13,7 +13,7 @@ import stillframe42.aicodereviewer.rag.domain.port.out.ConventionVectorPort
 // Spring AI VectorStore를 ConventionVectorPort로 감싸는 아웃바운드 어댑터
 // VectorStore API가 지원하지 않는 경우 JdbcTemplate을 직접 사용한다.
 @Component
-class SpringAiConventionVectorAdapter(
+class ConventionVectorAdapter(
     private val vectorStore: VectorStore,
     private val jdbcTemplate: JdbcTemplate,
     private val objectMapper: ObjectMapper,

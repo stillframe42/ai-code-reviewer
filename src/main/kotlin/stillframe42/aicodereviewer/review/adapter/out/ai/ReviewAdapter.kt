@@ -34,7 +34,7 @@ import stillframe42.aicodereviewer.review.domain.port.out.AiReviewPort
 
 // Spring AI 기반 코드 리뷰 출력 어댑터 — AiReviewPort 구현체
 @Component
-class SpringAiReviewAdapter(
+class ReviewAdapter(
     private val promptBuilder: AiPromptBuilder,
     private val gitHubTools: GitHubTools,
     private val loggingAdvisor: LoggingAdvisor,

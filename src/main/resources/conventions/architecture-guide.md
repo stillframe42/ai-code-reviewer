@@ -24,7 +24,7 @@
 │              Adapter Layer              │
 │  ┌────────────┐    ┌────────────────┐   │
 │  │  in/web    │    │   out/ai       │   │
-│  │ Controller │    │ SpringAiAdapter│   │
+│  │ Controller │    │ Adapter        │   │
 │  └─────┬──────┘    └───────┬────────┘   │
 │        │                   │            │
 │  ┌─────▼──────────────────▼─────────┐  │
@@ -86,7 +86,7 @@ data class CodeIssue(
 
 // ❌ 도메인 포트에 구현체 의존 금지
 interface ReviewUseCase {
-    fun getSpringAiClient(): ChatClient  // ← 인프라 의존 금지
+    fun getChatClient(): ChatClient  // ← 인프라 의존 금지
 }
 ```
 
@@ -147,7 +147,7 @@ class ReviewController(
 ```kotlin
 // ✅ 아웃바운드 어댑터는 포트 인터페이스를 구현
 @Component
-class SpringAiReviewAdapter(
+class ReviewAdapter(
     private val chatClient: ChatClient,
 ) : AiReviewPort {  // ← 포트 구현
 
@@ -194,10 +194,10 @@ class DefaultReviewService(private val aiReviewPort: AiReviewPort)
 
 // ❌ 잘못된 의존성 방향
 // Domain → Adapter (역방향 의존 — 절대 금지)
-class CodeReview(private val springAiReviewAdapter: SpringAiReviewAdapter)
+class CodeReview(private val reviewAdapter: ReviewAdapter)
 
 // Application → Adapter 구현체 (역방향 의존 — 절대 금지)
-class DefaultReviewService(private val springAiReviewAdapter: SpringAiReviewAdapter)
+class DefaultReviewService(private val reviewAdapter: ReviewAdapter)
 ```
 
 ---
@@ -261,7 +261,7 @@ package stillframe42.aicodereviewer.review.adapter.out.persistence
 | Application 구현체 | `Default{기능}Service` | `DefaultReviewService` |
 | 아웃바운드 포트 | `{기능}Port` 또는 `Ai{기능}Port` | `AiReviewPort`, `GitHubApiPort` |
 | 인바운드 어댑터 | `{기능}Controller` | `ReviewController` |
-| 아웃바운드 어댑터 (AI) | `SpringAi{기능}Adapter` | `SpringAiReviewAdapter` |
+| 아웃바운드 어댑터 (AI) | `{기능}Adapter` | `ReviewAdapter` |
 | 아웃바운드 어댑터 (DB) | `{기능}Adapter` | `ProcessedEventAdapter` |
 | JPA Entity | `{기능}Entity` | `ReviewRequestEntity` |
 | DTO (요청) | `{기능}Request` | `ReviewRequest` |

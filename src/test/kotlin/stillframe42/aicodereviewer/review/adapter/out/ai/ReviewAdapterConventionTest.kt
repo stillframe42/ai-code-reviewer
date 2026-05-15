@@ -13,8 +13,8 @@ import stillframe42.aicodereviewer.integration.AbstractIntegrationTest
 import stillframe42.aicodereviewer.integration.support.WireMockStubs
 import stillframe42.aicodereviewer.review.domain.port.out.AiReviewPort
 
-// SpringAiReviewAdapter convention 주입 및 format 스키마 주입 통합 테스트
-class SpringAiReviewAdapterConventionTest : AbstractIntegrationTest() {
+// ReviewAdapter convention 주입 및 format 스키마 주입 통합 테스트
+class ReviewAdapterConventionTest : AbstractIntegrationTest() {
 
     @Autowired
     private lateinit var aiReviewPort: AiReviewPort

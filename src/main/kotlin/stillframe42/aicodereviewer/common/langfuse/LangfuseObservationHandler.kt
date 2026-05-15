@@ -26,10 +26,10 @@ class LangfuseObservationHandler(
 
     // LLM 호출 시작 시: Langfuse에 Trace + Generation 생성
     // Tool Calling 시나리오: 첫 번째 LLM 호출 후 tool 실행, 두 번째 LLM 호출이 이어진다.
-    // traceId는 SpringAiReviewAdapter가 코루틴 컨텍스트로 사전 전달 — 없으면 신규 생성 (chat 플로우 대비 fallback)
+    // traceId는 ReviewAdapter가 코루틴 컨텍스트로 사전 전달 — 없으면 신규 생성 (chat 플로우 대비 fallback)
     override fun onStart(context: ChatModelObservationContext) {
         try {
-            // traceId: SpringAiReviewAdapter가 사전 생성해 코루틴 컨텍스트로 전달. 없으면 생성
+            // traceId: ReviewAdapter가 사전 생성해 코루틴 컨텍스트로 전달. 없으면 생성
             val traceId = LangfuseTraceContextHolder.get() ?: UUID.randomUUID().toString()
             val generationId = UUID.randomUUID().toString()
             val startTime = Instant.now().toString()
@@ -55,7 +55,7 @@ class LangfuseObservationHandler(
     }
 
     // LLM 응답 수신 후: Generation에 출력, 토큰, 종료 시간 업데이트
-    // traceId는 Tool Calling 전체 흐름이 끝날 때까지 유지 — SpringAiReviewAdapter withContext 종료 시 소멸
+    // traceId는 Tool Calling 전체 흐름이 끝날 때까지 유지 — ReviewAdapter withContext 종료 시 소멸
     override fun onStop(context: ChatModelObservationContext) {
         try {
             val traceInfo = traceInfoMap.remove(context) ?: return
@@ -80,7 +80,7 @@ class LangfuseObservationHandler(
     }
 
     // LLM 호출 에러 시: Generation을 에러 상태로 업데이트
-    // traceId 정리는 SpringAiReviewAdapter withContext 블록의 finally에서 처리
+    // traceId 정리는 ReviewAdapter withContext 블록의 finally에서 처리
     override fun onError(context: ChatModelObservationContext) {
         try {
             val traceInfo = traceInfoMap.remove(context) ?: return

@@ -12,9 +12,9 @@ import stillframe42.aicodereviewer.integration.AbstractIntegrationTest
 import stillframe42.aicodereviewer.integration.support.WireMockStubs
 import stillframe42.aicodereviewer.review.domain.port.out.AiReviewPort
 
-// SpringAiReviewAdapter 모델 오버라이드 통합 테스트
+// ReviewAdapter 모델 오버라이드 통합 테스트
 // modelName이 지정됐을 때 Anthropic API 요청에 해당 모델이 포함되는지 검증한다
-class SpringAiReviewAdapterModelTest : AbstractIntegrationTest() {
+class ReviewAdapterModelTest : AbstractIntegrationTest() {
 
     @Autowired
     private lateinit var aiReviewPort: AiReviewPort

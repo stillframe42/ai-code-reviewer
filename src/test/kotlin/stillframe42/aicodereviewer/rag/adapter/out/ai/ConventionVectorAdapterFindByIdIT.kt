@@ -9,7 +9,7 @@ import org.springframework.jdbc.core.JdbcTemplate
 import stillframe42.aicodereviewer.integration.AbstractIntegrationTest
 import stillframe42.aicodereviewer.rag.domain.port.out.ConventionVectorPort
 
-class SpringAiConventionVectorAdapterFindByIdIT : AbstractIntegrationTest() {
+class ConventionVectorAdapterFindByIdIT : AbstractIntegrationTest() {
 
     @Autowired
     private lateinit var vectorPort: ConventionVectorPort

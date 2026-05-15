@@ -4,10 +4,10 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 
 // extractJson()의 bracket counter 정확성 검증 — 한국어 문장 내 중괄호 등 케이스
-class SpringAiEvaluationAdapterExtractJsonTest {
+class EvaluationAdapterExtractJsonTest {
 
     private fun extract(raw: String): String =
-        SpringAiEvaluationAdapter.extractJson(raw)
+        EvaluationAdapter.extractJson(raw)
 
     @Test
     fun `평범한 JSON은 그대로 추출된다`() {

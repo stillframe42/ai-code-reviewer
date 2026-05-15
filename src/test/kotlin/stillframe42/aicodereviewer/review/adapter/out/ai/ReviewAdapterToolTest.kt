@@ -11,8 +11,8 @@ import stillframe42.aicodereviewer.integration.support.WireMockStubs
 import stillframe42.aicodereviewer.review.domain.model.ReviewMode
 import stillframe42.aicodereviewer.review.domain.port.out.AiReviewPort
 
-// SpringAiReviewAdapter Tool Calling 통합 테스트 — WireMock으로 AI API를 모킹합니다.
-class SpringAiReviewAdapterToolTest : AbstractIntegrationTest() {
+// ReviewAdapter Tool Calling 통합 테스트 — WireMock으로 AI API를 모킹합니다.
+class ReviewAdapterToolTest : AbstractIntegrationTest() {
 
     @Autowired
     private lateinit var aiReviewPort: AiReviewPort

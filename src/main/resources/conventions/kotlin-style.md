@@ -24,7 +24,7 @@ class reviewRequestEntity
 
 - 인터페이스는 형용사 또는 명사로 명명한다 (`Serializable`, `ReviewUseCase`)
 - 구현체는 `Default` 접두사를 사용한다 (`DefaultReviewService`)
-- 어댑터 구현체는 기술명 접두사를 사용한다 (`SpringAiReviewAdapter`)
+- 아웃바운드 어댑터 구현체는 접두사 없이 기능명만 사용한다 (`ReviewAdapter`)
 
 ### 1.2 함수 및 변수
 

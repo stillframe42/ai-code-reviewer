@@ -10,11 +10,11 @@ import stillframe42.aicodereviewer.integration.AbstractIntegrationTest
 import stillframe42.aicodereviewer.integration.support.WireMockStubs
 import stillframe42.aicodereviewer.review.domain.model.ReviewMode
 
-// Tool Calling 활성화 상태에서 SpringAiReviewAdapter 전체 동작 확인 통합 테스트 — WireMock 모킹
-class SpringAiReviewAdapterToolCallingTest : AbstractIntegrationTest() {
+// Tool Calling 활성화 상태에서 ReviewAdapter 전체 동작 확인 통합 테스트 — WireMock 모킹
+class ReviewAdapterToolCallingTest : AbstractIntegrationTest() {
 
     @Autowired
-    private lateinit var springAiReviewAdapter: SpringAiReviewAdapter
+    private lateinit var reviewAdapter: ReviewAdapter
 
     @BeforeEach
     fun setUpStubs() {
@@ -36,7 +36,7 @@ class SpringAiReviewAdapterToolCallingTest : AbstractIntegrationTest() {
     @Test
     fun `WithGitHubTools 모드로 코드 리뷰 요청 시 CodeReview 결과를 반환한다`() = runBlocking {
         // WireMock이 stop_reason=end_turn을 반환하므로 Tool 호출 없이 리뷰가 완료된다
-        val result = springAiReviewAdapter.reviewCode(
+        val result = reviewAdapter.reviewCode(
             code = sampleDiff,
             provider = AiProvider.ANTHROPIC,
             mode = ReviewMode.WithGitHubTools(installationId = WireMockStubs.TEST_INSTALLATION_ID),
@@ -50,7 +50,7 @@ class SpringAiReviewAdapterToolCallingTest : AbstractIntegrationTest() {
 
     @Test
     fun `WithGitHubTools 모드로 리뷰 시 toolCallCount가 0 이상으로 설정된다`() = runBlocking {
-        val result = springAiReviewAdapter.reviewCode(
+        val result = reviewAdapter.reviewCode(
             code = sampleDiff,
             provider = AiProvider.ANTHROPIC,
             mode = ReviewMode.WithGitHubTools(installationId = WireMockStubs.TEST_INSTALLATION_ID),
@@ -62,7 +62,7 @@ class SpringAiReviewAdapterToolCallingTest : AbstractIntegrationTest() {
 
     @Test
     fun `Simple 모드로 리뷰 시 toolCallCount는 0이다`() = runBlocking {
-        val result = springAiReviewAdapter.reviewCode(
+        val result = reviewAdapter.reviewCode(
             code = "fun add(a: Int, b: Int) = a + b",
             provider = AiProvider.ANTHROPIC,
             mode = ReviewMode.Simple,

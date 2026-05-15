@@ -15,7 +15,7 @@
   │   ├─ ConventionKeywordSearchPort.search()  ... 키워드 검색 (candidateSize = topK × 2)
   │   └─ reciprocalRankFusion()                ... RRF 병합 (k=60, 상위 topK개)
   → ContextCompressorPort.compress()           ... 컨텍스트 압축 (ARCH 카테고리 우회)
-  → SpringAiReviewAdapter.reviewCode()         ... LLM 리뷰 생성 (conventionContext 주입)
+  → ReviewAdapter.reviewCode()         ... LLM 리뷰 생성 (conventionContext 주입)
   → CodeReview                                 ... 최종 리뷰 결과
 ```
 
@@ -88,7 +88,7 @@
 
 | 항목 | 내용 |
 |------|------|
-| **측정 대상** | Generation 단계 (`SpringAiReviewAdapter`) |
+| **측정 대상** | Generation 단계 (`ReviewAdapter`) |
 | **정의** | 생성된 리뷰의 모든 주장(claim)이 검색된 컨텍스트에 근거하는 비율 |
 | **산출 공식** | `Faithfulness = 컨텍스트에 근거한 클레임 수 / 리뷰의 전체 클레임 수` |
 | **평가 방식** | LLM-as-a-Judge: 리뷰의 각 주장을 추출 → 각 주장이 검색 컨텍스트에서 뒷받침되는지 판정 |
@@ -108,7 +108,7 @@
 
 | 항목 | 내용 |
 |------|------|
-| **측정 대상** | Generation 단계 (`SpringAiReviewAdapter`) |
+| **측정 대상** | Generation 단계 (`ReviewAdapter`) |
 | **정의** | 생성된 리뷰가 코드의 실제 문제점과 관련 있는 비율 |
 | **산출 공식** | `Relevancy = 코드 문제와 관련 있는 코멘트 수 / 전체 코멘트 수` |
 | **평가 방식** | LLM-as-a-Judge: 입력 코드의 문제점과 생성된 리뷰를 LLM에 제시 → 각 코멘트의 관련성 판정 |

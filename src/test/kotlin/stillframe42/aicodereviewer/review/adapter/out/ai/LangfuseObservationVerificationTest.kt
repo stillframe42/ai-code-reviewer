@@ -20,7 +20,7 @@ import stillframe42.aicodereviewer.review.domain.model.ReviewMode
 class LangfuseObservationVerificationTest : AbstractIntegrationTest() {
 
     @Autowired
-    private lateinit var springAiReviewAdapter: SpringAiReviewAdapter
+    private lateinit var reviewAdapter: ReviewAdapter
 
     private val objectMapper = jacksonObjectMapper()
 
@@ -49,7 +49,7 @@ class LangfuseObservationVerificationTest : AbstractIntegrationTest() {
             repoFullName = WireMockStubs.TEST_REPO,
         )
 
-        springAiReviewAdapter.reviewCode(
+        reviewAdapter.reviewCode(
             code = "fun hello() = println(\"hello\")",
             provider = AiProvider.ANTHROPIC,
             mode = ReviewMode.Simple,
@@ -83,7 +83,7 @@ class LangfuseObservationVerificationTest : AbstractIntegrationTest() {
             repoFullName = WireMockStubs.TEST_REPO,
         )
 
-        springAiReviewAdapter.reviewCode(
+        reviewAdapter.reviewCode(
             code = "fun hello() = println(\"hello\")",
             provider = AiProvider.ANTHROPIC,
             mode = ReviewMode.WithGitHubTools(installationId = WireMockStubs.TEST_INSTALLATION_ID),
@@ -121,7 +121,7 @@ class LangfuseObservationVerificationTest : AbstractIntegrationTest() {
             repoFullName = "test-owner/test-repo",
         )
 
-        springAiReviewAdapter.reviewCode(
+        reviewAdapter.reviewCode(
             code = "fun hello() = println(\"hello\")",
             provider = AiProvider.ANTHROPIC,
             mode = ReviewMode.Simple,

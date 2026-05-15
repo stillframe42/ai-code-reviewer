@@ -16,7 +16,7 @@ import stillframe42.aicodereviewer.core.AiProvider
 
 // Spring AI 기반 채팅 출력 어댑터 — AiChatPort 구현체
 @Component
-class SpringAiChatAdapter(
+class ChatAdapter(
     private val promptBuilder: AiPromptBuilder,
     private val loggingAdvisor: LoggingAdvisor,
     private val retryAdvisor: RetryAdvisor,
