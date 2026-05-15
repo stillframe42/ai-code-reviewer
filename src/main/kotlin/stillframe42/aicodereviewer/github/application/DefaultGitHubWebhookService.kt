@@ -244,6 +244,10 @@ class DefaultGitHubWebhookService(
             throw e
         } catch (e: AgentException) {
             fallbackToSpringAI(e.toFallbackReason(), event, prDiff, e)
+        } catch (e: Exception) {
+            // AgentException 외 외부 시스템 transient 오류 (RAG 임베딩 실패 등) 도 동일하게 폴백.
+            // "error" reason 으로 메트릭 분리 — 의도된 도메인 예외와 구분 가능.
+            fallbackToSpringAI("error", event, prDiff, e)
         }
     }
 

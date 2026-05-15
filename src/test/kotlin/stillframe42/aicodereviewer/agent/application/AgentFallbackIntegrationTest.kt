@@ -14,6 +14,7 @@ import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Import
 import org.springframework.context.annotation.Primary
 import org.springframework.http.MediaType
+import stillframe42.aicodereviewer.agent.domain.exception.AgentUnavailableException
 import stillframe42.aicodereviewer.agent.domain.model.AgentAnalysisCommand
 import stillframe42.aicodereviewer.agent.domain.model.AgentAnalysisResult
 import stillframe42.aicodereviewer.agent.domain.port.out.AgentAnalysisPort
@@ -26,7 +27,6 @@ import stillframe42.aicodereviewer.integration.support.WireMockStubs
 import stillframe42.aicodereviewer.review.adapter.out.persistence.ReviewIssueCategoryRepository
 import stillframe42.aicodereviewer.review.adapter.out.persistence.ReviewRequestRepository
 import stillframe42.aicodereviewer.review.adapter.out.persistence.ReviewResultRepository
-import stillframe42.aicodereviewer.agent.domain.exception.AgentUnavailableException
 import stillframe42.aicodereviewer.review.adapter.out.persistence.ToolCallLogRepository
 import java.util.concurrent.TimeUnit.SECONDS
 
