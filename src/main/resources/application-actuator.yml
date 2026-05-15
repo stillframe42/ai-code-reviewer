@@ -8,6 +8,12 @@ management:
   endpoint:
     health:
       show-details: always
+      group:
+        python-agent:
+          include: pythonAgent
+  health:
+    python-agent:
+      enabled: true
   metrics:
     export:
       prometheus:
