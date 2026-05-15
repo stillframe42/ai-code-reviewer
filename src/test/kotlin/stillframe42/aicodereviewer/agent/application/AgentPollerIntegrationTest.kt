@@ -7,8 +7,6 @@ import kotlinx.coroutines.runBlocking
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.test.context.DynamicPropertyRegistry
-import org.springframework.test.context.DynamicPropertySource
 import stillframe42.aicodereviewer.agent.domain.exception.AgentAnalysisFailedException
 import stillframe42.aicodereviewer.agent.domain.exception.AgentAnalysisTimeoutException
 import stillframe42.aicodereviewer.agent.domain.exception.AgentUnavailableException
@@ -16,17 +14,6 @@ import stillframe42.aicodereviewer.integration.AbstractIntegrationTest
 import stillframe42.aicodereviewer.integration.support.WireMockStubs
 
 class AgentPollerIntegrationTest : AbstractIntegrationTest() {
-
-    companion object {
-        @JvmStatic
-        @DynamicPropertySource
-        fun pollOverrides(registry: DynamicPropertyRegistry) {
-            // 통합 테스트 시간 단축 — interval/timeout 매우 짧게
-            registry.add("agent.python.poll.interval") { "10ms" }
-            registry.add("agent.python.poll.timeout") { "5s" }
-            registry.add("agent.python.poll.max-attempts") { "30" }
-        }
-    }
 
     @Autowired
     private lateinit var poller: AgentPoller

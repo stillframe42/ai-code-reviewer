@@ -71,6 +71,11 @@ abstract class AbstractIntegrationTest {
             // Redis → Testcontainers
             registry.add("spring.data.redis.host") { redis.host }
             registry.add("spring.data.redis.port") { redis.getMappedPort(6379).toString() }
+            // 통합 테스트는 짧은 polling 으로 IN_PROGRESS timeout 빠른 검증 — AgentPoller / AgentFallback IT 공통.
+            // 운영 (60s/2s/30) 대비 짧지만 폴링 로직 자체는 동일하게 검증된다.
+            registry.add("agent.python.poll.max-attempts") { "30" }
+            registry.add("agent.python.poll.interval") { "10ms" }
+            registry.add("agent.python.poll.timeout") { "5s" }
         }
     }
 
