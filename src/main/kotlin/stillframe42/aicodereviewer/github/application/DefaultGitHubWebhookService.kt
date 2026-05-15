@@ -3,7 +3,12 @@ package stillframe42.aicodereviewer.github.application
 import kotlinx.coroutines.CancellationException
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
+import stillframe42.aicodereviewer.agent.application.AgentFallbackMetrics
 import stillframe42.aicodereviewer.agent.application.AgentReviewService
+import stillframe42.aicodereviewer.agent.domain.exception.AgentAnalysisFailedException
+import stillframe42.aicodereviewer.agent.domain.exception.AgentAnalysisTimeoutException
+import stillframe42.aicodereviewer.agent.domain.exception.AgentException
+import stillframe42.aicodereviewer.agent.domain.exception.AgentUnavailableException
 import stillframe42.aicodereviewer.agent.domain.service.SecurityFileDetector
 import stillframe42.aicodereviewer.common.Logging
 import stillframe42.aicodereviewer.common.metrics.event.ReviewCompletedEvent
@@ -37,6 +42,7 @@ class DefaultGitHubWebhookService(
     private val reviewPersistencePort: ReviewPersistencePort,
     private val eventPublisher: ApplicationEventPublisher,
     private val agentReviewService: AgentReviewService,
+    private val agentFallbackMetrics: AgentFallbackMetrics,
 ) : GitHubWebhookUseCase, Logging {
 
     // diff position 매핑 + 포맷팅이 완료된 PR 코멘트 구성용 출력
@@ -213,34 +219,47 @@ class DefaultGitHubWebhookService(
         )
     }
 
-    // AI 리뷰 실행 — 보안 파일 포함 시 agent 경로 우선, 실패 시 Spring AI 경로로 fallback
+    // AI 리뷰 실행 — 보안 파일 포함 시 agent 경로 우선, AgentException 발생 시 Spring AI 경로로 폴백
     private suspend fun runAiReview(
         event: PullRequestEvent,
         prDiff: String,
         prFiles: List<PrFile>,
     ): CodeReview? {
-        if (SecurityFileDetector.hasSecurityFile(prFiles)) {
-            try {
-                return agentReviewService.review(
-                    repositoryFullName = event.repositoryFullName,
-                    pullRequestNumber = event.pullRequestNumber,
-                    prDiff = prDiff,
-                    prFiles = prFiles,
-                ).also {
-                    logger.info(
-                        "Agent path 리뷰 완료: repo={}, pr={}, score={}",
-                        event.repositoryFullName, event.pullRequestNumber, it.overallScore,
-                    )
-                }
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                logger.warn(
-                    "Agent path 실패, Spring AI 경로로 fallback: repo={}, pr={}",
-                    event.repositoryFullName, event.pullRequestNumber, e,
+        if (!SecurityFileDetector.hasSecurityFile(prFiles)) {
+            return runDefaultReview(event, prDiff)
+        }
+        return try {
+            agentReviewService.review(
+                repositoryFullName = event.repositoryFullName,
+                pullRequestNumber = event.pullRequestNumber,
+                prDiff = prDiff,
+                prFiles = prFiles,
+            ).also {
+                logger.info(
+                    "Agent path 리뷰 완료: repo={}, pr={}, score={}",
+                    event.repositoryFullName, event.pullRequestNumber, it.overallScore,
                 )
             }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: AgentException) {
+            fallbackToSpringAI(e.toFallbackReason(), event, prDiff, e)
         }
+    }
+
+    // 분류된 reason 으로 메트릭/로그를 남기고 Spring AI 기본 리뷰 경로로 위임한다.
+    private suspend fun fallbackToSpringAI(
+        reason: String,
+        event: PullRequestEvent,
+        prDiff: String,
+        cause: Throwable,
+    ): CodeReview? {
+        agentFallbackMetrics.record(reason)
+        logger.warn(
+            "Agent path 폴백: reason={}, repo={}, pr={}",
+            reason, event.repositoryFullName, event.pullRequestNumber, cause,
+        )
+        // TODO(이벤트 큐 도입 후): cause is AgentAnalysisTimeoutException 일 때 scheduleRetry(event) 분기 추가
         return runDefaultReview(event, prDiff)
     }
 
@@ -283,4 +302,12 @@ class DefaultGitHubWebhookService(
         try { block() }
         catch (e: CancellationException) { throw e }
         catch (e: Exception) { logger.warn(warnMessage, e); null }
+}
+
+// AgentException 서브타입을 메트릭/로그용 분류 문자열로 변환.
+// when 이 exhaustive 라 sealed 에 신규 서브타입 추가 시 컴파일러가 매핑 누락을 잡아준다.
+private fun AgentException.toFallbackReason(): String = when (this) {
+    is AgentUnavailableException     -> "unavailable"
+    is AgentAnalysisTimeoutException -> "timeout"
+    is AgentAnalysisFailedException  -> "failed"
 }

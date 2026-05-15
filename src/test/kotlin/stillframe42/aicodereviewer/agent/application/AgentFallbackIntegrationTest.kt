@@ -26,6 +26,7 @@ import stillframe42.aicodereviewer.integration.support.WireMockStubs
 import stillframe42.aicodereviewer.review.adapter.out.persistence.ReviewIssueCategoryRepository
 import stillframe42.aicodereviewer.review.adapter.out.persistence.ReviewRequestRepository
 import stillframe42.aicodereviewer.review.adapter.out.persistence.ReviewResultRepository
+import stillframe42.aicodereviewer.agent.domain.exception.AgentUnavailableException
 import stillframe42.aicodereviewer.review.adapter.out.persistence.ToolCallLogRepository
 import java.util.concurrent.TimeUnit.SECONDS
 
@@ -148,7 +149,7 @@ class FailingAgentConfig {
     @Primary
     fun failingAgentAnalysisPort(): AgentAnalysisPort = object : AgentAnalysisPort {
         override suspend fun requestDeepAnalysis(command: AgentAnalysisCommand): AgentAnalysisResult =
-            error("simulated agent failure")
+            throw AgentUnavailableException("simulated agent down")
 
         override suspend fun getAnalysisResult(analysisId: String): AgentAnalysisResult =
             error("not used")
