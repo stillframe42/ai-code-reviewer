@@ -13,7 +13,7 @@ object AgentFindingMapper {
     fun toCodeReview(result: AgentAnalysisResult): CodeReview =
         CodeReview(
             overallScore = computeOverallScore(result.findings),
-            summary = "Python 에이전트 심층 분석 결과 (analysisId=${result.analysisId})",
+            summary = "에이전트 심층 분석 결과 (analysisId=${result.analysisId})",
             issues = result.findings.map { it.toCodeIssue() },
             positives = emptyList(),
         )

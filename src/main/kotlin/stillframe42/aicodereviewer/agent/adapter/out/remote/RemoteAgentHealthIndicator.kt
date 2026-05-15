@@ -1,4 +1,4 @@
-package stillframe42.aicodereviewer.agent.adapter.out.python
+package stillframe42.aicodereviewer.agent.adapter.out.remote
 
 import kotlinx.coroutines.reactor.mono
 import org.springframework.boot.health.contributor.Health
@@ -10,7 +10,7 @@ import stillframe42.aicodereviewer.agent.domain.port.out.AgentAnalysisPort
 // suspend fun checkHealth() 을 ReactiveHealthIndicator 로 노출 — kotlinx-coroutines-reactor 의
 // mono 빌더로 코루틴 호출을 그대로 사용해 runBlocking 사용을 회피한다.
 @Component
-class PythonAgentHealthIndicator(
+class RemoteAgentHealthIndicator(
     private val port: AgentAnalysisPort,
 ) : ReactiveHealthIndicator {
 

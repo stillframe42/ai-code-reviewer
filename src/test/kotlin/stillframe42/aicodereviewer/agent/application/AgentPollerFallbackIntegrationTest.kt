@@ -33,9 +33,9 @@ class AgentPollerFallbackIntegrationTest : AbstractIntegrationTest() {
         @DynamicPropertySource
         fun pollOverrides(registry: DynamicPropertyRegistry) {
             // polling timeout 빠르게 — max-attempts 3회 × interval 10ms = 30ms 안에 timeout 도달
-            registry.add("agent.python.poll.interval") { "10ms" }
-            registry.add("agent.python.poll.max-attempts") { "3" }
-            registry.add("agent.python.poll.timeout") { "5s" }
+            registry.add("agent.remote.poll.interval") { "10ms" }
+            registry.add("agent.remote.poll.max-attempts") { "3" }
+            registry.add("agent.remote.poll.timeout") { "5s" }
         }
     }
 
@@ -99,7 +99,7 @@ class AgentPollerFallbackIntegrationTest : AbstractIntegrationTest() {
         wireMock.verify(
             0,
             postRequestedFor(urlPathEqualTo("/repos/$repo/pulls/$prNumber/reviews"))
-                .withRequestBody(containing("Python 에이전트 심층 분석 결과")),
+                .withRequestBody(containing("에이전트 심층 분석 결과")),
         )
     }
 
@@ -136,7 +136,7 @@ class AgentPollerFallbackIntegrationTest : AbstractIntegrationTest() {
         wireMock.verify(
             0,
             postRequestedFor(urlPathEqualTo("/repos/$repo/pulls/$prNumber/reviews"))
-                .withRequestBody(containing("Python 에이전트 심층 분석 결과")),
+                .withRequestBody(containing("에이전트 심층 분석 결과")),
         )
     }
 

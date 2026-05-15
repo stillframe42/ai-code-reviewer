@@ -1,4 +1,4 @@
-package stillframe42.aicodereviewer.agent.adapter.out.python
+package stillframe42.aicodereviewer.agent.adapter.out.remote
 
 import java.net.ConnectException
 import org.springframework.beans.factory.annotation.Qualifier
@@ -8,9 +8,9 @@ import org.springframework.web.reactive.function.client.WebClientRequestExceptio
 import org.springframework.web.reactive.function.client.WebClientResponseException
 import org.springframework.web.reactive.function.client.awaitBodilessEntity
 import org.springframework.web.reactive.function.client.awaitBody
-import stillframe42.aicodereviewer.agent.adapter.out.python.dto.AgentAnalysisRequest
-import stillframe42.aicodereviewer.agent.adapter.out.python.dto.AgentAnalysisResponse
-import stillframe42.aicodereviewer.agent.adapter.out.python.dto.AgentIssue
+import stillframe42.aicodereviewer.agent.adapter.out.remote.dto.AgentAnalysisRequest
+import stillframe42.aicodereviewer.agent.adapter.out.remote.dto.AgentAnalysisResponse
+import stillframe42.aicodereviewer.agent.adapter.out.remote.dto.AgentIssue
 import stillframe42.aicodereviewer.agent.domain.exception.AgentUnavailableException
 import stillframe42.aicodereviewer.agent.domain.model.AgentAnalysisCommand
 import stillframe42.aicodereviewer.agent.domain.model.AgentAnalysisResult
@@ -21,8 +21,8 @@ import stillframe42.aicodereviewer.common.Logging
 // 네트워크/5xx 는 AgentUnavailableException 으로 매핑 — 호출자(서비스 레이어)가 폴백 분기에서
 // 도메인 예외 한 번에 처리하도록. 4xx 는 호출자 버그이므로 재전파 (디버그 가능성 유지).
 @Component
-class PythonAgentClient(
-    @param:Qualifier("pythonAgentWebClient")
+class RemoteAgentClient(
+    @param:Qualifier("remoteAgentWebClient")
     private val webClient: WebClient,
 ) : AgentAnalysisPort, Logging {
 

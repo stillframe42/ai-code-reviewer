@@ -22,7 +22,7 @@ class AgentCallbackControllerIntegrationTest : AbstractIntegrationTest() {
         @JvmStatic
         @DynamicPropertySource
         fun callbackOverrides(registry: DynamicPropertyRegistry) {
-            registry.add("agent.python.callback.internal-auth-token") { "test-internal-token" }
+            registry.add("agent.remote.callback.internal-auth-token") { "test-internal-token" }
         }
     }
 

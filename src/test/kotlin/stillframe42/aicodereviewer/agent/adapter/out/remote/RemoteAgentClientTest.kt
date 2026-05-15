@@ -1,4 +1,4 @@
-package stillframe42.aicodereviewer.agent.adapter.out.python
+package stillframe42.aicodereviewer.agent.adapter.out.remote
 
 import com.github.tomakehurst.wiremock.client.WireMock.aResponse
 import com.github.tomakehurst.wiremock.client.WireMock.get
@@ -15,13 +15,13 @@ import stillframe42.aicodereviewer.agent.domain.exception.AgentUnavailableExcept
 import stillframe42.aicodereviewer.agent.domain.model.AgentAnalysisCommand
 import stillframe42.aicodereviewer.integration.AbstractIntegrationTest
 
-// PythonAgentClient 의 HTTP 예외 매핑 회귀 안전망.
-// AbstractIntegrationTest 의 공유 WireMock 으로 agent.python.url 이 라우팅되어 있으므로
+// RemoteAgentClient 의 HTTP 예외 매핑 회귀 안전망.
+// AbstractIntegrationTest 의 공유 WireMock 으로 agent.remote.url 이 라우팅되어 있으므로
 // 별도 컨텍스트를 만들지 않고 클라이언트 빈을 그대로 주입받는다.
-class PythonAgentClientTest : AbstractIntegrationTest() {
+class RemoteAgentClientTest : AbstractIntegrationTest() {
 
     @Autowired
-    private lateinit var pythonAgentClient: PythonAgentClient
+    private lateinit var remoteAgentClient: RemoteAgentClient
 
     private val sampleCommand = AgentAnalysisCommand(
         prNumber = 1,
@@ -39,7 +39,7 @@ class PythonAgentClientTest : AbstractIntegrationTest() {
         )
 
         val ex = assertThrows<AgentUnavailableException> {
-            runBlocking { pythonAgentClient.requestDeepAnalysis(sampleCommand) }
+            runBlocking { remoteAgentClient.requestDeepAnalysis(sampleCommand) }
         }
         assertThat(ex.message).contains("503")
         assertThat(ex.cause).isInstanceOf(WebClientResponseException::class.java)
@@ -53,7 +53,7 @@ class PythonAgentClientTest : AbstractIntegrationTest() {
         )
 
         assertThrows<WebClientResponseException> {
-            runBlocking { pythonAgentClient.requestDeepAnalysis(sampleCommand) }
+            runBlocking { remoteAgentClient.requestDeepAnalysis(sampleCommand) }
         }
     }
 
@@ -65,7 +65,7 @@ class PythonAgentClientTest : AbstractIntegrationTest() {
         )
 
         val ex = assertThrows<AgentUnavailableException> {
-            runBlocking { pythonAgentClient.getAnalysisResult("abc-123") }
+            runBlocking { remoteAgentClient.getAnalysisResult("abc-123") }
         }
         assertThat(ex.message).contains("500")
     }

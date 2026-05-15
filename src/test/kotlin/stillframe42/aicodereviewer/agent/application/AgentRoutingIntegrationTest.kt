@@ -36,7 +36,7 @@ class AgentRoutingIntegrationTest : AbstractIntegrationTest() {
         @JvmStatic
         @DynamicPropertySource
         fun pollOverrides(registry: DynamicPropertyRegistry) {
-            registry.add("agent.python.poll.interval") { "10ms" }
+            registry.add("agent.remote.poll.interval") { "10ms" }
         }
     }
 
@@ -90,12 +90,12 @@ class AgentRoutingIntegrationTest : AbstractIntegrationTest() {
 
         postWebhook(repo, prNumber, headSha, installationId)
 
-        // Agent 경로 응답: summary = "Python 에이전트 심층 분석 결과 ...",
+        // Agent 경로 응답: summary = "에이전트 심층 분석 결과 ...",
         //                  issue description = "라우팅 회귀 검증 finding" (실어댑터 → WireMock)
         await.atMost(15, SECONDS).untilAsserted {
             wireMock.verify(
                 postRequestedFor(urlPathEqualTo("/repos/$repo/pulls/$prNumber/reviews"))
-                    .withRequestBody(containing("Python 에이전트 심층 분석 결과"))
+                    .withRequestBody(containing("에이전트 심층 분석 결과"))
                     .withRequestBody(containing("라우팅 회귀 검증 finding")),
             )
         }
@@ -128,9 +128,9 @@ class AgentRoutingIntegrationTest : AbstractIntegrationTest() {
         wireMock.verify(
             0,
             postRequestedFor(urlPathEqualTo("/repos/$repo/pulls/$prNumber/reviews"))
-                .withRequestBody(containing("Python 에이전트 심층 분석 결과")),
+                .withRequestBody(containing("에이전트 심층 분석 결과")),
         )
-        // 일반 PR 은 Python 에이전트 호출 0회 (POST analyze + GET polling 모두)
+        // 일반 PR 은 원격 에이전트 호출 0회 (POST analyze + GET polling 모두)
         wireMock.verify(
             0,
             postRequestedFor(urlPathEqualTo("/agent/analyze")),

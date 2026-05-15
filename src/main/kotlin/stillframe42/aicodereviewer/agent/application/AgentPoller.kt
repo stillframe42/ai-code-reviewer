@@ -9,13 +9,13 @@ import stillframe42.aicodereviewer.agent.domain.exception.AgentAnalysisTimeoutEx
 import stillframe42.aicodereviewer.agent.domain.model.AgentAnalysisResult
 import stillframe42.aicodereviewer.agent.domain.port.out.AgentAnalysisPort
 import stillframe42.aicodereviewer.common.Logging
-import stillframe42.aicodereviewer.config.PythonAgentProperties
+import stillframe42.aicodereviewer.config.RemoteAgentProperties
 import kotlin.time.toKotlinDuration
 
 @Component
 class AgentPoller(
     private val port: AgentAnalysisPort,
-    properties: PythonAgentProperties,
+    properties: RemoteAgentProperties,
 ) : Logging {
 
     private val maxAttempts = properties.poll.maxAttempts

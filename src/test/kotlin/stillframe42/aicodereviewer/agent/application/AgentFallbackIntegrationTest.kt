@@ -28,7 +28,7 @@ import stillframe42.aicodereviewer.review.adapter.out.persistence.ReviewResultRe
 import stillframe42.aicodereviewer.review.adapter.out.persistence.ToolCallLogRepository
 import java.util.concurrent.TimeUnit.SECONDS
 
-// 실제 PythonAgentClient + WireMock 으로 3 시나리오 (connection reset / 5xx / IN_PROGRESS timeout) 모두 검증.
+// 실제 RemoteAgentClient + WireMock 으로 3 시나리오 (connection reset / 5xx / IN_PROGRESS timeout) 모두 검증.
 // 각 시나리오는 (a) Spring AI 폴백으로 PR 리뷰 1건 등록 (b) agent.fallback.count{reason} 메트릭이 정확한 reason 으로 1 증가.
 class AgentFallbackIntegrationTest : AbstractIntegrationTest() {
 
@@ -72,7 +72,7 @@ class AgentFallbackIntegrationTest : AbstractIntegrationTest() {
         wireMock.verify(
             0,
             postRequestedFor(urlPathEqualTo("/repos/${fixture.repo}/pulls/${fixture.prNumber}/reviews"))
-                .withRequestBody(containing("Python 에이전트 심층 분석 결과")),
+                .withRequestBody(containing("에이전트 심층 분석 결과")),
         )
     }
 
@@ -99,7 +99,7 @@ class AgentFallbackIntegrationTest : AbstractIntegrationTest() {
         wireMock.verify(
             0,
             postRequestedFor(urlPathEqualTo("/repos/${fixture.repo}/pulls/${fixture.prNumber}/reviews"))
-                .withRequestBody(containing("Python 에이전트 심층 분석 결과")),
+                .withRequestBody(containing("에이전트 심층 분석 결과")),
         )
     }
 

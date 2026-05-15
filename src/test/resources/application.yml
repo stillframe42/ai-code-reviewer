@@ -44,7 +44,7 @@ spring:
     import:
       - classpath:application-db.yml     # 테스트용 DB 설정
       - classpath:application-github.yml # GitHub 설정 (기본값 사용)
-      - classpath:application-agent.yml  # Python 에이전트 클라이언트 설정 (WebClient 빈 placeholder 해석용)
+      - classpath:application-agent.yml  # 원격 에이전트 클라이언트 설정 (WebClient 빈 placeholder 해석용)
 
   # 환경변수가 있으면 실제 키 사용, 없으면 더미 키 폴백 (실제 AI 호출 스킵됨)
   # application-ai.yml을 import하지 않으므로 모델 설정을 여기서 명시 (미설정 시 Spring AI 기본값 사용)

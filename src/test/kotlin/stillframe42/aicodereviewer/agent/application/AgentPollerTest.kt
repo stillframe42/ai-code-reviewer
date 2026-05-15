@@ -9,7 +9,7 @@ import stillframe42.aicodereviewer.agent.domain.exception.AgentAnalysisTimeoutEx
 import stillframe42.aicodereviewer.agent.domain.model.AgentAnalysisCommand
 import stillframe42.aicodereviewer.agent.domain.model.AgentAnalysisResult
 import stillframe42.aicodereviewer.agent.domain.port.out.AgentAnalysisPort
-import stillframe42.aicodereviewer.config.PythonAgentProperties
+import stillframe42.aicodereviewer.config.RemoteAgentProperties
 import java.io.IOException
 import java.time.Duration
 
@@ -19,13 +19,13 @@ class AgentPollerTest {
         maxAttempts: Int = 3,
         interval: Duration = Duration.ofMillis(10),
         timeout: Duration = Duration.ofSeconds(1),
-    ) = PythonAgentProperties(
+    ) = RemoteAgentProperties(
         url = "http://test",
         connectTimeout = Duration.ofSeconds(1),
         readTimeout = Duration.ofSeconds(1),
         maxInMemorySize = DataSize.ofMegabytes(1),
-        poll = PythonAgentProperties.PollProperties(maxAttempts, interval, timeout),
-        callback = PythonAgentProperties.CallbackProperties(internalAuthToken = ""),
+        poll = RemoteAgentProperties.PollProperties(maxAttempts, interval, timeout),
+        callback = RemoteAgentProperties.CallbackProperties(internalAuthToken = ""),
     )
 
     private class FakeAgentAnalysisPort(

@@ -1,4 +1,4 @@
-package stillframe42.aicodereviewer.agent.adapter.out.python
+package stillframe42.aicodereviewer.agent.adapter.out.remote
 
 import kotlinx.coroutines.test.runTest
 import org.assertj.core.api.Assertions.assertThat
@@ -15,13 +15,13 @@ class AgentBeanWiringTest : AbstractIntegrationTest() {
     private lateinit var agentPort: AgentAnalysisPort
 
     @Test
-    fun `AgentAnalysisPort 빈이 PythonAgentClient 로 주입된다`() {
-        assertThat(agentPort).isInstanceOf(PythonAgentClient::class.java)
+    fun `AgentAnalysisPort 빈이 RemoteAgentClient 로 주입된다`() {
+        assertThat(agentPort).isInstanceOf(RemoteAgentClient::class.java)
     }
 
     @Test
-    fun `pythonAgentWebClient 가 주입되고 WireMock 응답을 도메인 결과로 매핑한다`() = runTest {
-        WireMockStubs.stubPythonAgentAnalyze(wireMock)
+    fun `remoteAgentWebClient 가 주입되고 WireMock 응답을 도메인 결과로 매핑한다`() = runTest {
+        WireMockStubs.stubRemoteAgentAnalyze(wireMock)
 
         val result = agentPort.requestDeepAnalysis(
             AgentAnalysisCommand(

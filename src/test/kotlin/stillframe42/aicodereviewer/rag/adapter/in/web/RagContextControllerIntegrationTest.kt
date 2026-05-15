@@ -11,7 +11,7 @@ import org.springframework.test.context.TestPropertySource
 import stillframe42.aicodereviewer.integration.AbstractIntegrationTest
 import stillframe42.aicodereviewer.rag.adapter.`in`.web.dto.RagContextResponse
 
-@TestPropertySource(properties = ["agent.python.callback.internal-auth-token=test-rag-token"])
+@TestPropertySource(properties = ["agent.remote.callback.internal-auth-token=test-rag-token"])
 class RagContextControllerIntegrationTest : AbstractIntegrationTest() {
 
     @Autowired

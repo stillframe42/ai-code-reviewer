@@ -4,8 +4,8 @@ import org.springframework.boot.context.properties.ConfigurationProperties
 import org.springframework.util.unit.DataSize
 import java.time.Duration
 
-@ConfigurationProperties(prefix = "agent.python")
-data class PythonAgentProperties(
+@ConfigurationProperties(prefix = "agent.remote")
+data class RemoteAgentProperties(
     val url: String,
     val connectTimeout: Duration,
     val readTimeout: Duration,

@@ -313,7 +313,7 @@ paths:
       operationId: getRagContext
       summary: RAG 컨벤션 컨텍스트 단건 조회 (내부용)
       description: |
-        Python 에이전트가 contextIds lazy fetch 시 호출한다.
+        에이전트가 contextIds lazy fetch 시 호출한다.
         X-Internal-Auth 헤더 필수 — INTERNAL_AGENT_CALLBACK_TOKEN 과 일치해야 함.
       tags:
         - rag
@@ -762,7 +762,7 @@ components:
 
     AgentAnalysisRequest:
       type: object
-      description: Python 에이전트로 전달하는 분석 요청 페이로드
+      description: 에이전트로 전달하는 분석 요청 페이로드
       required:
         - diff
         - context_ids
@@ -775,7 +775,7 @@ components:
           type: array
           items:
             type: string
-          description: pgvector vector_store row id 목록. Python 측이 lazy fetch 로 본문 조회.
+          description: pgvector vector_store row id 목록. 에이전트가 lazy fetch 로 본문 조회.
           example:
             - "a1b2c3d4-e5f6-7890-abcd-ef0123456789"
             - "b2c3d4e5-f6a7-8901-bcde-f01234567890"

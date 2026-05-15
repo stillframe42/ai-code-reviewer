@@ -14,13 +14,13 @@ import tools.jackson.databind.PropertyNamingStrategies
 import tools.jackson.databind.json.JsonMapper
 
 @Configuration
-@EnableConfigurationProperties(PythonAgentProperties::class)
-class PythonAgentConfig {
+@EnableConfigurationProperties(RemoteAgentProperties::class)
+class RemoteAgentConfig {
 
     // 어댑터의 SnakeCase 직렬화 계약(@JsonNaming 의존) 을 codec layer 에서도 보장하기 위해
     // 전용 JsonMapper 에 SNAKE_CASE 를 글로벌 설정한다
-    @Bean("pythonAgentWebClient")
-    fun pythonAgentWebClient(properties: PythonAgentProperties): WebClient {
+    @Bean("remoteAgentWebClient")
+    fun remoteAgentWebClient(properties: RemoteAgentProperties): WebClient {
         val jsonMapper = JsonMapper.builder()
             .propertyNamingStrategy(PropertyNamingStrategies.SNAKE_CASE)
             .build()

@@ -1,4 +1,4 @@
-package stillframe42.aicodereviewer.agent.adapter.out.python.dto
+package stillframe42.aicodereviewer.agent.adapter.out.remote.dto
 
 import com.fasterxml.jackson.databind.PropertyNamingStrategies
 import com.fasterxml.jackson.databind.annotation.JsonNaming

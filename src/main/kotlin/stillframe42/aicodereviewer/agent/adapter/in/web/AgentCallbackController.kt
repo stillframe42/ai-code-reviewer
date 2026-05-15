@@ -12,7 +12,6 @@ import stillframe42.aicodereviewer.agent.domain.port.`in`.AgentCallbackUseCase
 import stillframe42.aicodereviewer.common.Logging
 import stillframe42.aicodereviewer.common.auth.InternalAuthValidator
 
-// Python 에이전트 콜백 endpoint — Kafka 전환 전 임시 골격
 // X-Internal-Auth 헤더 토큰 검증으로 외부 노출 차단 (Spring Security 부재 환경의 최소 가드)
 @RestController
 @RequestMapping("/internal/agent")

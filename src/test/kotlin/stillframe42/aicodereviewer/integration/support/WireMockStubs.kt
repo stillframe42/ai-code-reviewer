@@ -313,9 +313,8 @@ object WireMockStubs {
         )
     }
 
-    // Python Agent /agent/analyze 응답 — PythonAgentClient 실어댑터 통합 테스트용
-    // description 마커("라우팅 회귀 검증 finding") 로 라우팅 회귀 검증
-    fun stubPythonAgentAnalyze(wireMock: WireMockServer) {
+    // RemoteAgentClient 실어댑터 통합 테스트용 — description 마커("라우팅 회귀 검증 finding") 로 라우팅 회귀 검증
+    fun stubRemoteAgentAnalyze(wireMock: WireMockServer) {
         wireMock.stubFor(
             post(urlPathEqualTo("/agent/analyze"))
                 .willReturn(

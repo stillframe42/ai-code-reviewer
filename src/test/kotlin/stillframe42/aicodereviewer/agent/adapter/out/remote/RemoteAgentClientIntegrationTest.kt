@@ -1,4 +1,4 @@
-package stillframe42.aicodereviewer.agent.adapter.out.python
+package stillframe42.aicodereviewer.agent.adapter.out.remote
 
 import com.github.tomakehurst.wiremock.client.WireMock.aResponse
 import com.github.tomakehurst.wiremock.client.WireMock.equalToJson
@@ -14,10 +14,10 @@ import org.springframework.beans.factory.annotation.Autowired
 import stillframe42.aicodereviewer.agent.domain.model.AgentAnalysisCommand
 import stillframe42.aicodereviewer.integration.AbstractIntegrationTest
 
-class PythonAgentClientIntegrationTest : AbstractIntegrationTest() {
+class RemoteAgentClientIntegrationTest : AbstractIntegrationTest() {
 
     @Autowired
-    private lateinit var pythonAgentClient: PythonAgentClient
+    private lateinit var remoteAgentClient: RemoteAgentClient
 
     @Test
     fun `requestDeepAnalysis - 200 응답을 도메인 결과로 매핑한다`() = runTest {
@@ -45,7 +45,7 @@ class PythonAgentClientIntegrationTest : AbstractIntegrationTest() {
                 ),
         )
 
-        val result = pythonAgentClient.requestDeepAnalysis(
+        val result = remoteAgentClient.requestDeepAnalysis(
             AgentAnalysisCommand(prNumber = 1, repo = "owner/repo", diff = "diff"),
         )
 
@@ -62,7 +62,7 @@ class PythonAgentClientIntegrationTest : AbstractIntegrationTest() {
                 .willReturn(okJson("""{"analysis_id":"x","status":"DONE","issues":[]}""")),
         )
 
-        pythonAgentClient.requestDeepAnalysis(
+        remoteAgentClient.requestDeepAnalysis(
             AgentAnalysisCommand(
                 prNumber = 7,
                 repo = "owner/repo",
@@ -99,7 +99,7 @@ class PythonAgentClientIntegrationTest : AbstractIntegrationTest() {
                 .willReturn(okJson("""{"analysis_id":"id-002","status":"IN_PROGRESS","issues":[]}""")),
         )
 
-        val result = pythonAgentClient.getAnalysisResult("id-002")
+        val result = remoteAgentClient.getAnalysisResult("id-002")
 
         assertThat(result.analysisId).isEqualTo("id-002")
         assertThat(result.status).isEqualTo("IN_PROGRESS")
@@ -131,7 +131,7 @@ class PythonAgentClientIntegrationTest : AbstractIntegrationTest() {
                 ),
         )
 
-        val result = pythonAgentClient.getAnalysisResult("id-003")
+        val result = remoteAgentClient.getAnalysisResult("id-003")
 
         assertThat(result.status).isEqualTo("DONE")
         assertThat(result.findings).hasSize(1)
@@ -144,7 +144,7 @@ class PythonAgentClientIntegrationTest : AbstractIntegrationTest() {
             get(urlPathEqualTo("/health")).willReturn(aResponse().withStatus(200)),
         )
 
-        assertThat(pythonAgentClient.checkHealth()).isTrue()
+        assertThat(remoteAgentClient.checkHealth()).isTrue()
     }
 
     @Test
@@ -153,12 +153,12 @@ class PythonAgentClientIntegrationTest : AbstractIntegrationTest() {
             get(urlPathEqualTo("/health")).willReturn(aResponse().withStatus(503)),
         )
 
-        assertThat(pythonAgentClient.checkHealth()).isFalse()
+        assertThat(remoteAgentClient.checkHealth()).isFalse()
     }
 
     @Test
     fun `checkHealth - stub 이 없으면 (404) false 를 반환한다`() = runTest {
         // WireMock 은 매칭되는 stub 이 없으면 404 — 어댑터가 false 로 처리해야 한다
-        assertThat(pythonAgentClient.checkHealth()).isFalse()
+        assertThat(remoteAgentClient.checkHealth()).isFalse()
     }
 }

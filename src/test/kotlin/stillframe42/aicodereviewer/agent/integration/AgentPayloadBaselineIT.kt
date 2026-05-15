@@ -50,7 +50,7 @@ class AgentPayloadBaselineIT {
             registry.add("github.api.base-url") { "http://localhost:${wireMock.port()}" }
             registry.add("spring.ai.anthropic.base-url") { "http://localhost:${wireMock.port()}" }
             registry.add("langfuse.host") { "http://localhost:${wireMock.port()}" }
-            registry.add("agent.python.url") { "http://localhost:${wireMock.port()}" }
+            registry.add("agent.remote.url") { "http://localhost:${wireMock.port()}" }
             registry.add("spring.data.redis.host") { redis.host }
             registry.add("spring.data.redis.port") { redis.getMappedPort(6379).toString() }
             // spring.ai.openai.base-url 미설정 — 실 OpenAI API 사용 (mock 임베딩은 HNSW 0건)
@@ -82,7 +82,7 @@ class AgentPayloadBaselineIT {
         }
 
         seedVectorStore()
-        stubPythonAgent()
+        stubRemoteAgent()
 
         var rawSnapshotBody = ""
         val measurements = PayloadSamples.SAMPLES.map { sample ->
@@ -135,7 +135,7 @@ class AgentPayloadBaselineIT {
     }
 
     // POST /agent/analyze 는 즉시 DONE, GET /agent/analyze/{id} 도 DONE — 폴러가 1회 만에 종료
-    private fun stubPythonAgent() {
+    private fun stubRemoteAgent() {
         wireMock.stubFor(
             post(urlPathEqualTo("/agent/analyze"))
                 .willReturn(okJson("""{"analysis_id":"baseline","status":"DONE","issues":[]}""")),

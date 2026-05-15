@@ -4,9 +4,9 @@ import java.time.Duration
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.springframework.util.unit.DataSize
-import stillframe42.aicodereviewer.config.PythonAgentProperties
-import stillframe42.aicodereviewer.config.PythonAgentProperties.CallbackProperties
-import stillframe42.aicodereviewer.config.PythonAgentProperties.PollProperties
+import stillframe42.aicodereviewer.config.RemoteAgentProperties
+import stillframe42.aicodereviewer.config.RemoteAgentProperties.CallbackProperties
+import stillframe42.aicodereviewer.config.RemoteAgentProperties.PollProperties
 
 class InternalAuthValidatorTest {
 
@@ -39,7 +39,7 @@ class InternalAuthValidatorTest {
     private fun validatorWithToken(token: String): InternalAuthValidator =
         InternalAuthValidator(properties(token))
 
-    private fun properties(token: String): PythonAgentProperties = PythonAgentProperties(
+    private fun properties(token: String): RemoteAgentProperties = RemoteAgentProperties(
         url = "http://localhost:8081",
         connectTimeout = Duration.ofSeconds(3),
         readTimeout = Duration.ofSeconds(60),

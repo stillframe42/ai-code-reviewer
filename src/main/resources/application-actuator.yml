@@ -1,6 +1,6 @@
 management:
   server:
-    port: 9001                    # 메인 API(8080)와 분리 — 내부망 전용. 8081 은 Python 에이전트 컨테이너가 사용
+    port: 9001                    # 메인 API(8080)와 분리 — 내부망 전용. 8081 은 원격 에이전트 컨테이너가 사용
   endpoints:
     web:
       exposure:
@@ -9,10 +9,10 @@ management:
     health:
       show-details: always
       group:
-        python-agent:
-          include: pythonAgent
+        remote-agent:
+          include: remoteAgent
   health:
-    python-agent:
+    remote-agent:
       enabled: true
   metrics:
     export:
