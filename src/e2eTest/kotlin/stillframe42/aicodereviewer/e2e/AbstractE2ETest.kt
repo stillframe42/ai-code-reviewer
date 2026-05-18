@@ -13,6 +13,7 @@ import org.springframework.test.context.DynamicPropertySource
 import org.springframework.test.web.servlet.client.RestTestClient
 import org.testcontainers.containers.GenericContainer
 import org.testcontainers.postgresql.PostgreSQLContainer
+import stillframe42.aicodereviewer.github.adapter.out.persistence.ProcessedPullRequestEventRepository
 import stillframe42.aicodereviewer.e2e.support.ContainerLogTail
 import stillframe42.aicodereviewer.e2e.support.OpenAiEmbeddingBatchTransformer
 import stillframe42.aicodereviewer.e2e.support.RemoteAgentContainer
@@ -100,6 +101,10 @@ abstract class AbstractE2ETest {
     @Autowired
     protected lateinit var redisTemplate: ReactiveRedisTemplate<String, String>
 
+    // 동일 PR (repo, prNumber, headSha) 를 fixture 로 공유하는 테스트 간 격리 — `skipIfAlreadyProcessed` 우회 방지.
+    @Autowired
+    protected lateinit var processedEventRepository: ProcessedPullRequestEventRepository
+
     @BeforeEach
     fun setUpBase() {
         wireMock.resetAll()
@@ -108,6 +113,7 @@ abstract class AbstractE2ETest {
             .serverCommands()
             .flushAll()
             .block()
+        processedEventRepository.deleteAll()
         client = RestTestClient.bindToServer()
             .baseUrl("http://localhost:$port")
             .build()
