@@ -89,12 +89,22 @@ sourceSets {
         compileClasspath += sourceSets["test"].output + sourceSets["main"].output
         runtimeClasspath += sourceSets["test"].output + sourceSets["main"].output
     }
+    val e2eTest by creating {
+        compileClasspath += sourceSets["test"].output + sourceSets["main"].output
+        runtimeClasspath += sourceSets["test"].output + sourceSets["main"].output
+    }
 }
 
 val evaluationTestImplementation by configurations.getting {
     extendsFrom(configurations["testImplementation"])
 }
 val evaluationTestRuntimeOnly by configurations.getting {
+    extendsFrom(configurations["testRuntimeOnly"])
+}
+val e2eTestImplementation by configurations.getting {
+    extendsFrom(configurations["testImplementation"])
+}
+val e2eTestRuntimeOnly by configurations.getting {
     extendsFrom(configurations["testRuntimeOnly"])
 }
 
@@ -147,6 +157,15 @@ tasks.register<Test>("evaluationTest") {
     classpath = sourceSets["evaluationTest"].runtimeClasspath
     useJUnitPlatform()
     shouldRunAfter("test")
+}
+
+tasks.register<Test>("e2eTest") {
+    description = "E2E 시나리오 테스트 (실제 Remote 에이전트 컨테이너 포함, 명시 실행)"
+    group = "verification"
+    testClassesDirs = sourceSets["e2eTest"].output.classesDirs
+    classpath = sourceSets["e2eTest"].runtimeClasspath
+    useJUnitPlatform()
+    // ./gradlew check 에 포함 안 함 — 명시 실행만 (스펙 D3)
 }
 
 // 실행: ./gradlew experimentTest      — 실제 OpenAI API 키(sk-*) 필요
