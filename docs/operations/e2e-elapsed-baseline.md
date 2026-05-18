@@ -10,8 +10,8 @@
 
 ## 전체 elapsed
 
-webhook 수신 → PR review POST 도달까지: **TBD ms** (실 실행 후 본 문서의 본 줄을 측정값으로 갱신)
-60s 목표: 충분히 안 (E2E stub 환경 기준)
+webhook 수신 → PR review POST 도달까지: **1177ms** (1회 측정, 2026-05-18 실 실행 기준)
+60s 목표: 충분히 안 (E2E stub 환경 기준, 목표의 약 2% 수준)
 
 ## Segment 별 시간 소비 영역 (시나리오 1 자연 실행 기준 추정)
 
