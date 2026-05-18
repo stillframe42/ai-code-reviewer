@@ -32,15 +32,15 @@ object WireMockScenarios {
                 .withBody("""{"token":"ghs_test_token","expires_at":"2099-01-01T00:00:00Z"}""")))
     }
 
-    // GET /repos/{owner}/{repo}/pulls/{n} — Accept: application/vnd.github.diff 시 unified diff 본문 반환
+    // GET /repos/{owner}/{repo}/pulls/{n} — Accept: application/vnd.github.v3.diff (v3 포함, GitHubHttpClient.fetchPrDiff 와 정합)
     private fun stubGitHubGetPr(wm: WireMockServer, fixture: SecurityPrFixture) {
         wm.stubFor(get(urlMatching("/repos/stillframe42/ai-code-reviewer/pulls/${fixture.prNumber}"))
-            .withHeader("Accept", equalTo("application/vnd.github.diff"))
+            .withHeader("Accept", equalTo("application/vnd.github.v3.diff"))
             .willReturn(aResponse()
                 .withStatus(200)
-                .withHeader("Content-Type", "application/vnd.github.diff")
+                .withHeader("Content-Type", "application/vnd.github.v3.diff")
                 .withBody(fixture.prDiff)))
-        // 일반 JSON 요청도 받을 수 있도록 fallback
+        // 일반 JSON 요청도 받을 수 있도록 fallback (다른 곳에서 PR metadata 조회 가능)
         wm.stubFor(get(urlMatching("/repos/stillframe42/ai-code-reviewer/pulls/${fixture.prNumber}"))
             .willReturn(aResponse()
                 .withStatus(200)
@@ -100,6 +100,16 @@ object WireMockScenarios {
                 .withHeader("Content-Type", "application/json")
                 .withBody(fixture.openAiFinalIssuesResponse))
             .willSetStateTo("Done"))
+
+        // LangGraph 가 Done 상태 후에도 추가 호출 (extract_issues, agent_node retry 등) 을 할 수 있으므로
+        // self-loop 로 final issues 응답을 계속 반환.
+        wm.stubFor(post(urlMatching("/v1/chat/completions"))
+            .inScenario("openai-chat")
+            .whenScenarioStateIs("Done")
+            .willReturn(aResponse()
+                .withStatus(200)
+                .withHeader("Content-Type", "application/json")
+                .withBody(fixture.openAiFinalIssuesResponse)))
     }
 
     // Langfuse ingestion — 안 깨지게만. 응답 형식은 정확하지 않아도 됨.

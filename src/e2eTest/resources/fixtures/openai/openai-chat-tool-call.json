@@ -14,8 +14,8 @@
             "id": "call_owasp_1",
             "type": "function",
             "function": {
-              "name": "get_owasp_reference",
-              "arguments": "{\"cwe\":\"CWE-256\"}"
+              "name": "search_owasp",
+              "arguments": "{\"query\":\"plaintext password storage CWE-256\"}"
             }
           }
         ]

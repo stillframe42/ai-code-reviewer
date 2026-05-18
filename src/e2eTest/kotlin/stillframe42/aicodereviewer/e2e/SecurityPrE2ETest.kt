@@ -26,7 +26,7 @@ class SecurityPrE2ETest : AbstractE2ETest() {
 
         // then — 9단계 박제
         E2EAssertions.assertWebhookAccepted(response)                                    // 1
-        E2EAssertions.assertRagContextIdsPassed(wireMock, fixture.prNumber)             // 2+3
+        E2EAssertions.assertRagContextIdsPassed(wireMock, remoteAgentLogs)               // 2+3
         E2EAssertions.assertRemoteAgentReached(remoteAgentLogs)                          // 4
         E2EAssertions.assertLangGraphTraversed(remoteAgentLogs)                          // 5
         E2EAssertions.assertOwaspToolCalled(wireMock)                                    // 6

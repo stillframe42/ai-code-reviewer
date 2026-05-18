@@ -22,12 +22,15 @@ object RemoteAgentContainer {
             .withExposedPorts(8081)
             // Remote 에이전트의 OpenAI 호출이 호스트 WireMock 으로 루프백
             .withEnv("OPENAI_API_KEY", "test-key")
-            .withEnv("OPENAI_BASE_URL", "http://host.docker.internal:$wireMockHostPort")
+            // openai-python 은 base_url 끝에 /v1 을 요구 (호출 시 base_url + "/chat/completions" 형태로 결합).
+            .withEnv("OPENAI_BASE_URL", "http://host.docker.internal:$wireMockHostPort/v1")
             // TODO: callback 흐름 활성 phase 진입 시 randomServerPort 를 동적 주입하는 헬퍼 도입.
             //       Phase 1 에서는 callback 미사용이므로 임시값 8080 사용.
             .withEnv("SPRING_BOOT_URL", "http://host.docker.internal:8080")
             .withEnv("GITHUB_TOKEN", "test-token")
             .withEnv("MAX_AGENT_STEPS", "10")
+            // RagContextController 호출 시 X-Internal-Auth 헤더로 사용 — ai-agent-service Settings 가 필수로 요구
+            .withEnv("INTERNAL_AUTH_TOKEN", "e2e-internal-auth-token")
             .withExtraHost("host.docker.internal", "host-gateway")
             .waitingFor(Wait.forHttp("/health").forPort(8081))
             .withLogConsumer(Slf4jLogConsumer(log).withPrefix("remote-agent"))

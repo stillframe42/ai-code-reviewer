@@ -24,46 +24,52 @@ object E2EAssertions {
     }
 
     // 단계 (2)+(3): SECURITY 분기 + RAG 컨텍스트 조회
-    // POST /agent/analyze 요청이 도달했다는 것 자체가 SECURITY 분기 + RAG 호출 완료를 함의
-    fun assertRagContextIdsPassed(wm: WireMockServer, prNumber: Int) {
+    // POST /agent/analyze 는 Remote 에이전트 endpoint 이므로 WireMock 에서 캡처 불가 — 대안:
+    //   (a) Spring Boot 의 OpenAI 임베딩 호출 (/v1/embeddings) 1회 이상 = ConventionContextService 가 RAG 검색 수행
+    //   (b) Remote 에이전트 stdout 에 "SECURITY" 마커 = SECURITY 분기로 Remote 에 도달
+    fun assertRagContextIdsPassed(wm: WireMockServer, logs: ContainerLogTail) {
         await atMost DEFAULT_TIMEOUT untilAsserted {
-            val event = wm.allServeEvents.firstOrNull {
-                it.request.url == "/agent/analyze" && it.request.method.value() == "POST"
-            } ?: error("POST /agent/analyze 요청 미도달 (단계 2/3 실패)")
-
-            val body = JsonPath.parse(event.request.bodyAsString)
-            assertThat(body.read<Int>("$.pr_number")).isEqualTo(prNumber)
-            val contextIds: List<Any> = body.read("$.context_ids")
-            assertThat(contextIds).withFailMessage("context_ids 가 비어있음 — RAG 검색 결과 없음")
-                .isNotEmpty
+            val embeddingCount = wm.allServeEvents.count {
+                it.request.url.startsWith("/v1/embeddings") && it.request.method.value() == "POST"
+            }
+            assertThat(embeddingCount)
+                .withFailMessage("/v1/embeddings 호출 0건 — RAG buildContextIds 미수행 (단계 3)")
+                .isGreaterThanOrEqualTo(1)
         }
-    }
-
-    // 단계 (4): Remote 에이전트 컨테이너 stdout 에 도달 흔적
-    fun assertRemoteAgentReached(logs: ContainerLogTail) {
-        val hit = logs.await(FAST_TIMEOUT) {
-            it.contains("/agent/analyze") || it.contains("agent.analyze")
+        val securityMarker = logs.await(FAST_TIMEOUT) {
+            it.contains("SECURITY") || it.contains("security_agent")
         }
-        assertThat(hit).withFailMessage("Remote 에이전트 stdout 에서 /agent/analyze 흔적 미발견 (단계 4)")
+        assertThat(securityMarker)
+            .withFailMessage("Remote 에이전트 stdout 에서 SECURITY 분기 마커 미발견 (단계 2)")
             .isTrue
     }
 
-    // 단계 (5): LangGraph 실행 — security_agent 노드 또는 graph 마커
+    // 단계 (4): Remote 에이전트 컨테이너 stdout 에 분석 시작 흔적
+    fun assertRemoteAgentReached(logs: ContainerLogTail) {
+        val hit = logs.await(FAST_TIMEOUT) {
+            it.contains("agent_node") || it.contains("run_security_agent") || it.contains("/agent/analyze")
+        }
+        assertThat(hit).withFailMessage("Remote 에이전트 stdout 에서 분석 시작 흔적 미발견 (단계 4)")
+            .isTrue
+    }
+
+    // 단계 (5): LangGraph 실행 — agent_node / extract_issues / run_security_agent 등의 node 마커
     fun assertLangGraphTraversed(logs: ContainerLogTail) {
         val hit = logs.await(FAST_TIMEOUT) {
-            it.contains("security_agent") || it.contains("graph") || it.contains("LangGraph")
+            it.contains("agent_node") || it.contains("extract_issues") ||
+                it.contains("run_security_agent") || it.contains("security_agent")
         }
-        assertThat(hit).withFailMessage("LangGraph traversal 마커 미발견 (단계 5)")
+        assertThat(hit).withFailMessage("LangGraph node traversal 마커 미발견 (단계 5)")
             .isTrue
     }
 
     // 단계 (6): OWASP Tool 호출 — scenario state 가 ToolCalled/Done 으로 전이
     fun assertOwaspToolCalled(wm: WireMockServer) {
         await atMost FAST_TIMEOUT untilAsserted {
-            val scenario = wm.allScenarios.scenarios
-                .firstOrNull { it.name == "openai-chat" }
-                ?: error("openai-chat scenario 미설정")
-            assertThat(scenario.state)
+            // Awaitility 의 untilAsserted 는 AssertionError 만 retry — error() (IllegalStateException) 사용 금지.
+            val scenario = wm.allScenarios.scenarios.firstOrNull { it.name == "openai-chat" }
+            assertThat(scenario).withFailMessage("openai-chat scenario 미설정").isNotNull
+            assertThat(scenario!!.state)
                 .withFailMessage("LangGraph 가 Tool 호출 결정을 내리지 않음 — state=%s", scenario.state)
                 .isIn("ToolCalled", "Done")
         }
@@ -76,9 +82,12 @@ object E2EAssertions {
             val reviewEvent = wm.allServeEvents.firstOrNull {
                 it.request.method.value() == "POST" &&
                     it.request.url.matches(Regex(".*/pulls/$prNumber/reviews"))
-            } ?: error("POST /pulls/$prNumber/reviews 요청 미도달 (단계 7)")
+            }
+            assertThat(reviewEvent)
+                .withFailMessage("POST /pulls/$prNumber/reviews 요청 미도달 (단계 7)")
+                .isNotNull
 
-            val body = reviewEvent.request.bodyAsString
+            val body = reviewEvent!!.request.bodyAsString
             assertThat(body)
                 .withFailMessage("PR review body 에 보안 이슈 흔적 없음:\n%s", body)
                 .containsAnyOf("CWE-256", "평문 패스워드", "plaintext", "HIGH")

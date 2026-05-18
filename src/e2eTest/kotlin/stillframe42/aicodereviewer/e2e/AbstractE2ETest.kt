@@ -74,6 +74,12 @@ abstract class AbstractE2ETest {
             registry.add("agent.remote.poll.interval") { "500ms" }
             registry.add("agent.remote.poll.timeout") { "30s" }
             registry.add("agent.remote.poll.max-attempts") { "60" }
+
+            // application-integration-test.yml 의 동일 키를 DynamicPropertySource 우선순위로 덮어쓴다.
+            // SecurityPrFixture.WEBHOOK_SECRET 와 동일해야 함 (HMAC 서명 검증).
+            registry.add("github.app.webhook-secret") { "e2e-webhook-secret" }
+            // Remote 에이전트의 INTERNAL_AUTH_TOKEN env 와 동일해야 함 (RagContextController 가드).
+            registry.add("agent.remote.callback.internal-auth-token") { "e2e-internal-auth-token" }
         }
     }
 

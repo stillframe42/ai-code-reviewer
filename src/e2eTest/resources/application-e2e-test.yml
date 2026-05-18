@@ -1,5 +1,9 @@
 spring:
+  # IT 의 base 설정 (driver, autoconfigure, jpa, flyway, vectorstore 등) 재사용
+  # — e2e 특수 설정만 본 파일에서 override (활성 profile 의 정의가 우선)
   config:
+    import:
+      - "classpath:application-integration-test.yml"
     activate:
       on-profile: e2e-test
   ai:
@@ -18,6 +22,12 @@ langfuse:
 github:
   app:
     webhook-secret: e2e-webhook-secret
+
+# Remote 에이전트가 RAG context API 호출 시 X-Internal-Auth 헤더로 사용. RemoteAgentContainer 의 INTERNAL_AUTH_TOKEN env 와 동일해야 함.
+agent:
+  remote:
+    callback:
+      internal-auth-token: e2e-internal-auth-token
 
 management:
   endpoints:
