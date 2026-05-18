@@ -24,8 +24,8 @@ object RemoteAgentContainer {
             .withEnv("OPENAI_API_KEY", "test-key")
             // openai-python 은 base_url 끝에 /v1 을 요구 (호출 시 base_url + "/chat/completions" 형태로 결합).
             .withEnv("OPENAI_BASE_URL", "http://host.docker.internal:$wireMockHostPort/v1")
-            // TODO: callback 흐름 활성 phase 진입 시 randomServerPort 를 동적 주입하는 헬퍼 도입.
-            //       Phase 1 에서는 callback 미사용이므로 임시값 8080 사용.
+            // TODO: callback 흐름 활성 시점에 randomServerPort 를 동적 주입하는 헬퍼 도입.
+            //       현재는 callback 미사용이므로 임시값 8080 사용.
             .withEnv("SPRING_BOOT_URL", "http://host.docker.internal:8080")
             .withEnv("GITHUB_TOKEN", "test-token")
             .withEnv("MAX_AGENT_STEPS", "10")

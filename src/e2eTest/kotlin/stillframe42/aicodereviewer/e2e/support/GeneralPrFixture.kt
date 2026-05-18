@@ -1,7 +1,7 @@
 package stillframe42.aicodereviewer.e2e.support
 
-// 시나리오 2 의 fixture 묶음. companion.load() 가 classpath 에서 모두 로드 + 서명 계산.
-// SecurityPrFixture 와 동일 패턴의 별도 data class — rule of three (시나리오 3) 까지 공통화 보류.
+// 일반 PR fixture 묶음. companion.load() 가 classpath 에서 모두 로드 + 서명 계산.
+// SecurityPrFixture 와 동일 패턴의 별도 data class — 같은 형태 3개 모이면 공통 추출 검토 (rule of three).
 data class GeneralPrFixture(
     val prNumber: Int,
     val webhookPayload: String,

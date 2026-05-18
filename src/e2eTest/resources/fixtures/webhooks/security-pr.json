@@ -6,7 +6,7 @@
     "number": 42,
     "state": "open",
     "title": "feat: add SecurityConfig",
-    "body": "Phase 2 시나리오 1 — 보안 파일 변경 PR",
+    "body": "보안 파일 변경 PR",
     "head": {
       "sha": "00000000000000000000000000000000000000ab",
       "ref": "feature/security-config"

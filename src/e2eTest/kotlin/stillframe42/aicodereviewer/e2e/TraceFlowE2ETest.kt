@@ -31,7 +31,7 @@ class TraceFlowE2ETest : AbstractE2ETest() {
             .exchange()
             .expectStatus().isAccepted
 
-        // 시나리오 1 흐름이 한 차례 흘러갈 시간 — agent_node 마커가 등장하면 흐름 진행 신호.
+        // 보안 PR 흐름이 한 차례 흘러갈 시간 — agent_node 마커가 등장하면 흐름 진행 신호.
         await atMost Duration.ofSeconds(30) untilAsserted {
             val flowStarted = remoteAgentLogs.snapshot().any {
                 it.contains("agent_node") || it.contains("POST /agent/analyze")

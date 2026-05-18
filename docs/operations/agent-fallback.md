@@ -39,6 +39,14 @@ rate(agent_fallback_count_total[5m])
 
 (Prometheus 노출 시 Micrometer 가 `.` 을 `_` 으로, `Counter` 에 `_total` 접미사를 자동 추가한다.)
 
+**보조 알람 (단순 절대값)**: 5분 내 폴백 호출이 분당 0.5건 이상이면 알람.
+
+```promql
+rate(agent_fallback_count_total[5m]) > 0.5
+```
+
+ratio 알람보다 단순하나 webhook 트래픽 변동에 둔감 — 트래픽이 적은 시간대(야간 등) 의 폴백을 더 잘 잡는다. 운영 트래픽 패턴에 따라 ratio / absolute 둘 중 또는 둘 다 등록 검토.
+
 ## 헬스 다운 시 점검 체크리스트
 
 1. **헬스 엔드포인트 확인** — `curl -s http://<host>:9001/actuator/health/remote-agent` 의 status 가 `DOWN` 인지 확인.

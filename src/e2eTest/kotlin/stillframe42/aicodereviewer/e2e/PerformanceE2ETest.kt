@@ -6,7 +6,7 @@ import stillframe42.aicodereviewer.e2e.support.E2EAssertions
 import stillframe42.aicodereviewer.e2e.support.SecurityPrFixture
 import stillframe42.aicodereviewer.e2e.support.WireMockScenarios
 
-// 시나리오 1 의 외부 관찰자 시점 elapsed (webhook POST → PR review verify 통과) 를 1회 측정·박제.
+// 보안 PR 흐름의 외부 관찰자 시점 elapsed (webhook POST → PR review verify 통과) 를 1회 측정·박제.
 // 10회 반복 p50/p95/max 정량 측정은 docs/operations/e2e-elapsed-baseline.md 의 향후 TODO.
 class PerformanceE2ETest : AbstractE2ETest() {
 

@@ -6,7 +6,7 @@
     "number": 44,
     "state": "open",
     "title": "feat: add SecurityConfig (agent down scenario)",
-    "body": "DAY 20 Phase 2 시나리오 3 — Remote 에이전트 다운 폴백",
+    "body": "보안 파일 변경 PR — 에이전트 다운 폴백 시뮬",
     "head": {
       "sha": "00000000000000000000000000000000000000ef",
       "ref": "feature/security-config-agent-down"

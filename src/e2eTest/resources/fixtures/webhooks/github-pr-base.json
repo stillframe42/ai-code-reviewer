@@ -6,7 +6,7 @@
     "number": 1,
     "state": "open",
     "title": "E2E baseline PR",
-    "body": "Phase 1 인프라용 baseline payload — Phase 2 이후 시나리오별 변형 베이스",
+    "body": "인프라용 baseline payload — 시나리오별 변형 베이스",
     "head": {
       "sha": "0000000000000000000000000000000000000001",
       "ref": "feature/e2e-baseline"

@@ -12,7 +12,7 @@ import com.github.tomakehurst.wiremock.http.Fault
 import com.github.tomakehurst.wiremock.stubbing.Scenario
 import java.time.Duration
 
-// 시나리오 1 의 모든 외부 호출 stub.
+// 보안 PR (Remote 에이전트 경로) 의 모든 외부 호출 stub.
 // 가장 까다로운 부분은 stubOpenAiChatSequence — LangGraph 의 Tool 사용 결정 → 실행 → 최종 답 흐름을 scenario state 로 강제.
 object WireMockScenarios {
 
@@ -26,7 +26,7 @@ object WireMockScenarios {
         stubLangfuse(wm)
     }
 
-    // 시나리오 2 (일반 PR) — installation token / GitHub PR-files / GitHub POST review / Anthropic /v1/messages / OpenAI embedding / langfuse stub.
+    // 일반 PR — installation token / GitHub PR-files / GitHub POST review / Anthropic /v1/messages / OpenAI embedding / langfuse stub.
     // OpenAI chat 시퀀스는 호출 안 함 — Spring AI 직접 경로는 Anthropic 1회로 끝난다.
     // 단, RAG 컨벤션 컨텍스트 빌딩(ConventionContextService)이 OpenAI 임베딩을 사용하므로 stubOpenAiEmbedding 은 필요하다.
     fun stubAllForGeneral(wm: WireMockServer, fixture: GeneralPrFixture) {
@@ -41,7 +41,7 @@ object WireMockScenarios {
 
     // GET /repos/.../pulls/{n} — Accept 헤더 매칭 stub 우선 (priority 1), JSON fallback 후순위 (priority 10).
     // 운영 webClient 가 다중 Accept 헤더 ("application/vnd.github+json" default + ".v3.diff" override) 를 보낼 때
-    // priority 명시 없이는 fallback 이 매칭되어 prDiff 가 빈 JSON 으로 흐를 수 있음 — 시나리오 2 가 처음으로 노출시킨 케이스.
+    // priority 명시 없이는 fallback 이 매칭되어 prDiff 가 빈 JSON 으로 흐를 수 있음 — 일반 PR 경로가 처음으로 노출시킨 케이스.
     private fun stubGitHubGetPrGeneral(wm: WireMockServer, fixture: GeneralPrFixture) {
         wm.stubFor(get(urlMatching("/repos/stillframe42/ai-code-reviewer/pulls/${fixture.prNumber}"))
             .atPriority(1)
@@ -76,7 +76,7 @@ object WireMockScenarios {
                 .withBody(fixture.anthropicReviewResponse)))
     }
 
-    // 시나리오 3 (에이전트 다운) — installation token / GitHub PR-files / GitHub POST review /
+    // 에이전트 다운 — installation token / GitHub PR-files / GitHub POST review /
     // Anthropic /v1/messages / OpenAI embedding / langfuse / agent ConnectionReset fault stub.
     // agent.remote.url 이 WireMock 으로 redirect 된 상태에서 /agent/analyze 호출이 connection reset 되어
     // RemoteAgentClient.mapHttpExceptions 가 AgentUnavailableException 으로 매핑 → fallbackToSpringAI("unavailable", ...).
@@ -98,7 +98,7 @@ object WireMockScenarios {
             .willReturn(aResponse().withFault(Fault.CONNECTION_RESET_BY_PEER)))
     }
 
-    // GET /repos/.../pulls/{n} — Accept 헤더 매칭 priority 1, JSON fallback 후순위 (Phase 1 의 stubGitHubGetPrGeneral 패턴 동일).
+    // GET /repos/.../pulls/{n} — Accept 헤더 매칭 priority 1, JSON fallback 후순위 (stubGitHubGetPrGeneral 패턴 동일).
     private fun stubGitHubGetPrAgentDown(wm: WireMockServer, fixture: AgentDownPrFixture) {
         wm.stubFor(get(urlMatching("/repos/stillframe42/ai-code-reviewer/pulls/${fixture.prNumber}"))
             .atPriority(1)
@@ -180,7 +180,7 @@ object WireMockScenarios {
     }
 
     // POST /v1/embeddings — Spring Boot 의 RAG 임베딩.
-    // OpenAiEmbeddingBatchTransformer (Phase 1) 가 input 배열 수에 맞게 동적 응답 생성.
+    // OpenAiEmbeddingBatchTransformer 가 input 배열 수에 맞게 동적 응답 생성.
     private fun stubOpenAiEmbedding(wm: WireMockServer) {
         wm.stubFor(post(urlMatching("/v1/embeddings"))
             .willReturn(aResponse()

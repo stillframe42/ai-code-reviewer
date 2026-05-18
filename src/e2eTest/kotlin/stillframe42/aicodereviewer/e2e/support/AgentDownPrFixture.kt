@@ -1,7 +1,7 @@
 package stillframe42.aicodereviewer.e2e.support
 
-// 시나리오 3 (Remote 에이전트 다운 → Spring AI 폴백) 의 fixture 묶음.
-// SecurityPrFixture / GeneralPrFixture 와 동일 패턴 — rule of three 가 모였으나 공통 추출은 Phase 종료 후 별도 결정.
+// 에이전트 다운 → Spring AI 폴백 PR fixture 묶음.
+// SecurityPrFixture / GeneralPrFixture 와 동일 패턴 — 3개 모였으므로 공통 추출은 후속 작업에서 별도 결정.
 data class AgentDownPrFixture(
     val prNumber: Int,
     val webhookPayload: String,

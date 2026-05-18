@@ -6,7 +6,7 @@
     "number": 43,
     "state": "open",
     "title": "feat: add calculateAge to UserService",
-    "body": "DAY 20 Phase 1 시나리오 2 — 일반 파일 변경 PR",
+    "body": "일반 파일 변경 PR — UserService.kt 메서드 추가",
     "head": {
       "sha": "00000000000000000000000000000000000000cd",
       "ref": "feature/user-service-age"

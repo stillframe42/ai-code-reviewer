@@ -9,7 +9,7 @@ import stillframe42.aicodereviewer.e2e.support.AgentDownPrFixture
 import stillframe42.aicodereviewer.e2e.support.E2EAssertions
 import stillframe42.aicodereviewer.e2e.support.WireMockScenarios
 
-// 시나리오 3 — Remote 에이전트 다운 → Spring AI 폴백 → PR 코멘트 등록.
+// Remote 에이전트 다운 → Spring AI 폴백 → PR 코멘트 등록.
 // 핵심 박제:
 //   (1) /agent/analyze 호출이 connection reset → AgentUnavailableException → 폴백 분기
 //   (2) agent.fallback.count{reason=unavailable} +1
@@ -19,7 +19,7 @@ import stillframe42.aicodereviewer.e2e.support.WireMockScenarios
 //   - companion 의 static init 에서 System property `e2e.agent.remote.url.override` 를 WireMock URL 로 설정 →
 //     AbstractE2ETest.overrideProperties 의 supplier 가 그 값을 우선 사용 (companion init 은 Spring 컨텍스트 부팅 전에 실행).
 //   - WireMock 에 POST /agent/analyze 의 ConnectionReset fault stub → 호출 시 WebClientRequestException → AgentUnavailableException.
-//   - @TestPropertySource 의 marker 가 컨텍스트 cache key 를 분리 → 시나리오 1·2 컨텍스트와 독립 (HikariPool +1).
+//   - @TestPropertySource 의 marker 가 컨텍스트 cache key 를 분리 → 다른 e2e 테스트 컨텍스트와 독립 (HikariPool +1).
 //   - @AfterAll 에서 System property 클리어 → 다른 e2eTest 영향 0.
 @TestPropertySource(properties = ["e2e.scenario=agent-down"])
 class AgentDownE2ETest : AbstractE2ETest() {
@@ -58,5 +58,6 @@ class AgentDownE2ETest : AbstractE2ETest() {
         E2EAssertions.assertPrReviewSubmitted(wireMock, fixture.prNumber)
         E2EAssertions.assertFallbackMetricIncremented(meterRegistry, "unavailable", baseline)
         E2EAssertions.assertRemoteAgentHealthDown(client)
+        E2EAssertions.assertFallbackMetricExposedAsPrometheus(client, "unavailable")
     }
 }

@@ -1,6 +1,6 @@
 package stillframe42.aicodereviewer.e2e.support
 
-// 시나리오 1 의 5개 fixture 묶음. companion.load() 가 classpath 에서 모두 로드 + 서명 계산.
+// 보안 PR (Remote 에이전트 경로) 의 5개 fixture 묶음. companion.load() 가 classpath 에서 모두 로드 + 서명 계산.
 data class SecurityPrFixture(
     val prNumber: Int,
     val webhookPayload: String,

@@ -5,7 +5,7 @@ import stillframe42.aicodereviewer.e2e.support.E2EAssertions
 import stillframe42.aicodereviewer.e2e.support.SecurityPrFixture
 import stillframe42.aicodereviewer.e2e.support.WireMockScenarios
 
-// 시나리오 1 — 보안 PR webhook → Remote 에이전트 → PR 리뷰 등록 happy path.
+// 보안 PR webhook → Remote 에이전트 → PR 리뷰 등록 happy path.
 // 9단계 assertion 의 호출 순서 자체가 흐름을 가시화한다.
 class SecurityPrE2ETest : AbstractE2ETest() {
 

@@ -116,14 +116,14 @@ object E2EAssertions {
         }
     }
 
-    // 시나리오 2 핵심 박제: Remote 에이전트의 POST /agent/analyze 가 0회 호출됨.
+    // 일반 PR 박제 핵심: Remote 에이전트의 POST /agent/analyze 가 0회 호출됨.
     // 양성 결과(`assertPrReviewSubmitted`) 가 도착한 후 호출하는 것이 안전하다 —
     // fire-and-forget 처리가 진행 중일 때 verify(0) 가 거짓 통과할 위험 회피.
     fun assertRemoteAgentNotCalled(wm: WireMockServer) {
         wm.verify(0, postRequestedFor(urlMatching("/agent/analyze")))
     }
 
-    // 시나리오 3 박제: agent.fallback.count{reason} 카운터가 baseline + 1 이상으로 증가했음을 await.
+    // 폴백 박제: agent.fallback.count{reason} 카운터가 baseline + 1 이상으로 증가했음을 await.
     // baseline 은 테스트 진입 직전 fallbackMetricBaseline() 로 측정. 다른 테스트 누적분 격리 위함.
     // fire-and-forget 백그라운드 처리라 PR 코멘트 등록(`assertPrReviewSubmitted`) 이후 호출하는 것이 안전.
     fun assertFallbackMetricIncremented(meterRegistry: MeterRegistry, reason: String, baseline: Double) {
@@ -148,7 +148,7 @@ object E2EAssertions {
             .counter()
             ?.count() ?: 0.0
 
-    // 시나리오 3 박제: /actuator/health 의 components.remoteAgent.status 가 DOWN 으로 노출됨을 await.
+    // 헬스 박제: /actuator/health 의 components.remoteAgent.status 가 DOWN 으로 노출됨을 await.
     // ReactiveHealthIndicator 가 매 호출 port.checkHealth() 직접 호출 (캐시 없음) — 다운 상태가 즉시 반영됨.
     // application-e2e-test.yml 의 management.endpoint.health.show-details=always 설정으로 components 노출됨.
     fun assertRemoteAgentHealthDown(client: RestTestClient) {
@@ -166,6 +166,28 @@ object E2EAssertions {
             assertThat(status)
                 .withFailMessage("components.remoteAgent.status 가 DOWN 아님: %s\nbody=%s", status, body)
                 .isEqualTo("DOWN")
+        }
+    }
+
+    // Prometheus 노출 박제: /actuator/prometheus 응답 본문에 agent_fallback_count_total{reason=...} 라인이 노출됨을 확인.
+    // 폴백 발생 직후 호출되어야 의미 있음 — 메트릭 +1 이 노출 시점에 반영.
+    // Micrometer 가 . → _ 변환 + Counter 에 _total 접미사 자동 추가하는 규칙을 박제한다.
+    fun assertFallbackMetricExposedAsPrometheus(client: RestTestClient, reason: String) {
+        await atMost DEFAULT_TIMEOUT untilAsserted {
+            val body = client.get()
+                .uri("/actuator/prometheus")
+                .exchange()
+                .expectBody(String::class.java)
+                .returnResult()
+                .responseBody
+                ?: error("/actuator/prometheus 응답 본문 없음")
+            val pattern = Regex("""agent_fallback_count_total\{[^}]*reason="$reason"[^}]*\}\s+\d""")
+            assertThat(pattern.containsMatchIn(body))
+                .withFailMessage(
+                    "agent_fallback_count_total{reason=%s} 라인이 prometheus 응답에 없음:\n%s",
+                    reason, body.take(2000),
+                )
+                .isTrue
         }
     }
 }
