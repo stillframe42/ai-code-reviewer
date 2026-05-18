@@ -1,0 +1,17 @@
+{
+  "id": "chatcmpl-final-1",
+  "object": "chat.completion",
+  "created": 1700000001,
+  "model": "gpt-4o-mini",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": "{\"issues\":[{\"severity\":\"HIGH\",\"type\":\"SECURITY\",\"location\":\"SecurityConfig.kt:9\",\"description\":\"평문 패스워드가 하드코딩되어 있습니다 (CWE-256)\",\"suggestion\":\"환경변수 또는 KMS 로 분리\",\"owasp_reference\":\"CWE-256\"}]}"
+      },
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": { "prompt_tokens": 80, "completion_tokens": 60, "total_tokens": 140 }
+}
