@@ -1,0 +1,10 @@
+[
+  {
+    "filename": "src/main/kotlin/example/SecurityConfig.kt",
+    "status": "added",
+    "additions": 12,
+    "deletions": 0,
+    "changes": 12,
+    "patch": "@@ -0,0 +1,12 @@\n+package example\n+\n+import org.springframework.context.annotation.Configuration\n+\n+@Configuration\n+class SecurityConfig {\n+\n+    // 보안 이슈: 평문 패스워드 하드코딩\n+    var adminPassword: String = \"admin123\"\n+\n+    fun login(user: String, pass: String): Boolean = pass == adminPassword\n+}"
+  }
+]
