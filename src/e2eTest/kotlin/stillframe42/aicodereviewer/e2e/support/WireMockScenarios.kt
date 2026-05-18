@@ -8,6 +8,7 @@ import com.github.tomakehurst.wiremock.client.WireMock.get
 import com.github.tomakehurst.wiremock.client.WireMock.post
 import com.github.tomakehurst.wiremock.client.WireMock.put
 import com.github.tomakehurst.wiremock.client.WireMock.urlMatching
+import com.github.tomakehurst.wiremock.http.Fault
 import com.github.tomakehurst.wiremock.stubbing.Scenario
 import java.time.Duration
 
@@ -68,6 +69,62 @@ object WireMockScenarios {
 
     // POST /v1/messages — Spring AI Anthropic 어댑터의 호출 endpoint. 1회 응답으로 끝남.
     private fun stubAnthropicMessages(wm: WireMockServer, fixture: GeneralPrFixture) {
+        wm.stubFor(post(urlMatching("/v1/messages"))
+            .willReturn(aResponse()
+                .withStatus(200)
+                .withHeader("Content-Type", "application/json")
+                .withBody(fixture.anthropicReviewResponse)))
+    }
+
+    // 시나리오 3 (에이전트 다운) — installation token / GitHub PR-files / GitHub POST review /
+    // Anthropic /v1/messages / OpenAI embedding / langfuse / agent ConnectionReset fault stub.
+    // agent.remote.url 이 WireMock 으로 redirect 된 상태에서 /agent/analyze 호출이 connection reset 되어
+    // RemoteAgentClient.mapHttpExceptions 가 AgentUnavailableException 으로 매핑 → fallbackToSpringAI("unavailable", ...).
+    fun stubAllForAgentDown(wm: WireMockServer, fixture: AgentDownPrFixture) {
+        stubGitHubInstallationToken(wm)
+        stubGitHubGetPrAgentDown(wm, fixture)
+        stubGitHubGetPrFilesAgentDown(wm, fixture)
+        stubGitHubPostReview(wm, fixture.prNumber)
+        stubOpenAiEmbedding(wm)
+        stubAnthropicMessagesAgentDown(wm, fixture)
+        stubLangfuse(wm)
+        stubAgentConnectionReset(wm)
+    }
+
+    // POST /agent/analyze — connection reset fault 로 WebClientRequestException 유발.
+    // AgentFallbackIntegrationTest 의 connection reset 시나리오와 동일 패턴.
+    private fun stubAgentConnectionReset(wm: WireMockServer) {
+        wm.stubFor(post(urlMatching("/agent/analyze"))
+            .willReturn(aResponse().withFault(Fault.CONNECTION_RESET_BY_PEER)))
+    }
+
+    // GET /repos/.../pulls/{n} — Accept 헤더 매칭 priority 1, JSON fallback 후순위 (Phase 1 의 stubGitHubGetPrGeneral 패턴 동일).
+    private fun stubGitHubGetPrAgentDown(wm: WireMockServer, fixture: AgentDownPrFixture) {
+        wm.stubFor(get(urlMatching("/repos/stillframe42/ai-code-reviewer/pulls/${fixture.prNumber}"))
+            .atPriority(1)
+            .withHeader("Accept", containing("application/vnd.github.v3.diff"))
+            .willReturn(aResponse()
+                .withStatus(200)
+                .withHeader("Content-Type", "application/vnd.github.v3.diff")
+                .withBody(fixture.prDiff)))
+        wm.stubFor(get(urlMatching("/repos/stillframe42/ai-code-reviewer/pulls/${fixture.prNumber}"))
+            .atPriority(10)
+            .willReturn(aResponse()
+                .withStatus(200)
+                .withHeader("Content-Type", "application/json")
+                .withBody("""{"number":${fixture.prNumber},"title":"test","body":""}""")))
+    }
+
+    private fun stubGitHubGetPrFilesAgentDown(wm: WireMockServer, fixture: AgentDownPrFixture) {
+        wm.stubFor(get(urlMatching("/repos/stillframe42/ai-code-reviewer/pulls/${fixture.prNumber}/files"))
+            .willReturn(aResponse()
+                .withStatus(200)
+                .withHeader("Content-Type", "application/json")
+                .withBody(fixture.prFilesJson)))
+    }
+
+    // POST /v1/messages — Spring AI 폴백 경로의 Anthropic 호출. 1회 응답으로 끝남.
+    private fun stubAnthropicMessagesAgentDown(wm: WireMockServer, fixture: AgentDownPrFixture) {
         wm.stubFor(post(urlMatching("/v1/messages"))
             .willReturn(aResponse()
                 .withStatus(200)

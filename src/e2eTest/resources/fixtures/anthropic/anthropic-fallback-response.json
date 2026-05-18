@@ -1,0 +1,18 @@
+{
+  "id": "msg_test_agent_down_fallback",
+  "type": "message",
+  "role": "assistant",
+  "model": "claude-3-5-haiku-20241022",
+  "content": [
+    {
+      "type": "text",
+      "text": "{\"overall_score\":3,\"summary\":\"평문 패스워드 하드코딩 발견 — Remote 에이전트 폴백으로 분석된 결과입니다.\",\"issues\":[{\"id\":\"ISSUE-1\",\"category\":\"SECURITY\",\"filename\":\"src/main/kotlin/example/SecurityConfig.kt\",\"line\":9,\"severity\":\"CRITICAL\",\"description\":\"adminPassword가 평문으로 하드코딩되어 있습니다. 환경변수 또는 SecretsManager 사용을 권장합니다.\",\"suggestion\":\"@Value(\\\"\\${admin.password}\\\")로 외부 주입\"}],\"positives\":[]}"
+    }
+  ],
+  "stop_reason": "end_turn",
+  "stop_sequence": null,
+  "usage": {
+    "input_tokens": 220,
+    "output_tokens": 100
+  }
+}

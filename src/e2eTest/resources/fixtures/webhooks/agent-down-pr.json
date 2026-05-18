@@ -1,0 +1,39 @@
+{
+  "action": "opened",
+  "number": 44,
+  "pull_request": {
+    "id": 44,
+    "number": 44,
+    "state": "open",
+    "title": "feat: add SecurityConfig (agent down scenario)",
+    "body": "DAY 20 Phase 2 시나리오 3 — Remote 에이전트 다운 폴백",
+    "head": {
+      "sha": "00000000000000000000000000000000000000ef",
+      "ref": "feature/security-config-agent-down"
+    },
+    "base": {
+      "sha": "0000000000000000000000000000000000000000",
+      "ref": "main"
+    },
+    "user": {
+      "login": "e2e-tester",
+      "id": 1
+    }
+  },
+  "repository": {
+    "id": 1,
+    "name": "ai-code-reviewer",
+    "full_name": "stillframe42/ai-code-reviewer",
+    "owner": {
+      "login": "stillframe42",
+      "id": 1
+    }
+  },
+  "installation": {
+    "id": 1
+  },
+  "sender": {
+    "login": "e2e-tester",
+    "id": 1
+  }
+}

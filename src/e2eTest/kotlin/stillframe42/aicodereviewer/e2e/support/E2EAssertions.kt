@@ -4,6 +4,7 @@ import com.github.tomakehurst.wiremock.WireMockServer
 import com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor
 import com.github.tomakehurst.wiremock.client.WireMock.urlMatching
 import com.jayway.jsonpath.JsonPath
+import io.micrometer.core.instrument.MeterRegistry
 import org.assertj.core.api.Assertions.assertThat
 import org.awaitility.kotlin.atMost
 import org.awaitility.kotlin.await
@@ -120,5 +121,51 @@ object E2EAssertions {
     // fire-and-forget 처리가 진행 중일 때 verify(0) 가 거짓 통과할 위험 회피.
     fun assertRemoteAgentNotCalled(wm: WireMockServer) {
         wm.verify(0, postRequestedFor(urlMatching("/agent/analyze")))
+    }
+
+    // 시나리오 3 박제: agent.fallback.count{reason} 카운터가 baseline + 1 이상으로 증가했음을 await.
+    // baseline 은 테스트 진입 직전 fallbackMetricBaseline() 로 측정. 다른 테스트 누적분 격리 위함.
+    // fire-and-forget 백그라운드 처리라 PR 코멘트 등록(`assertPrReviewSubmitted`) 이후 호출하는 것이 안전.
+    fun assertFallbackMetricIncremented(meterRegistry: MeterRegistry, reason: String, baseline: Double) {
+        await atMost DEFAULT_TIMEOUT untilAsserted {
+            val current = meterRegistry.find("agent.fallback.count")
+                .tag("reason", reason)
+                .counter()
+                ?.count() ?: 0.0
+            assertThat(current)
+                .withFailMessage(
+                    "agent.fallback.count{reason=%s} 증가 안 됨 — baseline=%.1f, current=%.1f",
+                    reason, baseline, current,
+                )
+                .isGreaterThanOrEqualTo(baseline + 1.0)
+        }
+    }
+
+    // 진입 시점 baseline 측정 헬퍼 — 카운터가 아직 등록 안 됐을 수 있으므로 ?: 0.0
+    fun fallbackMetricBaseline(meterRegistry: MeterRegistry, reason: String): Double =
+        meterRegistry.find("agent.fallback.count")
+            .tag("reason", reason)
+            .counter()
+            ?.count() ?: 0.0
+
+    // 시나리오 3 박제: /actuator/health 의 components.remoteAgent.status 가 DOWN 으로 노출됨을 await.
+    // ReactiveHealthIndicator 가 매 호출 port.checkHealth() 직접 호출 (캐시 없음) — 다운 상태가 즉시 반영됨.
+    // application-e2e-test.yml 의 management.endpoint.health.show-details=always 설정으로 components 노출됨.
+    fun assertRemoteAgentHealthDown(client: RestTestClient) {
+        await atMost DEFAULT_TIMEOUT untilAsserted {
+            // status code 는 의도적으로 검증하지 않는다 — components.remoteAgent.status 가 DOWN 이라도
+            // Spring Boot 의 HttpCodeStatusMapper 설정에 따라 전체 status 가 200 또는 503 어느 쪽이든 가능.
+            val body = client.get()
+                .uri("/actuator/health")
+                .exchange()
+                .expectBody(String::class.java)
+                .returnResult()
+                .responseBody
+                ?: error("/actuator/health 응답 본문 없음")
+            val status = JsonPath.parse(body).read<String>("$.components.remoteAgent.status")
+            assertThat(status)
+                .withFailMessage("components.remoteAgent.status 가 DOWN 아님: %s\nbody=%s", status, body)
+                .isEqualTo("DOWN")
+        }
     }
 }

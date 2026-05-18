@@ -72,8 +72,13 @@ abstract class AbstractE2ETest {
             registry.add("spring.ai.openai.base-url") { "http://localhost:${wireMock.port()}" }
             registry.add("langfuse.host") { "http://localhost:${wireMock.port()}" }
 
-            // Remote 에이전트만 실제 컨테이너
-            registry.add("agent.remote.url") { "http://localhost:${remoteAgent.getMappedPort(8081)}" }
+            // Remote 에이전트는 기본적으로 실제 컨테이너로 흐르되, 시나리오 3 (AgentDownE2ETest) 에서
+            // 다운 시뮬레이션을 위해 System property `e2e.agent.remote.url.override` 가 설정되어 있으면 그 값을 우선 사용.
+            // hook 은 단 한 줄로 minimal 하게 유지 — 시나리오 1·2 의 동작에는 영향 없음 (property 미설정 시 기존과 동일).
+            registry.add("agent.remote.url") {
+                System.getProperty("e2e.agent.remote.url.override")
+                    ?: "http://localhost:${remoteAgent.getMappedPort(8081)}"
+            }
             // IN_PROGRESS 가 최소 1회 박히도록 운영에 가까운 interval
             registry.add("agent.remote.poll.interval") { "500ms" }
             registry.add("agent.remote.poll.timeout") { "30s" }
