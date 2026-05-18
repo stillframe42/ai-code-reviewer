@@ -1,0 +1,39 @@
+{
+  "action": "opened",
+  "number": 43,
+  "pull_request": {
+    "id": 43,
+    "number": 43,
+    "state": "open",
+    "title": "feat: add calculateAge to UserService",
+    "body": "DAY 20 Phase 1 시나리오 2 — 일반 파일 변경 PR",
+    "head": {
+      "sha": "00000000000000000000000000000000000000cd",
+      "ref": "feature/user-service-age"
+    },
+    "base": {
+      "sha": "0000000000000000000000000000000000000000",
+      "ref": "main"
+    },
+    "user": {
+      "login": "e2e-tester",
+      "id": 1
+    }
+  },
+  "repository": {
+    "id": 1,
+    "name": "ai-code-reviewer",
+    "full_name": "stillframe42/ai-code-reviewer",
+    "owner": {
+      "login": "stillframe42",
+      "id": 1
+    }
+  },
+  "installation": {
+    "id": 1
+  },
+  "sender": {
+    "login": "e2e-tester",
+    "id": 1
+  }
+}

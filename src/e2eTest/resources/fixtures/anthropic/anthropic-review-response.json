@@ -1,0 +1,18 @@
+{
+  "id": "msg_test_general_pr",
+  "type": "message",
+  "role": "assistant",
+  "model": "claude-3-5-haiku-20241022",
+  "content": [
+    {
+      "type": "text",
+      "text": "{\"overall_score\":8,\"summary\":\"calculateAge 메서드 추가 — 간결하나 입력 검증이 없습니다.\",\"issues\":[{\"id\":\"ISSUE-1\",\"category\":\"READABILITY\",\"filename\":\"src/main/kotlin/example/UserService.kt\",\"line\":8,\"severity\":\"MINOR\",\"description\":\"birthYear 가 미래 연도일 때 음수 반환. 유효성 검증을 추가하세요.\",\"suggestion\":\"require(birthYear <= LocalDate.now().year)\"}],\"positives\":[\"표현식 본문(=) 으로 간결하게 작성됨\"]}"
+    }
+  ],
+  "stop_reason": "end_turn",
+  "stop_sequence": null,
+  "usage": {
+    "input_tokens": 200,
+    "output_tokens": 80
+  }
+}

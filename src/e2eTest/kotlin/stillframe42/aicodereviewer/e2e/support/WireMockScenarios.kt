@@ -2,6 +2,7 @@ package stillframe42.aicodereviewer.e2e.support
 
 import com.github.tomakehurst.wiremock.WireMockServer
 import com.github.tomakehurst.wiremock.client.WireMock.aResponse
+import com.github.tomakehurst.wiremock.client.WireMock.containing
 import com.github.tomakehurst.wiremock.client.WireMock.equalTo
 import com.github.tomakehurst.wiremock.client.WireMock.get
 import com.github.tomakehurst.wiremock.client.WireMock.post
@@ -22,6 +23,56 @@ object WireMockScenarios {
         stubOpenAiEmbedding(wm)
         stubOpenAiChatSequence(wm, fixture, chatDelay)
         stubLangfuse(wm)
+    }
+
+    // 시나리오 2 (일반 PR) — installation token / GitHub PR-files / GitHub POST review / Anthropic /v1/messages / OpenAI embedding / langfuse stub.
+    // OpenAI chat 시퀀스는 호출 안 함 — Spring AI 직접 경로는 Anthropic 1회로 끝난다.
+    // 단, RAG 컨벤션 컨텍스트 빌딩(ConventionContextService)이 OpenAI 임베딩을 사용하므로 stubOpenAiEmbedding 은 필요하다.
+    fun stubAllForGeneral(wm: WireMockServer, fixture: GeneralPrFixture) {
+        stubGitHubInstallationToken(wm)
+        stubGitHubGetPrGeneral(wm, fixture)
+        stubGitHubGetPrFilesGeneral(wm, fixture)
+        stubGitHubPostReview(wm, fixture.prNumber)
+        stubOpenAiEmbedding(wm)
+        stubAnthropicMessages(wm, fixture)
+        stubLangfuse(wm)
+    }
+
+    // GET /repos/.../pulls/{n} — Accept 헤더 매칭 stub 우선 (priority 1), JSON fallback 후순위 (priority 10).
+    // 운영 webClient 가 다중 Accept 헤더 ("application/vnd.github+json" default + ".v3.diff" override) 를 보낼 때
+    // priority 명시 없이는 fallback 이 매칭되어 prDiff 가 빈 JSON 으로 흐를 수 있음 — 시나리오 2 가 처음으로 노출시킨 케이스.
+    private fun stubGitHubGetPrGeneral(wm: WireMockServer, fixture: GeneralPrFixture) {
+        wm.stubFor(get(urlMatching("/repos/stillframe42/ai-code-reviewer/pulls/${fixture.prNumber}"))
+            .atPriority(1)
+            .withHeader("Accept", containing("application/vnd.github.v3.diff"))
+            .willReturn(aResponse()
+                .withStatus(200)
+                .withHeader("Content-Type", "application/vnd.github.v3.diff")
+                .withBody(fixture.prDiff)))
+        wm.stubFor(get(urlMatching("/repos/stillframe42/ai-code-reviewer/pulls/${fixture.prNumber}"))
+            .atPriority(10)
+            .willReturn(aResponse()
+                .withStatus(200)
+                .withHeader("Content-Type", "application/json")
+                .withBody("""{"number":${fixture.prNumber},"title":"test","body":""}""")))
+    }
+
+    // GET /repos/.../pulls/{n}/files
+    private fun stubGitHubGetPrFilesGeneral(wm: WireMockServer, fixture: GeneralPrFixture) {
+        wm.stubFor(get(urlMatching("/repos/stillframe42/ai-code-reviewer/pulls/${fixture.prNumber}/files"))
+            .willReturn(aResponse()
+                .withStatus(200)
+                .withHeader("Content-Type", "application/json")
+                .withBody(fixture.prFilesJson)))
+    }
+
+    // POST /v1/messages — Spring AI Anthropic 어댑터의 호출 endpoint. 1회 응답으로 끝남.
+    private fun stubAnthropicMessages(wm: WireMockServer, fixture: GeneralPrFixture) {
+        wm.stubFor(post(urlMatching("/v1/messages"))
+            .willReturn(aResponse()
+                .withStatus(200)
+                .withHeader("Content-Type", "application/json")
+                .withBody(fixture.anthropicReviewResponse)))
     }
 
     // GitHub App installation access token 발급 stub

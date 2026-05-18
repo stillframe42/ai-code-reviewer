@@ -114,4 +114,11 @@ object E2EAssertions {
             wm.verify(postRequestedFor(urlMatching(".*/pulls/$prNumber/reviews")))
         }
     }
+
+    // 시나리오 2 핵심 박제: Remote 에이전트의 POST /agent/analyze 가 0회 호출됨.
+    // 양성 결과(`assertPrReviewSubmitted`) 가 도착한 후 호출하는 것이 안전하다 —
+    // fire-and-forget 처리가 진행 중일 때 verify(0) 가 거짓 통과할 위험 회피.
+    fun assertRemoteAgentNotCalled(wm: WireMockServer) {
+        wm.verify(0, postRequestedFor(urlMatching("/agent/analyze")))
+    }
 }

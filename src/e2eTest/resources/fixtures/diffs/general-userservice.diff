@@ -1,0 +1,15 @@
+diff --git a/src/main/kotlin/example/UserService.kt b/src/main/kotlin/example/UserService.kt
+new file mode 100644
+index 0000000..2345bcd
+--- /dev/null
++++ b/src/main/kotlin/example/UserService.kt
+@@ -0,0 +1,9 @@
++package example
++
++import java.time.LocalDate
++
++class UserService {
++
++    fun calculateAge(birthYear: Int): Int =
++        LocalDate.now().year - birthYear
++}

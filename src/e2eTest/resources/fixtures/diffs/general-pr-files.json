@@ -1,0 +1,10 @@
+[
+  {
+    "filename": "src/main/kotlin/example/UserService.kt",
+    "status": "added",
+    "additions": 9,
+    "deletions": 0,
+    "changes": 9,
+    "patch": "@@ -0,0 +1,9 @@\n+package example\n+\n+import java.time.LocalDate\n+\n+class UserService {\n+\n+    fun calculateAge(birthYear: Int): Int =\n+        LocalDate.now().year - birthYear\n+}"
+  }
+]
