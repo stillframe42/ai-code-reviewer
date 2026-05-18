@@ -8,7 +8,7 @@ import org.assertj.core.api.Assertions.assertThat
 import org.awaitility.kotlin.atMost
 import org.awaitility.kotlin.await
 import org.awaitility.kotlin.untilAsserted
-import org.springframework.test.web.reactive.server.WebTestClient
+import org.springframework.test.web.servlet.client.RestTestClient
 import java.time.Duration
 
 // 9단계 박제 함수 집합. 단계 (2)~(9) 는 fire-and-forget 백그라운드 처리라 Awaitility 폴링 필수.
@@ -19,7 +19,7 @@ object E2EAssertions {
     private val FAST_TIMEOUT: Duration = Duration.ofSeconds(10)
 
     // 단계 (1): Webhook 수신 — 202 ACCEPTED
-    fun assertWebhookAccepted(response: WebTestClient.ResponseSpec) {
+    fun assertWebhookAccepted(response: RestTestClient.ResponseSpec) {
         response.expectStatus().isAccepted
     }
 
