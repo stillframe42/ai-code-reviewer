@@ -16,6 +16,7 @@ import org.testcontainers.postgresql.PostgreSQLContainer
 import stillframe42.aicodereviewer.e2e.support.ContainerLogTail
 import stillframe42.aicodereviewer.e2e.support.OpenAiEmbeddingBatchTransformer
 import stillframe42.aicodereviewer.e2e.support.RemoteAgentContainer
+import stillframe42.aicodereviewer.e2e.support.SpringBootLogTail
 
 // E2E 베이스 — AbstractIntegrationTest 와 의도적 격리.
 // 핵심 차이:
@@ -46,6 +47,9 @@ abstract class AbstractE2ETest {
                 .also { it.start() }
 
         val remoteAgentLogs: ContainerLogTail = ContainerLogTail()
+
+        // Phase 3: AgentPoller 등 Spring Boot 측 logger 로그 캡처. 자식 클래스가 @BeforeEach 로 attachTo 호출.
+        val springBootLogs: SpringBootLogTail = SpringBootLogTail()
 
         val remoteAgent: GenericContainer<*> =
             RemoteAgentContainer.create(wireMockHostPort = wireMock.port(), logTail = remoteAgentLogs)
