@@ -1,0 +1,24 @@
+spring:
+  config:
+    activate:
+      on-profile: e2e-test
+  ai:
+    openai:
+      api-key: test
+    anthropic:
+      api-key: test
+
+# trace 흐름 박제를 위해 enabled. host 는 DynamicPropertySource 가 WireMock 으로 override.
+langfuse:
+  public-key: test
+  secret-key: test
+  enabled: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,prometheus
+  endpoint:
+    health:
+      show-details: always

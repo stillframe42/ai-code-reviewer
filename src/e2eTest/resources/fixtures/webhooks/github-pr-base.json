@@ -1,0 +1,36 @@
+{
+  "action": "opened",
+  "number": 1,
+  "pull_request": {
+    "id": 1,
+    "number": 1,
+    "state": "open",
+    "title": "E2E baseline PR",
+    "body": "Phase 1 인프라용 baseline payload — Phase 2 이후 시나리오별 변형 베이스",
+    "head": {
+      "sha": "0000000000000000000000000000000000000001",
+      "ref": "feature/e2e-baseline"
+    },
+    "base": {
+      "sha": "0000000000000000000000000000000000000000",
+      "ref": "main"
+    },
+    "user": {
+      "login": "e2e-tester",
+      "id": 1
+    }
+  },
+  "repository": {
+    "id": 1,
+    "name": "ai-code-reviewer",
+    "full_name": "stillframe42/ai-code-reviewer",
+    "owner": {
+      "login": "stillframe42",
+      "id": 1
+    }
+  },
+  "sender": {
+    "login": "e2e-tester",
+    "id": 1
+  }
+}
