@@ -14,6 +14,11 @@ langfuse:
   secret-key: test
   enabled: true
 
+# Phase 2: webhook 서명 검증용 고정 secret. SecurityPrFixture.WEBHOOK_SECRET 과 동일해야 함.
+github:
+  app:
+    webhook-secret: e2e-webhook-secret
+
 management:
   endpoints:
     web:

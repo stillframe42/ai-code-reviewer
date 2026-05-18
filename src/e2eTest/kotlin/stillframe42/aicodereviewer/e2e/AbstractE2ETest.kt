@@ -13,6 +13,7 @@ import org.springframework.test.context.DynamicPropertySource
 import org.springframework.test.web.servlet.client.RestTestClient
 import org.testcontainers.containers.GenericContainer
 import org.testcontainers.postgresql.PostgreSQLContainer
+import stillframe42.aicodereviewer.e2e.support.ContainerLogTail
 import stillframe42.aicodereviewer.e2e.support.OpenAiEmbeddingBatchTransformer
 import stillframe42.aicodereviewer.e2e.support.RemoteAgentContainer
 
@@ -44,8 +45,10 @@ abstract class AbstractE2ETest {
                 .withExposedPorts(6379)
                 .also { it.start() }
 
+        val remoteAgentLogs: ContainerLogTail = ContainerLogTail()
+
         val remoteAgent: GenericContainer<*> =
-            RemoteAgentContainer.create(wireMockHostPort = wireMock.port())
+            RemoteAgentContainer.create(wireMockHostPort = wireMock.port(), logTail = remoteAgentLogs)
                 .also { it.start() }
 
         @JvmStatic

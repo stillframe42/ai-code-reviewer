@@ -14,11 +14,11 @@ object RemoteAgentContainer {
 
     private val log = LoggerFactory.getLogger(RemoteAgentContainer::class.java)
 
-    fun create(wireMockHostPort: Int): GenericContainer<*> {
+    fun create(wireMockHostPort: Int, logTail: ContainerLogTail? = null): GenericContainer<*> {
         val image = ImageFromDockerfile()
             .withFileFromPath(".", Paths.get("../ai-agent-service"))
 
-        return GenericContainer(image)
+        val container = GenericContainer(image)
             .withExposedPorts(8081)
             // Remote 에이전트의 OpenAI 호출이 호스트 WireMock 으로 루프백
             .withEnv("OPENAI_API_KEY", "test-key")
@@ -31,5 +31,9 @@ object RemoteAgentContainer {
             .withExtraHost("host.docker.internal", "host-gateway")
             .waitingFor(Wait.forHttp("/health").forPort(8081))
             .withLogConsumer(Slf4jLogConsumer(log).withPrefix("remote-agent"))
+
+        // logTail 이 있으면 추가 consumer 등록 — Slf4jLogConsumer 와 병렬 수집
+        logTail?.let { container.withLogConsumer(it.consumer) }
+        return container
     }
 }
