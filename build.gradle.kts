@@ -41,6 +41,12 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-actuator")
     runtimeOnly("io.micrometer:micrometer-registry-prometheus")
 
+    // Tracing — W3C traceparent 전파. spring-boot-micrometer-tracing-opentelemetry 가
+    // 트레이싱 자동 설정, micrometer-tracing-bridge-otel 이 Micrometer↔OTel 브릿지를 제공한다.
+    // OTLP exporter 는 제외 — Phase 4 에서 Tempo collector 구성 후 활성화한다.
+    implementation("org.springframework.boot:spring-boot-micrometer-tracing-opentelemetry")
+    implementation("io.micrometer:micrometer-tracing-bridge-otel")
+
     // Spring AI
     implementation("org.springframework.ai:spring-ai-starter-model-anthropic")
     implementation("org.springframework.ai:spring-ai-starter-model-openai")

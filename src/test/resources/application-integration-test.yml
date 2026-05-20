@@ -50,6 +50,12 @@ langfuse:
   secret-key: test-secret
   public-key: test-public
 
+management:
+  tracing:
+    sampling:
+      # 기본 샘플링 확률 10% 에서는 대부분 요청에 traceparent 가 주입되지 않아 검증 불가
+      probability: 1.0
+
 app:
   ai:
     reviewer:

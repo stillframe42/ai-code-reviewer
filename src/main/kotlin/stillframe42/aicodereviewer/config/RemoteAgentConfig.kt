@@ -1,5 +1,6 @@
 package stillframe42.aicodereviewer.config
 
+import io.micrometer.observation.ObservationRegistry
 import io.netty.channel.ChannelOption
 import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean
@@ -20,7 +21,10 @@ class RemoteAgentConfig {
     // 어댑터의 SnakeCase 직렬화 계약(@JsonNaming 의존) 을 codec layer 에서도 보장하기 위해
     // 전용 JsonMapper 에 SNAKE_CASE 를 글로벌 설정한다
     @Bean("remoteAgentWebClient")
-    fun remoteAgentWebClient(properties: RemoteAgentProperties): WebClient {
+    fun remoteAgentWebClient(
+        properties: RemoteAgentProperties,
+        observationRegistry: ObservationRegistry,
+    ): WebClient {
         val jsonMapper = JsonMapper.builder()
             .propertyNamingStrategy(PropertyNamingStrategies.SNAKE_CASE)
             .build()
@@ -29,6 +33,7 @@ class RemoteAgentConfig {
             .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, properties.connectTimeout.toMillis().toInt())
         return WebClient.builder()
             .baseUrl(properties.url)
+            .observationRegistry(observationRegistry)
             .clientConnector(ReactorClientHttpConnector(httpClient))
             .codecs {
                 it.defaultCodecs().maxInMemorySize(properties.maxInMemorySize.toBytes().toInt())
