@@ -7,7 +7,7 @@ datasources:
     editable: false
     jsonData:
       tracesToMetrics:
-        datasourceUid: prometheus
+        datasourceUid: PBFA97CFB590B2093
         # span 전후 2분으로 메트릭 조회 윈도우를 넓힘 — rate() 계산에 표본 확보
         spanStartTimeShift: '-2m'
         spanEndTimeShift: '2m'
