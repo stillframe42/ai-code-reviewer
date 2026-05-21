@@ -24,8 +24,8 @@ management:
       probability: 1.0
     export:
       otlp:
-        # collector 없는 로컬 실행에서 연결 오류 방지 — 기본 비활성, Tempo 구동 시 환경변수로 활성화
-        enabled: ${OTEL_TRACING_EXPORT_ENABLED:false}
+        # 기본 활성 — collector 없는 환경에서는 OTEL_TRACING_EXPORT_ENABLED=false 로 비활성화
+        enabled: ${OTEL_TRACING_EXPORT_ENABLED:true}
   opentelemetry:
     tracing:
       export:
