@@ -1,0 +1,24 @@
+apiVersion: 1
+
+datasources:
+  - name: Tempo
+    type: tempo
+    url: http://tempo:3200
+    editable: false
+    jsonData:
+      tracesToMetrics:
+        datasourceUid: prometheus
+        # span 전후 2분으로 메트릭 조회 윈도우를 넓힘 — rate() 계산에 표본 확보
+        spanStartTimeShift: '-2m'
+        spanEndTimeShift: '2m'
+        # span 의 http.route 속성을 Micrometer 메트릭의 uri 라벨로 매핑 (양쪽 이름이 다름)
+        tags:
+          - key: 'http.route'
+            value: 'uri'
+        queries:
+          - name: 'Request rate'
+            query: 'sum(rate(http_server_requests_seconds_count{$__tags}[5m]))'
+          - name: 'p95 latency'
+            query: 'histogram_quantile(0.95, sum(rate(http_server_requests_seconds_bucket{$__tags}[5m])) by (le))'
+          - name: 'Error rate'
+            query: 'sum(rate(http_server_requests_seconds_count{$__tags, outcome="SERVER_ERROR"}[5m]))'
