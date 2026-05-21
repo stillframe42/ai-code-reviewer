@@ -18,6 +18,8 @@ app:
       max-concurrency: 3
 
 spring:
+  application:
+    name: ai-code-reviewer   # ai-agent-service 와 trace 상 구분
   jackson:
     mapper:
       accept-case-insensitive-enums: true

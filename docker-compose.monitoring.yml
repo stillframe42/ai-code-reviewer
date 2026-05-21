@@ -20,6 +20,19 @@ services:
       - grafana-data:/var/lib/grafana
     depends_on:
       - prometheus
+      - tempo
+    restart: unless-stopped
+
+  tempo:
+    image: grafana/tempo:2.7.0
+    container_name: aireviewer-tempo
+    command: [ "-config.file=/etc/tempo/tempo.yml" ]
+    volumes:
+      - ./monitoring/tempo.yml:/etc/tempo/tempo.yml:ro
+    ports:
+      - "3200:3200"   # Tempo HTTP API / 쿼리
+      - "4317:4317"   # OTLP gRPC 수신
+      - "4318:4318"   # OTLP HTTP 수신
     restart: unless-stopped
 
 volumes:

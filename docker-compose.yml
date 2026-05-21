@@ -54,6 +54,8 @@ services:
       GITHUB_TOKEN: ${GITHUB_TOKEN}
       SPRING_BOOT_URL: http://host.docker.internal:8080
       MAX_AGENT_STEPS: 10
+      # 미설정 시 빈 값 → Python 측 OpenTelemetry 계측 비활성 (collector 없는 환경 보호)
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
     extra_hosts:
       - "host.docker.internal:host-gateway"
 

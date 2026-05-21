@@ -14,7 +14,11 @@ object RemoteAgentContainer {
 
     private val log = LoggerFactory.getLogger(RemoteAgentContainer::class.java)
 
-    fun create(wireMockHostPort: Int, logTail: ContainerLogTail? = null): GenericContainer<*> {
+    fun create(
+        wireMockHostPort: Int,
+        otlpGrpcHostPort: Int,
+        logTail: ContainerLogTail? = null,
+    ): GenericContainer<*> {
         val image = ImageFromDockerfile()
             .withFileFromPath(".", Paths.get("../ai-agent-service"))
 
@@ -29,6 +33,8 @@ object RemoteAgentContainer {
             .withEnv("SPRING_BOOT_URL", "http://host.docker.internal:8080")
             .withEnv("GITHUB_TOKEN", "test-token")
             .withEnv("MAX_AGENT_STEPS", "10")
+            // 컨테이너에서 호스트로 매핑된 Tempo gRPC 포트로 span export
+            .withEnv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://host.docker.internal:$otlpGrpcHostPort")
             // RagContextController 호출 시 X-Internal-Auth 헤더로 사용 — ai-agent-service Settings 가 필수로 요구
             .withEnv("INTERNAL_AUTH_TOKEN", "e2e-internal-auth-token")
             .withExtraHost("host.docker.internal", "host-gateway")

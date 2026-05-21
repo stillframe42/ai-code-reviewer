@@ -18,3 +18,17 @@ management:
     export:
       prometheus:
         enabled: true
+  tracing:
+    sampling:
+      # webhook 저빈도 서비스 — 모든 PR 의 trace 를 보존
+      probability: 1.0
+    export:
+      otlp:
+        # collector 없는 로컬 실행에서 연결 오류 방지 — 기본 비활성, Tempo 구동 시 환경변수로 활성화
+        enabled: ${OTEL_TRACING_EXPORT_ENABLED:false}
+  opentelemetry:
+    tracing:
+      export:
+        otlp:
+          # OTLP/HTTP 엔드포인트 — OTEL_TRACING_ENDPOINT 로 오버라이드
+          endpoint: ${OTEL_TRACING_ENDPOINT:http://localhost:4318/v1/traces}

@@ -18,6 +18,7 @@ import stillframe42.aicodereviewer.e2e.support.ContainerLogTail
 import stillframe42.aicodereviewer.e2e.support.OpenAiEmbeddingBatchTransformer
 import stillframe42.aicodereviewer.e2e.support.RemoteAgentContainer
 import stillframe42.aicodereviewer.e2e.support.SpringBootLogTail
+import stillframe42.aicodereviewer.e2e.support.TempoContainer
 
 // E2E 베이스 — AbstractIntegrationTest 와 의도적 격리.
 // 핵심 차이:
@@ -47,14 +48,21 @@ abstract class AbstractE2ETest {
                 .withExposedPorts(6379)
                 .also { it.start() }
 
+        // Tempo 는 Remote 컨테이너보다 먼저 기동 — Python 컨테이너의 OTLP endpoint env 가 Tempo mapped port 에 의존.
+        val tempo: GenericContainer<*> =
+            TempoContainer.create().also { it.start() }
+
         val remoteAgentLogs: ContainerLogTail = ContainerLogTail()
 
         // AgentPoller 등 Spring Boot 측 logger 로그 캡처. 자식 클래스가 @BeforeEach 로 attachTo 호출.
         val springBootLogs: SpringBootLogTail = SpringBootLogTail()
 
         val remoteAgent: GenericContainer<*> =
-            RemoteAgentContainer.create(wireMockHostPort = wireMock.port(), logTail = remoteAgentLogs)
-                .also { it.start() }
+            RemoteAgentContainer.create(
+                wireMockHostPort = wireMock.port(),
+                otlpGrpcHostPort = tempo.getMappedPort(4317),
+                logTail = remoteAgentLogs,
+            ).also { it.start() }
 
         @JvmStatic
         @DynamicPropertySource
@@ -90,6 +98,16 @@ abstract class AbstractE2ETest {
             registry.add("github.app.webhook-secret") { "e2e-webhook-secret" }
             // Remote 에이전트의 INTERNAL_AUTH_TOKEN env 와 동일해야 함 (RagContextController 가드).
             registry.add("agent.remote.callback.internal-auth-token") { "e2e-internal-auth-token" }
+
+            // 분산 trace 종단 검증용 OTLP export 설정.
+            // service.name 은 test resources 의 application.yml 이 main 을 가려 비므로 명시 주입,
+            // sampling 1.0 은 trace 전량 수집 전제를 명시한다 (application-integration-test.yml 과 동일값).
+            registry.add("spring.application.name") { "ai-code-reviewer" }
+            registry.add("management.tracing.sampling.probability") { "1.0" }
+            registry.add("management.tracing.export.otlp.enabled") { "true" }
+            registry.add("management.opentelemetry.tracing.export.otlp.endpoint") {
+                "http://localhost:${tempo.getMappedPort(4318)}/v1/traces"
+            }
         }
     }
 
@@ -97,6 +115,9 @@ abstract class AbstractE2ETest {
     protected var port: Int = 0
 
     protected lateinit var client: RestTestClient
+
+    protected val tempoHttpPort: Int
+        get() = tempo.getMappedPort(3200)
 
     @Autowired
     protected lateinit var redisTemplate: ReactiveRedisTemplate<String, String>
