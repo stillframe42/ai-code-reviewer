@@ -35,5 +35,21 @@ services:
       - "4318:4318"   # OTLP HTTP 수신
     restart: unless-stopped
 
+  ai-agent-service:
+    build:
+      context: ../ai-agent-service
+    container_name: aireviewer-agent
+    ports:
+      - "8081:8081"
+    env_file:
+      - ../ai-agent-service/.env
+    environment:
+      # 컨테이너 네트워크 기준으로 .env 값을 덮어쓴다
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://tempo:4317
+      SPRING_BOOT_URL: http://host.docker.internal:8080
+    depends_on:
+      - tempo
+    restart: unless-stopped
+
 volumes:
   grafana-data:
