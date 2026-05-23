@@ -779,6 +779,14 @@ components:
           example:
             - "a1b2c3d4-e5f6-7890-abcd-ef0123456789"
             - "b2c3d4e5-f6a7-8901-bcde-f01234567890"
+        session_id:
+          type: string
+          nullable: true
+          description: |
+            Langfuse 세션 식별자 — Spring Boot 의 reviewRequestId.toString() 을 그대로 사용한다.
+            Python 측은 이 값을 Langfuse CallbackHandler 의 session_id 로 부착해
+            Spring Boot trace 와 같은 세션으로 묶는다. null 이면 Python 로컬 analysis_id 로 fallback.
+          example: "42"
 
     # ── RAG 관련 스키마 ──────────────────────────────────────────────────────
 
