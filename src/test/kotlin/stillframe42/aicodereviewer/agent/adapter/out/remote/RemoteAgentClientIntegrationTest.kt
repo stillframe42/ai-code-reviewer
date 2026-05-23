@@ -93,6 +93,41 @@ class RemoteAgentClientIntegrationTest : AbstractIntegrationTest() {
     }
 
     @Test
+    fun `requestDeepAnalysis - sessionId 가 null 이면 페이로드의 session_id 도 null 로 전송된다`() = runTest {
+        wireMock.stubFor(
+            post(urlPathEqualTo("/agent/analyze"))
+                .willReturn(okJson("""{"analysis_id":"x","status":"DONE","issues":[]}""")),
+        )
+
+        remoteAgentClient.requestDeepAnalysis(
+            AgentAnalysisCommand(
+                prNumber = 8,
+                repo = "owner/repo",
+                diff = "d",
+                sessionId = null,
+            ),
+        )
+
+        wireMock.verify(
+            postRequestedFor(urlPathEqualTo("/agent/analyze"))
+                .withRequestBody(
+                    equalToJson(
+                        """
+                        {
+                          "pr_number": 8,
+                          "repo": "owner/repo",
+                          "diff": "d",
+                          "context_ids": [],
+                          "analysis_type": "GENERAL",
+                          "session_id": null
+                        }
+                        """.trimIndent(),
+                    ),
+                ),
+        )
+    }
+
+    @Test
     fun `getAnalysisResult - IN_PROGRESS 응답을 그대로 반환한다 (폴링 없음)`() = runTest {
         wireMock.stubFor(
             get(urlPathEqualTo("/agent/analyze/id-002"))

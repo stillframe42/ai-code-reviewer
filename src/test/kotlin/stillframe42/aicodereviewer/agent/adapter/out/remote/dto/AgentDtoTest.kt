@@ -116,4 +116,20 @@ class AgentDtoTest {
         assertThat(roundTrippedIssue).isEqualTo(originalIssue)
         assertThat(roundTrippedIssue.owaspReference).isNull()
     }
+
+    @Test
+    fun `AgentAnalysisRequest 의 sessionId 가 null 일 때 session_id 키는 포함되고 값은 null 로 직렬화된다`() {
+        val request = AgentAnalysisRequest(
+            prNumber = 1,
+            repo = "owner/repo",
+            diff = "diff",
+            sessionId = null,
+        )
+
+        val json = mapper.writeValueAsString(request)
+        val tree = mapper.readTree(json)
+
+        assertThat(tree.fieldNames().asSequence().toList()).contains("session_id")
+        assertThat(tree.get("session_id").isNull).isTrue()
+    }
 }
