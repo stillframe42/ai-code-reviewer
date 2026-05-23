@@ -69,7 +69,7 @@ class DefaultGitHubWebhookService(
 
         val startNanos = System.nanoTime()
         val reviewRequestId = startPersistedReview(event)
-        val review = runAiReview(event, inputs.diff, inputs.files)
+        val review = runAiReview(event, inputs.diff, inputs.files, reviewRequestId)
         finalizePersistedReview(reviewRequestId, review)
 
         dismissPreviousReview(event)
@@ -224,6 +224,7 @@ class DefaultGitHubWebhookService(
         event: PullRequestEvent,
         prDiff: String,
         prFiles: List<PrFile>,
+        reviewRequestId: Long?,
     ): CodeReview? {
         if (!SecurityFileDetector.hasSecurityFile(prFiles)) {
             return runDefaultReview(event, prDiff)
@@ -234,6 +235,7 @@ class DefaultGitHubWebhookService(
                 pullRequestNumber = event.pullRequestNumber,
                 prDiff = prDiff,
                 prFiles = prFiles,
+                reviewRequestId = reviewRequestId,
             ).also {
                 logger.info(
                     "Agent path 리뷰 완료: repo={}, pr={}, score={}",

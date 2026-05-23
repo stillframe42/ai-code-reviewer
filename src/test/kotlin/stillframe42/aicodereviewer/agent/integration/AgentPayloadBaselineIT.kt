@@ -95,6 +95,7 @@ class AgentPayloadBaselineIT {
                 pullRequestNumber = sample.prNumber,
                 prDiff = patch,
                 prFiles = prFiles,
+                reviewRequestId = null,
             )
 
             val request = wireMock

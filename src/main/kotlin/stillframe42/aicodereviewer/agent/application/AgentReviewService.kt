@@ -21,6 +21,7 @@ class AgentReviewService(
         pullRequestNumber: Int,
         prDiff: String,
         prFiles: List<PrFile>,
+        reviewRequestId: Long?,
     ): CodeReview {
         val securityFile = SecurityFileDetector.firstSecurityFile(prFiles)
         val contextIds = conventionContextService.buildContextIds(
@@ -34,6 +35,7 @@ class AgentReviewService(
             diff = prDiff,
             contextIds = contextIds,
             analysisType = "SECURITY",
+            sessionId = reviewRequestId?.toString(),
         )
 
         val initial = agentAnalysisPort.requestDeepAnalysis(command)
