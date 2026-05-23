@@ -31,6 +31,7 @@ class LangfuseObservationHandlerTest {
     @AfterEach
     fun tearDown() {
         LangfuseTraceContextHolder.clear()
+        ReviewObservationContextHolder.local.remove()
     }
 
     @Test
@@ -106,6 +107,47 @@ class LangfuseObservationHandlerTest {
         assertThat(metadata["review.request.id"]).isEqualTo("42")
         assertThat(metadata["review.pr.number"]).isEqualTo("7")
         assertThat(metadata["review.repo"]).isEqualTo("owner/repo")
+    }
+
+    @Test
+    @Suppress("UNCHECKED_CAST")
+    fun `ReviewContext가 있으면 trace-create body 에 sessionId가 reviewRequestId 문자열로 부착된다`() {
+        ReviewObservationContextHolder.local.set(
+            ReviewContext(reviewRequestId = 42L, prNumber = 7, repoFullName = "owner/repo")
+        )
+        val context = mock(ChatModelObservationContext::class.java)
+
+        var capturedBatch: List<Map<String, Any>>? = null
+        doAnswer { invocation ->
+            @Suppress("UNCHECKED_CAST")
+            capturedBatch = invocation.getArgument<List<Map<String, Any>>>(0)
+            null
+        }.`when`(langfuseClient).ingest(anyList())
+
+        handler.onStart(context)
+
+        val traceEvent = capturedBatch!!.first { it["type"] == "trace-create" }
+        val body = traceEvent["body"] as Map<*, *>
+        assertThat(body["sessionId"]).isEqualTo("42")
+    }
+
+    @Test
+    @Suppress("UNCHECKED_CAST")
+    fun `ReviewContext가 없으면 trace-create body 에 sessionId 키가 없다`() {
+        val context = mock(ChatModelObservationContext::class.java)
+
+        var capturedBatch: List<Map<String, Any>>? = null
+        doAnswer { invocation ->
+            @Suppress("UNCHECKED_CAST")
+            capturedBatch = invocation.getArgument<List<Map<String, Any>>>(0)
+            null
+        }.`when`(langfuseClient).ingest(anyList())
+
+        handler.onStart(context)
+
+        val traceEvent = capturedBatch!!.first { it["type"] == "trace-create" }
+        val body = traceEvent["body"] as Map<*, *>
+        assertThat(body.containsKey("sessionId")).isFalse()
     }
 
     @Test

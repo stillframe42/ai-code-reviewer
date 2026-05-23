@@ -40,12 +40,13 @@ class LangfuseObservationHandler(
 
             val reviewContext = ReviewObservationContextHolder.local.get()
             val metadata = buildMetadata(reviewContext)
+            val sessionId = reviewContext?.reviewRequestId?.toString()
 
             // trace-create + generation-create를 한 번의 배치로 전송
             // 같은 traceId가 이미 있으면 trace-create는 Langfuse에서 멱등 처리됨
             langfuseClient.ingest(
                 listOf(
-                    buildTraceCreate(traceId, startTime, metadata),
+                    buildTraceCreate(traceId, startTime, metadata, sessionId),
                     buildGenerationCreate(traceId, generationId, startTime, context, metadata),
                 ),
             )
@@ -111,17 +112,25 @@ class LangfuseObservationHandler(
             "review.repo" to reviewContext.repoFullName,
         ) else emptyMap()
 
-    private fun buildTraceCreate(traceId: String, timestamp: String, metadata: Map<String, String>): Map<String, Any> =
-        mapOf(
+    private fun buildTraceCreate(
+        traceId: String,
+        timestamp: String,
+        metadata: Map<String, String>,
+        sessionId: String?,
+    ): Map<String, Any> {
+        val body = mutableMapOf<String, Any>(
+            "id" to traceId,
+            "name" to "ai-code-review",
+            "metadata" to metadata,
+        )
+        sessionId?.let { body["sessionId"] = it }
+        return mapOf(
             "type" to "trace-create",
             "id" to UUID.randomUUID().toString(),
             "timestamp" to timestamp,
-            "body" to mapOf(
-                "id" to traceId,
-                "name" to "ai-code-review",
-                "metadata" to metadata,
-            ),
+            "body" to body,
         )
+    }
 
     private fun buildGenerationCreate(
         traceId: String,
