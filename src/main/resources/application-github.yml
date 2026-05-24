@@ -2,6 +2,7 @@ github:
   app:
     private-key-path: secrets/stillframe42-ai-code-reviewer.2026-03-22.private-key.pem
     app-id: 0
-    webhook-secret: dummy-secret
+    # 운영 시 application-secret.yml 또는 GITHUB_WEBHOOK_SECRET env 로 override. 빈 값이면 HMAC 검증 무조건 실패.
+    webhook-secret: ${GITHUB_WEBHOOK_SECRET:}
   api:
     base-url: https://api.github.com

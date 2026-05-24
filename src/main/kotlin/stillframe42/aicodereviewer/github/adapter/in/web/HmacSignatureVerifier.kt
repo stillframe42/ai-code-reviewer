@@ -19,8 +19,12 @@ class HmacSignatureVerifier(private val properties: GitHubProperties) {
     fun verify(payload: ByteArray, signatureHeader: String?): Boolean {
         if (signatureHeader == null || !signatureHeader.startsWith(SIGNATURE_PREFIX)) return false
 
+        // 빈 secret = config 누락 = 모든 webhook 거부 (SecretKeySpec 의 Empty key 예외도 회피).
+        val webhookSecret = properties.app.webhookSecret
+        if (webhookSecret.isEmpty()) return false
+
         val expected = signatureHeader.removePrefix(SIGNATURE_PREFIX)
-        val actual = computeSignature(payload, properties.app.webhookSecret)
+        val actual = computeSignature(payload, webhookSecret)
 
         // 상수 시간 비교 — 타이밍 공격 방지
         return MessageDigest.isEqual(
