@@ -113,9 +113,9 @@ class GitHubTools(
         parentDirEntries: List<DirectoryEntryResponse>?,
     ): String = buildString {
         appendDirectorySection("[같은 디렉토리: ${sameDir.ifEmpty { "(루트)" }}]", sameDirEntries, filePath)
-        if (parentDirEntries != null) {
+        parentDirEntries?.let {
             appendLine()
-            appendDirectorySection("[상위 디렉토리: ${parentDir.ifEmpty { "(루트)" }}]", parentDirEntries, filePath)
+            appendDirectorySection("[상위 디렉토리: ${parentDir.ifEmpty { "(루트)" }}]", it, filePath)
         }
     }.trimEnd()
 

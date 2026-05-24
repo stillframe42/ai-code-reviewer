@@ -183,7 +183,7 @@ class LangfuseObservationHandler(
             ),
         )
         // onStart() 시점에는 응답이 없어 "unknown"으로 기록되므로, onStop()에서 실제 모델명으로 덮어씀
-        if (model != null) body["model"] = model
+        model?.let { body["model"] = it }
 
         return mapOf(
             "type" to "generation-update",
