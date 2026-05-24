@@ -52,6 +52,12 @@ services:
     environment:
       OPENAI_API_KEY: ${OPENAI_API_KEY}
       GITHUB_TOKEN: ${GITHUB_TOKEN}
+      # Spring Boot 의 INTERNAL_AGENT_CALLBACK_TOKEN 과 동일 값을 공유해야 callback 인증 통과
+      INTERNAL_AUTH_TOKEN: ${INTERNAL_AGENT_CALLBACK_TOKEN}
+      # 미설정 시 Python 측 Langfuse 콜백 비활성 — Spring Boot 와의 통합 세션 trace 검증에 필수
+      LANGFUSE_PUBLIC_KEY: ${LANGFUSE_PUBLIC_KEY:-}
+      LANGFUSE_SECRET_KEY: ${LANGFUSE_SECRET_KEY:-}
+      LANGFUSE_HOST: ${LANGFUSE_HOST:-}
       SPRING_BOOT_URL: http://host.docker.internal:8080
       MAX_AGENT_STEPS: 10
       # 미설정 시 빈 값 → Python 측 OpenTelemetry 계측 비활성 (collector 없는 환경 보호)
