@@ -1,6 +1,6 @@
 package stillframe42.aicodereviewer.rag
 
-import org.springframework.ai.document.Document
+import stillframe42.aicodereviewer.rag.domain.model.RagDocument
 import org.springframework.ai.tokenizer.JTokkitTokenCountEstimator
 import org.springframework.ai.tokenizer.TokenCountEstimator
 import stillframe42.aicodereviewer.rag.domain.model.ConventionCategory
@@ -78,7 +78,7 @@ internal fun countTokens(text: String): Int = tokenEstimator.estimate(text)
 
 // 검색된 Document 리스트로부터 청크별 + 종합 측정값 계산.
 // 빈 List 는 빈 측정 결과(totalTokens=0, joinedTokens=0) 반환 — 압축 후 모든 청크 제외 케이스 지원.
-internal fun measureChunks(query: SampleQuery, docs: List<Document>): QueryMeasurement {
+internal fun measureChunks(query: SampleQuery, docs: List<RagDocument>): QueryMeasurement {
     val chunks = docs.mapIndexed { idx, doc ->
         val text = doc.text ?: ""
         ChunkMeasurement(

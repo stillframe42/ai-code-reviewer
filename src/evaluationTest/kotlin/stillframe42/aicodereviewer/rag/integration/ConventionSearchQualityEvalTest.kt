@@ -6,7 +6,7 @@ import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.ai.chat.client.ChatClient
-import org.springframework.ai.document.Document
+import stillframe42.aicodereviewer.rag.domain.model.RagDocument
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.test.context.ActiveProfiles
@@ -127,7 +127,7 @@ class ConventionSearchQualityEvalTest : Logging {
 
     // 질문과 검색 결과를 Claude에게 전달하여 관련성 점수와 원인을 구조화된 타입으로 반환받는다.
     // BeanOutputConverter가 QualityEvalResult의 JSON 스키마를 프롬프트에 자동으로 추가한다.
-    private fun evaluateWithClaude(query: String, docs: List<Document>): QualityEvalResult {
+    private fun evaluateWithClaude(query: String, docs: List<RagDocument>): QualityEvalResult {
         val docsText = docs.takeIf { it.isNotEmpty() }
             ?.mapIndexed { i, doc ->
                 buildString {
@@ -240,7 +240,7 @@ class ConventionSearchQualityEvalTest : Logging {
     private data class QueryResult(
         val label: String,
         val query: String,
-        val docs: List<Document>,
+        val docs: List<RagDocument>,
         val eval: QualityEvalResult,
     )
 }

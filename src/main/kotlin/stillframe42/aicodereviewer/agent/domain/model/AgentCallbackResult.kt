@@ -1,9 +1,6 @@
-package stillframe42.aicodereviewer.agent.adapter.`in`.web.dto
+package stillframe42.aicodereviewer.agent.domain.model
 
-import tools.jackson.databind.PropertyNamingStrategies
-import tools.jackson.databind.annotation.JsonNaming
-
-@JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy::class)
+// 원격 에이전트가 분석 완료 시 콜백으로 전달하는 결과 — 순수 도메인 모델 (직렬화 의존 없음)
 data class AgentCallbackResult(
     val analysisId: String,
     val status: String,
@@ -11,7 +8,6 @@ data class AgentCallbackResult(
     val error: String? = null,
 )
 
-@JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy::class)
 data class AgentCallbackIssue(
     val severity: String,
     val type: String,

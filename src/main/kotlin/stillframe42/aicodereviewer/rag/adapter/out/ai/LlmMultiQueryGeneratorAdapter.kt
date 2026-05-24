@@ -1,4 +1,4 @@
-package stillframe42.aicodereviewer.rag.domain.service
+package stillframe42.aicodereviewer.rag.adapter.out.ai
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
@@ -11,18 +11,19 @@ import org.springframework.beans.factory.annotation.Value
 import org.springframework.core.io.Resource
 import org.springframework.stereotype.Component
 import stillframe42.aicodereviewer.common.Logging
+import stillframe42.aicodereviewer.rag.domain.port.out.MultiQueryGeneratorPort
 
-// 원본 쿼리(파일명)를 LLM으로 3가지 변형으로 확장하여 검색 다양성을 확보한다.
+// LLM(Anthropic) 호출로 원본 쿼리에서 변형 3개를 추가 생성한다.
 // 변형 실패 시 원본만 반환 (graceful degradation).
 @Component
-class MultiQueryGenerator(
+class LlmMultiQueryGeneratorAdapter(
     @param:Qualifier("anthropicChatClient") private val chatClient: ChatClient,
     @param:Value("classpath:prompts/rag/rag-multi-query.st") private val promptResource: Resource,
     private val objectMapper: ObjectMapper,
-) : Logging {
+) : MultiQueryGeneratorPort, Logging {
 
     // 원본 쿼리 + LLM 변형 3개 = 최대 4개 반환 (중복 제거)
-    suspend fun generateMultipleQueries(originalQuery: String): List<String> {
+    override suspend fun generateMultipleQueries(originalQuery: String): List<String> {
         val prompt = promptResource.getContentAsString(Charsets.UTF_8)
             .replace("{originalQuery}", originalQuery)
         return runCatching {

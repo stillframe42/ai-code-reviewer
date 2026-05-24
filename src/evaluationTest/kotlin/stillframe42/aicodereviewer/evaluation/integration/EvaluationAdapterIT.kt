@@ -4,8 +4,9 @@ import kotlinx.coroutines.runBlocking
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable
-import org.springframework.ai.document.Document
+import stillframe42.aicodereviewer.rag.domain.model.RagDocument
 import org.springframework.beans.factory.annotation.Autowired
+import java.util.UUID
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.test.context.ActiveProfiles
 import org.springframework.test.context.DynamicPropertyRegistry
@@ -69,9 +70,10 @@ class EvaluationAdapterIT {
     @Test
     fun `Faithfulness 평가 - 컨텍스트에 근거한 리뷰는 높은 점수를 받는다`() = runBlocking {
         val context = listOf(
-            Document.builder()
-                .text("SQL Injection 방어: 모든 DB 쿼리에 파라미터 바인딩 사용. 문자열 직접 조합 금지.")
-                .build(),
+            RagDocument(
+                id = UUID.randomUUID().toString(),
+                text = "SQL Injection 방어: 모든 DB 쿼리에 파라미터 바인딩 사용. 문자열 직접 조합 금지.",
+            ),
         )
         val review = "이 코드는 SQL 쿼리에 문자열 연결을 사용하고 있어 SQL Injection 취약점이 있습니다. 파라미터 바인딩을 사용해야 합니다."
 
@@ -85,8 +87,8 @@ class EvaluationAdapterIT {
     @Test
     fun `Context Precision 평가 - 관련 문서 비율을 반환한다`() = runBlocking {
         val docs = listOf(
-            Document.builder().id("doc-1").text("SQL Injection 방어 규칙").build(),
-            Document.builder().id("doc-2").text("JPA Entity는 data class 금지").build(),
+            RagDocument(id = "doc-1", text = "SQL Injection 방어 규칙"),
+            RagDocument(id = "doc-2", text = "JPA Entity는 data class 금지"),
         )
 
         val score = ragEvaluationPort.evaluateContextPrecision(
@@ -104,7 +106,7 @@ class EvaluationAdapterIT {
     fun `Context Recall 평가 - 기대 이슈 커버 비율을 반환한다`() = runBlocking {
         val expectedIssues = listOf("SQL Injection 취약점 — 파라미터 바인딩 미사용")
         val docs = listOf(
-            Document.builder().id("doc-1").text("SQL Injection 방어: 모든 DB 쿼리에 파라미터 바인딩 사용.").build(),
+            RagDocument(id = "doc-1", text = "SQL Injection 방어: 모든 DB 쿼리에 파라미터 바인딩 사용."),
         )
 
         val score = ragEvaluationPort.evaluateContextRecall(expectedIssues, docs)

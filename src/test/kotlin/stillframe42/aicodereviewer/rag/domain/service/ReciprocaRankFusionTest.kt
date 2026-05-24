@@ -2,12 +2,12 @@ package stillframe42.aicodereviewer.rag.domain.service
 
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
-import org.springframework.ai.document.Document
+import stillframe42.aicodereviewer.rag.domain.model.RagDocument
 
 class ReciprocaRankFusionTest {
 
-    private fun doc(id: String, content: String): Document =
-        Document(id, content, emptyMap())
+    private fun doc(id: String, content: String): RagDocument =
+        RagDocument(id = id, text = content)
 
     @Test
     fun `양쪽 결과 모두 상위에 있는 문서가 최상위 순위를 받는다`() {

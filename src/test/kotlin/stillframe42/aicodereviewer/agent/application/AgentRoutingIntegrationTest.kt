@@ -28,7 +28,7 @@ import stillframe42.aicodereviewer.review.adapter.out.persistence.ToolCallLogRep
 import java.util.concurrent.TimeUnit.SECONDS
 
 // Agent 라우팅 통합 테스트
-// - 보안 파일 포함 PR → AgentReviewService 경로 (agent stub 마커 포함)
+// - 보안 파일 포함 PR → AgentReviewUseCase 경로 (agent stub 마커 포함)
 // - 일반 파일만 포함 PR → DefaultReviewService 경로 (agent stub 마커 없음)
 class AgentRoutingIntegrationTest : AbstractIntegrationTest() {
 

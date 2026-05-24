@@ -7,7 +7,7 @@ import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
 import org.springframework.ai.chat.client.ChatClient
-import org.springframework.ai.document.Document
+import stillframe42.aicodereviewer.rag.domain.model.RagDocument
 import org.springframework.ai.openai.OpenAiChatOptions
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Qualifier
@@ -139,7 +139,7 @@ class HybridSearchExperimentTest {
     }
 
     // top-3 문서를 80자 요약으로 연결한다. 마크다운 표 파이프 이스케이프 포함.
-    private fun buildSummary(docs: List<Document>): String =
+    private fun buildSummary(docs: List<RagDocument>): String =
         if (docs.isEmpty()) "결과 없음"
         else docs.joinToString(" ; ") { doc ->
             doc.text.orEmpty()

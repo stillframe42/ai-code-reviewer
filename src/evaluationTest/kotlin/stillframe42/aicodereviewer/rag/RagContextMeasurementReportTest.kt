@@ -2,8 +2,9 @@ package stillframe42.aicodereviewer.rag
 
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
-import org.springframework.ai.document.Document
+import stillframe42.aicodereviewer.rag.domain.model.RagDocument
 import java.io.File
+import java.util.UUID
 import stillframe42.aicodereviewer.rag.ChunkMeasurement
 import stillframe42.aicodereviewer.rag.QueryMeasurement
 import stillframe42.aicodereviewer.rag.SAMPLE_QUERIES
@@ -34,14 +35,16 @@ class RagContextMeasurementReportTest {
     @Test
     fun `measureChunks는 청크별 토큰 수를 계산하고 joined와 sum을 분리한다`() {
         val docs = listOf(
-            Document.builder()
-                .text("첫 번째 청크 내용입니다. 헥사고날 아키텍처 규칙을 설명합니다.")
-                .metadata(mapOf("source" to "architecture-guide.md"))
-                .build(),
-            Document.builder()
-                .text("두 번째 청크 내용입니다. UseCase 인터페이스 규약입니다.")
-                .metadata(mapOf("source" to "architecture-guide.md"))
-                .build(),
+            RagDocument(
+                id = UUID.randomUUID().toString(),
+                text = "첫 번째 청크 내용입니다. 헥사고날 아키텍처 규칙을 설명합니다.",
+                metadata = mapOf("source" to "architecture-guide.md"),
+            ),
+            RagDocument(
+                id = UUID.randomUUID().toString(),
+                text = "두 번째 청크 내용입니다. UseCase 인터페이스 규약입니다.",
+                metadata = mapOf("source" to "architecture-guide.md"),
+            ),
         )
         val query = SampleQuery("test", "Test.kt", "Test.kt", ARCH)
 

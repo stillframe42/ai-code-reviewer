@@ -15,7 +15,7 @@ import stillframe42.aicodereviewer.integration.AbstractIntegrationTest
 import stillframe42.aicodereviewer.integration.support.WireMockStubs
 import stillframe42.aicodereviewer.review.domain.model.DiffFilterOptions
 import stillframe42.aicodereviewer.review.domain.port.`in`.ReviewUseCase
-import stillframe42.aicodereviewer.review.domain.port.out.ReviewCacheStatsStore
+import stillframe42.aicodereviewer.review.domain.port.out.ReviewCacheStatsPort
 
 // DefaultReviewService 캐시 통합 테스트
 // 동일 diff의 두 번째 리뷰 호출이 캐시에서 반환되어 AI 호출이 발생하지 않음을 검증한다.
@@ -25,7 +25,7 @@ class DefaultReviewServiceCacheTest : AbstractIntegrationTest() {
     private lateinit var reviewUseCase: ReviewUseCase
 
     @Autowired
-    private lateinit var reviewCacheStatsStore: ReviewCacheStatsStore
+    private lateinit var reviewCacheStatsStore: ReviewCacheStatsPort
 
     @Autowired
     private lateinit var aiReviewerProperties: AiReviewerProperties

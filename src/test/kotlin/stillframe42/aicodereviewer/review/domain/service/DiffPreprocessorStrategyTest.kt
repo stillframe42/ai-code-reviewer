@@ -9,7 +9,7 @@ import stillframe42.aicodereviewer.review.domain.model.FileReviewStrategy
 // FileExtensionClassifier 기반 전략 분류, QUERY_REVIEW 헤더 삽입, strategyOverrides 적용을 검증한다
 class DiffPreprocessorStrategyTest {
 
-    private val preprocessor = DiffPreprocessor()
+    private val preprocessor = DiffPreprocessor
 
     // ─── QUERY_REVIEW 헤더 삽입 ───────────────────────────────────────────────
 

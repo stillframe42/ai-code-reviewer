@@ -23,7 +23,7 @@ import org.springframework.test.context.DynamicPropertySource
 import org.testcontainers.containers.GenericContainer
 import org.testcontainers.postgresql.PostgreSQLContainer
 import org.yaml.snakeyaml.Yaml
-import stillframe42.aicodereviewer.agent.application.AgentReviewService
+import stillframe42.aicodereviewer.agent.domain.port.`in`.AgentReviewUseCase
 import stillframe42.aicodereviewer.integration.AbstractIntegrationTest
 import stillframe42.aicodereviewer.rag.domain.port.`in`.ConventionIndexUseCase
 
@@ -70,7 +70,7 @@ class AgentPayloadBaselineIT {
         }.getOrNull()
     }
 
-    @Autowired private lateinit var agentReviewService: AgentReviewService
+    @Autowired private lateinit var agentReviewUseCase: AgentReviewUseCase
     @Autowired private lateinit var conventionIndexUseCase: ConventionIndexUseCase
     @Autowired private lateinit var jdbcTemplate: JdbcTemplate
     @Autowired private lateinit var objectMapper: ObjectMapper
@@ -90,7 +90,7 @@ class AgentPayloadBaselineIT {
             val patch = PayloadSamples.readPatch(sample)
             val prFiles = PayloadSamples.parsePrFiles(patch)
 
-            agentReviewService.review(
+            agentReviewUseCase.review(
                 repositoryFullName = "owner/repo",
                 pullRequestNumber = sample.prNumber,
                 prDiff = patch,

@@ -1,6 +1,5 @@
 package stillframe42.aicodereviewer.review.domain.service
 
-import org.springframework.stereotype.Component
 import stillframe42.aicodereviewer.common.Logging
 import stillframe42.aicodereviewer.common.TokenEstimator
 import stillframe42.aicodereviewer.review.domain.model.DiffFilterOptions
@@ -9,8 +8,7 @@ import stillframe42.aicodereviewer.review.domain.model.FileReviewStrategy
 
 // diff 전처리 도메인 서비스
 // 불필요한 청크(바이너리, 테스트 파일 등)와 메타데이터 줄을 제거하여 AI에 전달할 토큰을 절감한다
-@Component
-class DiffPreprocessor : Logging {
+object DiffPreprocessor : Logging {
 
     fun preprocess(diff: String, options: DiffFilterOptions): DiffPreprocessResult {
         val tokensBefore = TokenEstimator.estimate(diff)

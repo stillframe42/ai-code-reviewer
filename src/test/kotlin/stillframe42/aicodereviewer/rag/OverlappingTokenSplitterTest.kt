@@ -2,8 +2,9 @@ package stillframe42.aicodereviewer.rag
 
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
-import org.springframework.ai.document.Document
 import stillframe42.aicodereviewer.rag.adapter.out.ai.OverlappingTokenSplitter
+import stillframe42.aicodereviewer.rag.domain.model.RagDocument
+import java.util.UUID
 
 class OverlappingTokenSplitterTest {
 
@@ -11,7 +12,7 @@ class OverlappingTokenSplitterTest {
     private val splitter = OverlappingTokenSplitter(overlapChars = 10)
 
     private fun doc(text: String, source: String) =
-        Document(text, mapOf<String, Any>("source" to source))
+        RagDocument(id = UUID.randomUUID().toString(), text = text, metadata = mapOf("source" to source))
 
     @Test
     fun `빈 리스트는 빈 리스트를 반환한다`() {

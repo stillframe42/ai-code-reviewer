@@ -5,7 +5,6 @@ import com.fasterxml.jackson.module.kotlin.readValue
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.springframework.ai.chat.client.ChatClient
-import org.springframework.ai.document.Document
 import org.springframework.ai.openai.OpenAiChatOptions
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.beans.factory.annotation.Value
@@ -17,6 +16,7 @@ import stillframe42.aicodereviewer.config.EvaluationProperties
 import stillframe42.aicodereviewer.evaluation.domain.model.EvaluationMetric
 import stillframe42.aicodereviewer.evaluation.domain.model.EvaluationScore
 import stillframe42.aicodereviewer.evaluation.domain.port.out.RagEvaluationPort
+import stillframe42.aicodereviewer.rag.domain.model.RagDocument
 
 @Component
 class EvaluationAdapter(
@@ -33,10 +33,10 @@ class EvaluationAdapter(
 ) : RagEvaluationPort, Logging {
 
     override suspend fun evaluateFaithfulness(
-        context: List<Document>,
+        context: List<RagDocument>,
         generatedReview: String,
     ): EvaluationScore {
-        val contextText = context.joinToString("\n\n---\n\n") { it.text ?: "" }
+        val contextText = context.joinToString("\n\n---\n\n") { it.text }
         val promptResource = resourceLoader.getResource(evaluationProperties.faithfulnessPrompt)
         val prompt = promptResource.getContentAsString(Charsets.UTF_8)
             .replace("{context}", contextText)
@@ -48,11 +48,11 @@ class EvaluationAdapter(
 
     override suspend fun evaluateContextPrecision(
         query: String,
-        retrievedDocs: List<Document>,
+        retrievedDocs: List<RagDocument>,
         relevantConvention: String,
     ): EvaluationScore {
         val documentsText = retrievedDocs.mapIndexed { index, doc ->
-            "[문서 ${index + 1}] (ID: ${doc.id ?: "unknown"})\n${doc.text ?: ""}"
+            "[문서 ${index + 1}] (ID: ${doc.id})\n${doc.text}"
         }.joinToString("\n\n---\n\n")
 
         val prompt = contextPrecisionPrompt.getContentAsString(Charsets.UTF_8)
@@ -66,14 +66,14 @@ class EvaluationAdapter(
 
     override suspend fun evaluateContextRecall(
         expectedIssues: List<String>,
-        retrievedDocs: List<Document>,
+        retrievedDocs: List<RagDocument>,
     ): EvaluationScore {
         val issuesText = expectedIssues.mapIndexed { index, issue ->
             "${index + 1}. $issue"
         }.joinToString("\n")
 
         val documentsText = retrievedDocs.mapIndexed { index, doc ->
-            "[문서 ${index + 1}] (ID: ${doc.id ?: "unknown"})\n${doc.text ?: ""}"
+            "[문서 ${index + 1}] (ID: ${doc.id})\n${doc.text}"
         }.joinToString("\n\n---\n\n")
 
         val prompt = contextRecallPrompt.getContentAsString(Charsets.UTF_8)

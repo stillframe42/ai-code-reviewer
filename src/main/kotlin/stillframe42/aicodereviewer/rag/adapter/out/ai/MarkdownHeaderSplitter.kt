@@ -1,18 +1,19 @@
 package stillframe42.aicodereviewer.rag.adapter.out.ai
 
-import org.springframework.ai.document.Document
 import org.springframework.core.io.ClassPathResource
 import org.springframework.stereotype.Component
+import stillframe42.aicodereviewer.rag.domain.model.RagDocument
 import stillframe42.aicodereviewer.rag.domain.port.out.DocumentPreparerPort
+import java.util.UUID
 
-// 마크다운 문서를 ## / ### 헤더 기준으로 분리하여 Document 리스트를 반환한다.
+// 마크다운 문서를 ## / ### 헤더 기준으로 분리하여 RagDocument 리스트를 반환한다.
 // 코드 블록(```) 내 ## 는 헤더로 인식하지 않는다.
-// 헤더 이전 intro 내용 및 빈 섹션은 Document를 생성하지 않는다.
+// 헤더 이전 intro 내용 및 빈 섹션은 RagDocument를 생성하지 않는다.
 @Component
 class MarkdownHeaderSplitter : DocumentPreparerPort {
 
-    // 모든 컨벤션 파일을 헤더 기준으로 분리하여 Document 리스트 반환
-    override fun prepare(): List<Document> =
+    // 모든 컨벤션 파일을 헤더 기준으로 분리하여 RagDocument 리스트 반환
+    override fun prepare(): List<RagDocument> =
         conventionFiles.flatMap { (path, category) ->
             val fileName = path.substringAfterLast("/")
             val text = ClassPathResource(path).inputStream.use { it.bufferedReader().readText() }
@@ -23,8 +24,8 @@ class MarkdownHeaderSplitter : DocumentPreparerPort {
         }
 
     // 단일 텍스트를 ## / ### 헤더 기준으로 분리한다. (단위 테스트 가능하도록 internal 노출)
-    internal fun split(text: String, baseMetadata: Map<String, Any>): List<Document> {
-        val documents = mutableListOf<Document>()
+    internal fun split(text: String, baseMetadata: Map<String, Any>): List<RagDocument> {
+        val documents = mutableListOf<RagDocument>()
         var currentH2: String? = null
         var currentH3: String? = null
         var inCodeBlock = false
@@ -59,9 +60,10 @@ class MarkdownHeaderSplitter : DocumentPreparerPort {
     }
 }
 
-// buffer 내용을 Document로 변환하여 수신자 리스트에 추가한다.
+// buffer 내용을 RagDocument로 변환하여 수신자 리스트에 추가한다.
 // 빈 buffer나 헤더가 없는(첫 헤더 이전) 내용은 무시한다.
-private fun MutableList<Document>.flushSection(
+// id 는 분리된 청크 자체로는 의미가 없으므로 VectorStore 저장 시 자동 생성에 맡긴다 (UUID).
+private fun MutableList<RagDocument>.flushSection(
     buffer: MutableList<String>,
     currentH2: String?,
     currentH3: String?,
@@ -75,8 +77,9 @@ private fun MutableList<Document>.flushSection(
         currentH2 != null -> currentH2 to "h2"
         else -> return // 첫 ## 헤더 이전 내용 무시
     }
-    this += Document(
-        content,
-        baseMetadata + mapOf("section_header" to sectionHeader, "depth" to depth),
+    this += RagDocument(
+        id = UUID.randomUUID().toString(),
+        text = content,
+        metadata = baseMetadata + mapOf("section_header" to sectionHeader, "depth" to depth),
     )
 }

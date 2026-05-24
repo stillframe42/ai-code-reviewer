@@ -4,14 +4,14 @@ import kotlinx.coroutines.reactor.awaitSingle
 import kotlinx.coroutines.reactor.awaitSingleOrNull
 import org.springframework.data.redis.core.ReactiveRedisTemplate
 import org.springframework.stereotype.Component
-import stillframe42.aicodereviewer.review.domain.port.out.ReviewCacheStatsStore
+import stillframe42.aicodereviewer.review.domain.port.out.ReviewCacheStatsPort
 
 // Redis INCR 기반 캐시 통계 어댑터
 // stats:cache:hit, stats:cache:miss 키에 INCR / GET 연산만 수행한다. TTL 없음(누적 통계).
 @Component
 class RedisReviewCacheStatsAdapter(
     private val redisTemplate: ReactiveRedisTemplate<String, String>,
-) : ReviewCacheStatsStore {
+) : ReviewCacheStatsPort {
 
     companion object {
         private const val HIT_KEY = "stats:cache:hit"

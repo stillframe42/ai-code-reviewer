@@ -8,10 +8,12 @@ import org.springframework.ai.vectorstore.VectorStore
 import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.stereotype.Component
 import stillframe42.aicodereviewer.rag.domain.model.ConventionCategory
+import stillframe42.aicodereviewer.rag.domain.model.RagDocument
 import stillframe42.aicodereviewer.rag.domain.port.out.ConventionVectorPort
 
 // Spring AI VectorStore를 ConventionVectorPort로 감싸는 아웃바운드 어댑터
 // VectorStore API가 지원하지 않는 경우 JdbcTemplate을 직접 사용한다.
+// Spring AI Document ↔ 도메인 RagDocument 변환은 RagDocumentMapper 의 toRagDocument/toSpringAiDocument 에 위임.
 @Component
 class ConventionVectorAdapter(
     private val vectorStore: VectorStore,
@@ -19,8 +21,8 @@ class ConventionVectorAdapter(
     private val objectMapper: ObjectMapper,
 ) : ConventionVectorPort {
 
-    override fun save(documents: List<Document>) {
-        vectorStore.add(documents)
+    override fun save(documents: List<RagDocument>) {
+        vectorStore.add(documents.map(RagDocument::toSpringAiDocument))
     }
 
     override fun isEmpty(): Boolean =
@@ -35,7 +37,7 @@ class ConventionVectorAdapter(
 
     // query를 임베딩(OpenAI API 호출)하여 pgvector cosine 유사도 검색 수행
     // category가 지정되면 metadata JSONB 필터를 적용하여 해당 카테고리 문서만 검색한다
-    override fun search(query: String, topK: Int, category: ConventionCategory?, similarityThreshold: Double): List<Document> =
+    override fun search(query: String, topK: Int, category: ConventionCategory?, similarityThreshold: Double): List<RagDocument> =
         vectorStore.similaritySearch(
             SearchRequest.builder()
                 .query(query)
@@ -43,17 +45,17 @@ class ConventionVectorAdapter(
                 .similarityThreshold(similarityThreshold)
                 .apply { category?.let { filterExpression("category == '${it.name}'") } }
                 .build()
-        )
+        ).orEmpty().map(Document::toRagDocument)
 
-    override fun findById(id: String): Document? =
+    override fun findById(id: String): RagDocument? =
         runCatching {
             jdbcTemplate.queryForObject(
                 "SELECT id::text, content, metadata::text FROM vector_store WHERE id = ?::uuid",
                 { rs, _ ->
-                    Document(
-                        rs.getString("id"),
-                        rs.getString("content"),
-                        objectMapper.readValue<Map<String, Any>>(rs.getString("metadata")),
+                    RagDocument(
+                        id = rs.getString("id"),
+                        text = rs.getString("content"),
+                        metadata = objectMapper.readValue<Map<String, Any>>(rs.getString("metadata")),
                     )
                 },
                 id,

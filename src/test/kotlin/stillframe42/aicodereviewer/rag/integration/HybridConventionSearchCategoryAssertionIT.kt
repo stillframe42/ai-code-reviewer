@@ -8,13 +8,13 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.slf4j.LoggerFactory
-import org.springframework.ai.document.Document
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.jdbc.core.JdbcTemplate
 import stillframe42.aicodereviewer.integration.AbstractIntegrationTest
 import stillframe42.aicodereviewer.integration.support.WireMockStubs
 import stillframe42.aicodereviewer.rag.application.HybridConventionSearchService
 import stillframe42.aicodereviewer.rag.domain.model.ConventionCategory
+import stillframe42.aicodereviewer.rag.domain.model.RagDocument
 import stillframe42.aicodereviewer.rag.domain.port.`in`.ConventionIndexUseCase
 import stillframe42.aicodereviewer.rag.domain.service.FileCategoryMapper
 
@@ -129,7 +129,7 @@ class HybridConventionSearchCategoryAssertionIT : AbstractIntegrationTest() {
     }
 
     // RRF 병합 결과를 디버깅용 로그로 출력한다. top-3 각 문서의 source, category, score를 기록한다.
-    private fun logRrfResults(label: String, query: String, results: List<Document>) {
+    private fun logRrfResults(label: String, query: String, results: List<RagDocument>) {
         logger.info("[{}] query='{}' → {} results", label, query, results.size)
         results.forEachIndexed { index, doc ->
             logger.info(
@@ -137,7 +137,7 @@ class HybridConventionSearchCategoryAssertionIT : AbstractIntegrationTest() {
                 index + 1,
                 doc.metadata["source"],
                 doc.metadata["category"],
-                doc.text?.take(80)?.replace("\n", " "),
+                doc.text.take(80).replace("\n", " "),
             )
         }
     }

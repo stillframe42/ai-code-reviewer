@@ -11,7 +11,7 @@ import org.springframework.context.annotation.Primary
 import org.springframework.http.MediaType
 import org.springframework.test.context.DynamicPropertyRegistry
 import org.springframework.test.context.DynamicPropertySource
-import stillframe42.aicodereviewer.agent.adapter.`in`.web.dto.AgentCallbackResult
+import stillframe42.aicodereviewer.agent.domain.model.AgentCallbackResult
 import stillframe42.aicodereviewer.agent.domain.port.`in`.AgentCallbackUseCase
 import stillframe42.aicodereviewer.integration.AbstractIntegrationTest
 

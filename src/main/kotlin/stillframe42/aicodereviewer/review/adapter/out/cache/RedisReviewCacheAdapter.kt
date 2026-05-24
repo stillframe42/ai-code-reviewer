@@ -9,7 +9,7 @@ import stillframe42.aicodereviewer.review.domain.model.CodeReview
 
 // 코드 리뷰 결과 Redis 캐시 어댑터
 // AbstractRedisCacheAdapter<CodeReview>를 상속하여 JSON 직렬화·TTL 처리를 위임한다.
-// ReviewCacheStore 포트는 MeteredReviewCacheStore가 이 어댑터를 감싸 메트릭/로그를 더한 형태로 제공한다.
+// ReviewCachePort 포트는 MeteredReviewCacheAdapter가 이 어댑터를 감싸 메트릭/로그를 더한 형태로 제공한다.
 @Component
 class RedisReviewCacheAdapter(
     redisTemplate: ReactiveRedisTemplate<String, String>,

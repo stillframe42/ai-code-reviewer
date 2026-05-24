@@ -9,7 +9,7 @@ import stillframe42.aicodereviewer.review.domain.model.IssueSeverity
 // DiffPositionResolver 단위 테스트 — Spring 컨텍스트 없이 순수 도메인 로직 검증
 class DiffPositionResolverTest {
 
-    private val resolver = DiffPositionResolver()
+    private val resolver = DiffPositionResolver
 
     // --- buildPositionIndex 테스트 ---
 

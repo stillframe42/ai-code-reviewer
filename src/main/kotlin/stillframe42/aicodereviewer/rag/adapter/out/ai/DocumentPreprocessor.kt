@@ -5,6 +5,7 @@ import org.springframework.ai.reader.markdown.MarkdownDocumentReader
 import org.springframework.ai.reader.markdown.config.MarkdownDocumentReaderConfig
 import org.springframework.ai.transformer.splitter.TokenTextSplitter
 import org.springframework.core.io.ClassPathResource
+import stillframe42.aicodereviewer.rag.domain.model.RagDocument
 
 // classpath:conventions/ 하위 마크다운 파일을 읽어 메타데이터를 주입하고 청킹한다.
 // 파일명 기반으로 category를 결정하며, 모든 청크에 source/category/version/language를 추가한다.
@@ -18,13 +19,13 @@ class DocumentPreprocessor(
         .withIncludeCodeBlock(true)
         .build()
 
-    fun prepare(): List<Document> {
+    fun prepare(): List<RagDocument> {
         val rawDocuments = conventionFiles.flatMap { (path, category) ->
             val fileName = path.substringAfterLast("/")
             MarkdownDocumentReader(ClassPathResource(path), markdownConfig).get()
                 .map { doc -> injectMetadata(doc, fileName, category) }
         }
-        return textSplitter.apply(rawDocuments)
+        return textSplitter.apply(rawDocuments).map(Document::toRagDocument)
     }
 
     // 각 Document에 파일 출처와 카테고리 메타데이터를 추가한다.

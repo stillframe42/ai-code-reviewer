@@ -5,13 +5,13 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import stillframe42.aicodereviewer.integration.AbstractIntegrationTest
-import stillframe42.aicodereviewer.review.domain.port.out.ReviewCacheStatsStore
+import stillframe42.aicodereviewer.review.domain.port.out.ReviewCacheStatsPort
 
 // RedisReviewCacheStatsAdapter 통합 테스트 — Redis Testcontainers 사용
 class RedisReviewCacheStatsAdapterTest : AbstractIntegrationTest() {
 
     @Autowired
-    private lateinit var reviewCacheStatsStore: ReviewCacheStatsStore
+    private lateinit var reviewCacheStatsStore: ReviewCacheStatsPort
 
     @Test
     fun `incrementHit 호출 후 getHitCount는 1을 반환한다`() = runTest {

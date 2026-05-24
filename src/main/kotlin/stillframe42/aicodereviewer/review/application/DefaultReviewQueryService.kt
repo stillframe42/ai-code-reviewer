@@ -6,14 +6,14 @@ import org.springframework.stereotype.Service
 import stillframe42.aicodereviewer.review.domain.port.`in`.ReviewQueryUseCase
 import stillframe42.aicodereviewer.review.domain.port.`in`.ReviewStatsResult
 import stillframe42.aicodereviewer.review.domain.port.`in`.ReviewSummaryResult
-import stillframe42.aicodereviewer.review.domain.port.out.ReviewCacheStatsStore
+import stillframe42.aicodereviewer.review.domain.port.out.ReviewCacheStatsPort
 import stillframe42.aicodereviewer.review.domain.port.out.ReviewQueryPort
 
-// 리뷰 조회 유스케이스 구현 — ReviewQueryPort와 ReviewCacheStatsStore를 조합하여 통계를 반환한다
+// 리뷰 조회 유스케이스 구현 — ReviewQueryPort와 ReviewCacheStatsPort를 조합하여 통계를 반환한다
 @Service
 class DefaultReviewQueryService(
     private val reviewQueryPort: ReviewQueryPort,
-    private val reviewCacheStatsStore: ReviewCacheStatsStore,
+    private val reviewCacheStatsStore: ReviewCacheStatsPort,
 ) : ReviewQueryUseCase {
 
     override suspend fun getReviewByPr(

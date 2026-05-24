@@ -18,7 +18,6 @@ class DefaultEvaluationService(
     private val ragEvaluationPort: RagEvaluationPort,
     private val hybridSearchService: HybridConventionSearchService,
     private val reviewUseCase: ReviewUseCase,
-    private val patchQueryExtractor: PatchQueryExtractor,
 ) : EvaluationUseCase, Logging {
 
     override suspend fun evaluateAll(
@@ -51,7 +50,7 @@ class DefaultEvaluationService(
             val category = FileCategoryMapper.selectCategory(fileName)
 
             // 3. 컨벤션 검색 — 프로덕션(DefaultReviewService)과 동일한 PatchQueryExtractor 로 쿼리 생성 (drift 방지)
-            val query = patchQueryExtractor.extract(patchContent, filePath = fileName)
+            val query = PatchQueryExtractor.extract(patchContent, filePath = fileName)
             val retrievedDocs = hybridSearchService.search(
                 query = query,
                 topK = topK,

@@ -8,7 +8,7 @@ import org.junit.jupiter.api.TestInstance
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 import org.springframework.ai.chat.client.ChatClient
-import org.springframework.ai.document.Document
+import stillframe42.aicodereviewer.rag.domain.model.RagDocument
 import org.springframework.ai.transformer.splitter.TokenTextSplitter
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Qualifier
@@ -164,7 +164,7 @@ class ConventionChunkingExperimentTest {
 
     // 검색 결과 상위 3개 청크를 80자 요약으로 연결한 문자열 생성
     // | 는 마크다운 테이블 구분자와 충돌하므로 \| 로 이스케이프한다
-    private fun buildSummary(docs: List<Document>): String =
+    private fun buildSummary(docs: List<RagDocument>): String =
         if (docs.isEmpty()) "결과 없음"
         else docs.joinToString(" ; ") {
             it.text.orEmpty()
@@ -208,7 +208,7 @@ class ConventionChunkingExperimentTest {
     private fun updateExperimentMarkdown(
         strategy: String,   // "256" | "512" | "1024" | "header" | "512-overlap"
         totalChunks: Int,
-        results: List<Triple<String, List<Document>, Pair<Int, String>>>,
+        results: List<Triple<String, List<RagDocument>, Pair<Int, String>>>,
     ) {
         val section = when (strategy) {
             "256" -> "1-A"

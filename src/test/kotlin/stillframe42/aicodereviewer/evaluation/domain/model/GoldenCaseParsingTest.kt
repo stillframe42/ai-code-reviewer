@@ -1,6 +1,7 @@
 package stillframe42.aicodereviewer.evaluation.domain.model
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.databind.PropertyNamingStrategies
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import org.assertj.core.api.Assertions.assertThat
@@ -8,7 +9,9 @@ import org.junit.jupiter.api.Test
 
 class GoldenCaseParsingTest {
 
+    // fixture JSON 의 snake_case 키 ↔ GoldenCase 의 camelCase property 매핑은 ObjectMapper 에 위임
     private val objectMapper: ObjectMapper = jacksonObjectMapper()
+        .setPropertyNamingStrategy(PropertyNamingStrategies.SNAKE_CASE)
 
     @Test
     fun `golden-dataset json을 GoldenCase 리스트로 파싱한다`() {

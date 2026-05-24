@@ -19,7 +19,7 @@ import stillframe42.aicodereviewer.review.domain.model.DiffFilterOptions
 import stillframe42.aicodereviewer.review.domain.model.ReviewMode
 import stillframe42.aicodereviewer.review.domain.port.`in`.ReviewUseCase
 import stillframe42.aicodereviewer.review.domain.port.out.AiReviewPort
-import stillframe42.aicodereviewer.review.domain.port.out.ReviewCacheStore
+import stillframe42.aicodereviewer.review.domain.port.out.ReviewCachePort
 import stillframe42.aicodereviewer.config.RagProperties
 import stillframe42.aicodereviewer.rag.application.ConventionContextService
 import stillframe42.aicodereviewer.rag.domain.service.PatchQueryExtractor
@@ -30,13 +30,11 @@ import stillframe42.aicodereviewer.review.domain.service.PrImportanceAnalyzer
 @Service
 class DefaultReviewService(
     private val aiReviewPort: AiReviewPort,
-    private val diffPreprocessor: DiffPreprocessor,
     private val reviewProperties: ReviewProperties,
     private val prImportanceAnalyzer: PrImportanceAnalyzer,
     private val aiModelSelector: AiModelSelector,
-    private val reviewCacheStore: ReviewCacheStore,
+    private val reviewCachePort: ReviewCachePort,
     private val conventionContextService: ConventionContextService,
-    private val patchQueryExtractor: PatchQueryExtractor,
     private val observabilityPort: ObservabilityPort,
     private val claimVerifier: ClaimVerifier,
     private val ragProperties: RagProperties,
@@ -67,7 +65,7 @@ class DefaultReviewService(
                     reviewProperties.diff.additionalExcludePatterns,
                 maxTokens = options.maxTokens ?: reviewProperties.diff.maxTokens,
             )
-            val preprocessResult = diffPreprocessor.preprocess(code, merged)
+            val preprocessResult = DiffPreprocessor.preprocess(code, merged)
             logger.debug("=== 전처리된 diff (AI 전달 내용) ===\n{}", preprocessResult.diff)
 
             val importance = prImportanceAnalyzer.analyze(preprocessResult.fileNames)
@@ -86,7 +84,7 @@ class DefaultReviewService(
     }
 
     // 캐시 조회 → 히트 시 즉시 반환, 미스 시 RAG 호출 후 AI 호출 후 캐시 저장
-    // 메트릭/로그/저장 best-effort 처리는 MeteredReviewCacheStore 데코레이터에 위임한다.
+    // 메트릭/로그/저장 best-effort 처리는 MeteredReviewCacheAdapter 데코레이터에 위임한다.
     private suspend fun reviewWithCache(
         diff: String,
         provider: AiProvider,
@@ -95,12 +93,12 @@ class DefaultReviewService(
         filePath: String? = null,
     ): CodeReview {
         val key = cacheKey(diff, provider, modelName, mode)
-        reviewCacheStore.get(key)?.let { return it }
+        reviewCachePort.get(key)?.let { return it }
 
         // 캐시 미스 시에만 RAG 호출 (캐시 히트는 이미 컨벤션 컨텍스트가 반영된 결과)
         val conventionContext = filePath?.let {
             conventionContextService.buildContext(
-                query = patchQueryExtractor.extract(diff, filePath = it),
+                query = PatchQueryExtractor.extract(diff, filePath = it),
                 filePath = it,
             )
         }
@@ -115,7 +113,7 @@ class DefaultReviewService(
         } else {
             rawReview
         }
-        return finalReview.also { reviewCacheStore.put(key, it) }
+        return finalReview.also { reviewCachePort.put(key, it) }
     }
 
     // Semaphore로 동시 호출 수를 제한하며 병렬 LLM 호출 후 결과 집계

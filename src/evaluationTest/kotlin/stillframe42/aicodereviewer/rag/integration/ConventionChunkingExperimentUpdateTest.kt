@@ -8,7 +8,7 @@ import org.junit.jupiter.api.TestInstance
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 import org.springframework.ai.chat.client.ChatClient
-import org.springframework.ai.document.Document
+import stillframe42.aicodereviewer.rag.domain.model.RagDocument
 import org.springframework.ai.openai.OpenAiChatOptions
 import org.springframework.ai.transformer.splitter.TokenTextSplitter
 import org.springframework.beans.factory.annotation.Autowired
@@ -160,7 +160,7 @@ class ConventionChunkingExperimentUpdateTest {
     }
 
     // 검색 결과 상위 3개 청크를 80자 요약으로 연결한 문자열 생성
-    private fun buildSummary(docs: List<Document>): String =
+    private fun buildSummary(docs: List<RagDocument>): String =
         if (docs.isEmpty()) "결과 없음"
         else docs.joinToString(" ; ") {
             it.text.orEmpty()
@@ -203,7 +203,7 @@ class ConventionChunkingExperimentUpdateTest {
     private fun updateExperimentMarkdown(
         strategy: String,
         totalChunks: Int,
-        results: List<Triple<String, List<Document>, Pair<Int, String>>>,
+        results: List<Triple<String, List<RagDocument>, Pair<Int, String>>>,
     ) {
         val section = when (strategy) {
             "256" -> "1-A"
@@ -259,7 +259,7 @@ class ConventionChunkingExperimentUpdateTest {
     // 비교 요약 테이블의 "보강 후 평균" 열을 실험 결과로 업데이트한다.
     private fun updateComparisonSummary(
         strategy: String,
-        results: List<Triple<String, List<Document>, Pair<Int, String>>>,
+        results: List<Triple<String, List<RagDocument>, Pair<Int, String>>>,
     ) {
         val strategyLabel = when (strategy) {
             "256" -> "TokenTextSplitter(256)"

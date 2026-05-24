@@ -6,7 +6,7 @@ import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
 import org.springframework.ai.chat.client.ChatClient
-import org.springframework.ai.document.Document
+import stillframe42.aicodereviewer.rag.domain.model.RagDocument
 import org.springframework.ai.openai.OpenAiChatOptions
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Qualifier
@@ -110,7 +110,7 @@ class EmbeddingSmallModelExperimentTest {
         println("embedding-experiment.md 업데이트 완료 (model=$model)")
     }
 
-    private fun buildSummary(docs: List<Document>): String =
+    private fun buildSummary(docs: List<RagDocument>): String =
         if (docs.isEmpty()) "결과 없음"
         else docs.joinToString(" ; ") {
             it.text.orEmpty()

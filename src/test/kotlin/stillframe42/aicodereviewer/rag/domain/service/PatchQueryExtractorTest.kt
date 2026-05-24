@@ -5,7 +5,7 @@ import org.junit.jupiter.api.Test
 
 class PatchQueryExtractorTest {
 
-    private val extractor = PatchQueryExtractor()
+    private val extractor = PatchQueryExtractor
 
     @Test
     fun `추가된 코드 라인 첫 N줄 추출 (파일명 fallback 없음)`() {

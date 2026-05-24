@@ -4,7 +4,7 @@ import kotlinx.coroutines.CancellationException
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
 import stillframe42.aicodereviewer.agent.application.AgentFallbackMetrics
-import stillframe42.aicodereviewer.agent.application.AgentReviewService
+import stillframe42.aicodereviewer.agent.domain.port.`in`.AgentReviewUseCase
 import stillframe42.aicodereviewer.agent.domain.exception.AgentAnalysisFailedException
 import stillframe42.aicodereviewer.agent.domain.exception.AgentAnalysisTimeoutException
 import stillframe42.aicodereviewer.agent.domain.exception.AgentException
@@ -38,10 +38,9 @@ class DefaultGitHubWebhookService(
     private val reviewUseCase: ReviewUseCase,
     private val reviewCommentFormatterPort: ReviewCommentFormatterPort,
     private val processedEventPort: ProcessedEventPort,
-    private val diffPositionResolver: DiffPositionResolver,
     private val reviewPersistencePort: ReviewPersistencePort,
     private val eventPublisher: ApplicationEventPublisher,
-    private val agentReviewService: AgentReviewService,
+    private val agentReviewUseCase: AgentReviewUseCase,
     private val agentFallbackMetrics: AgentFallbackMetrics,
 ) : GitHubWebhookUseCase, Logging {
 
@@ -230,7 +229,7 @@ class DefaultGitHubWebhookService(
             return runDefaultReview(event, prDiff)
         }
         return try {
-            agentReviewService.review(
+            agentReviewUseCase.review(
                 repositoryFullName = event.repositoryFullName,
                 pullRequestNumber = event.pullRequestNumber,
                 prDiff = prDiff,
@@ -292,7 +291,7 @@ class DefaultGitHubWebhookService(
 
     // diff position 매핑 + PR 코멘트 출력 구성
     private fun buildReviewOutput(review: CodeReview, prDiff: String): ReviewOutput {
-        val resolution = diffPositionResolver.resolve(prDiff, review.issues)
+        val resolution = DiffPositionResolver.resolve(prDiff, review.issues)
         val bodyReview = review.copy(issues = resolution.unmappedIssues)
         // 인라인 코멘트 수 + 요약 이슈 수를 합산하여 총 이슈 수 계산
         val totalIssueCount = resolution.lineComments.size + resolution.unmappedIssues.size

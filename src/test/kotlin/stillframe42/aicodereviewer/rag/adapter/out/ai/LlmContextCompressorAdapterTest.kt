@@ -8,11 +8,12 @@ import kotlinx.coroutines.runBlocking
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.springframework.ai.document.Document
 import org.springframework.beans.factory.annotation.Autowired
 import stillframe42.aicodereviewer.integration.AbstractIntegrationTest
 import stillframe42.aicodereviewer.integration.support.WireMockStubs
+import stillframe42.aicodereviewer.rag.domain.model.RagDocument
 import stillframe42.aicodereviewer.rag.domain.port.out.ContextCompressorPort
+import java.util.UUID
 
 // LlmContextCompressorAdapter 통합 테스트 — WireMock으로 OpenAI 호출 모킹
 // 임계값 우회, 압축, NONE/빈 응답, 실패 fallback, 혼합 케이스를 검증한다
@@ -26,21 +27,23 @@ class LlmContextCompressorAdapterTest : AbstractIntegrationTest() {
         wireMock.resetAll()
     }
 
-    private fun docOfSize(charCount: Int, source: String = "test.md"): Document {
+    private fun docOfSize(charCount: Int, source: String = "test.md"): RagDocument {
         // 한글 1자 ≈ 1 토큰 가정. 임계값 300 토큰 초과시키려면 약 300+자 필요.
         // 안전하게 600자 사용 (cl100k_base에서 약 400~500 토큰)
         val text = "헥사고날 아키텍처 컨벤션 ".repeat(charCount / 14 + 1).take(charCount)
-        return Document.builder()
-            .text(text)
-            .metadata(mapOf("source" to source))
-            .build()
+        return RagDocument(
+            id = UUID.randomUUID().toString(),
+            text = text,
+            metadata = mapOf("source" to source),
+        )
     }
 
-    private fun smallDoc(): Document =
-        Document.builder()
-            .text("짧은 청크")  // 5자 → 매우 작음, 임계값 우회
-            .metadata(mapOf("source" to "small.md"))
-            .build()
+    private fun smallDoc(): RagDocument =
+        RagDocument(
+            id = UUID.randomUUID().toString(),
+            text = "짧은 청크",  // 5자 → 매우 작음, 임계값 우회
+            metadata = mapOf("source" to "small.md"),
+        )
 
     @Test
     fun `임계값 미만 청크는 LLM 호출 없이 원본 통과`() = runBlocking {

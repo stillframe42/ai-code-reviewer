@@ -7,7 +7,7 @@ import stillframe42.aicodereviewer.review.domain.model.DiffFilterOptions
 // DiffPreprocessor 순수 단위 테스트 — Spring 컨텍스트 없이 도메인 로직만 검증
 class DiffPreprocessorTest {
 
-    private val preprocessor = DiffPreprocessor()
+    private val preprocessor = DiffPreprocessor
 
     @Test
     fun `바이너리 파일 청크 제거`() {

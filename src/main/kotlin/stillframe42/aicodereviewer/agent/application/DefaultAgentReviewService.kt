@@ -2,6 +2,7 @@ package stillframe42.aicodereviewer.agent.application
 
 import org.springframework.stereotype.Service
 import stillframe42.aicodereviewer.agent.domain.model.AgentAnalysisCommand
+import stillframe42.aicodereviewer.agent.domain.port.`in`.AgentReviewUseCase
 import stillframe42.aicodereviewer.agent.domain.port.out.AgentAnalysisPort
 import stillframe42.aicodereviewer.agent.domain.service.AgentFindingMapper
 import stillframe42.aicodereviewer.agent.domain.service.SecurityFileDetector
@@ -10,13 +11,13 @@ import stillframe42.aicodereviewer.rag.application.ConventionContextService
 import stillframe42.aicodereviewer.review.domain.model.CodeReview
 
 @Service
-class AgentReviewService(
+class DefaultAgentReviewService(
     private val agentAnalysisPort: AgentAnalysisPort,
     private val agentPoller: AgentPoller,
     private val conventionContextService: ConventionContextService,
-) {
+) : AgentReviewUseCase {
 
-    suspend fun review(
+    override suspend fun review(
         repositoryFullName: String,
         pullRequestNumber: Int,
         prDiff: String,

@@ -1,6 +1,5 @@
 package stillframe42.aicodereviewer.github.domain.service
 
-import org.springframework.stereotype.Component
 import stillframe42.aicodereviewer.common.Logging
 import stillframe42.aicodereviewer.github.domain.model.PrReviewLineComment
 import stillframe42.aicodereviewer.review.domain.model.CodeIssue
@@ -8,8 +7,7 @@ import stillframe42.aicodereviewer.review.domain.model.CodeIssue
 // diff 텍스트에서 (파일명, 새 파일 라인 번호) → diff position 인덱스를 구축하고
 // CodeIssue 목록을 PrReviewLineComment로 변환하는 도메인 서비스
 // GitHub PR Reviews API의 position은 파일별 첫 @@ 줄을 1로 시작하는 1-based 누적 카운터
-@Component
-class DiffPositionResolver : Logging {
+object DiffPositionResolver : Logging {
 
     // raw diff와 CodeIssue 목록을 받아 인라인 코멘트 목록과 매핑 실패 이슈 목록을 반환
     fun resolve(rawDiff: String, issues: List<CodeIssue>): DiffPositionResolution {

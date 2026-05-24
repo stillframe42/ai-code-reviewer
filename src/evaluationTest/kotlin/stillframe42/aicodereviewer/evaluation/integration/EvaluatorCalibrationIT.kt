@@ -5,8 +5,9 @@ import kotlinx.coroutines.runBlocking
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable
-import org.springframework.ai.document.Document
+import stillframe42.aicodereviewer.rag.domain.model.RagDocument
 import org.springframework.beans.factory.annotation.Autowired
+import java.util.UUID
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.test.context.ActiveProfiles
 import org.springframework.test.context.DynamicPropertyRegistry
@@ -145,8 +146,8 @@ class EvaluatorCalibrationIT {
     private suspend fun evaluateOne(case: Map<String, Any>): Map<String, Any> {
         val context = case["context"] as String
         val reviewText = case["review_text"] as String
-        // Document에 context를 단일 chunk로 wrap (Faithfulness 평가 시 join하므로 1개여도 OK)
-        val ctxDocs = listOf(Document.builder().text(context).build())
+        // RagDocument 에 context 를 단일 chunk 로 wrap (Faithfulness 평가 시 join 하므로 1 개여도 OK)
+        val ctxDocs = listOf(RagDocument(id = UUID.randomUUID().toString(), text = context))
         val score = ragEvaluationPort.evaluateFaithfulness(ctxDocs, reviewText)
         return mapOf(
             "case_id" to (case["case_id"] as String),

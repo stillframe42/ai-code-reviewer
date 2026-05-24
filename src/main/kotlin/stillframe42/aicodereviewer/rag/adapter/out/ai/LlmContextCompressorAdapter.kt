@@ -4,7 +4,6 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.springframework.ai.chat.client.ChatClient
-import org.springframework.ai.document.Document
 import org.springframework.ai.openai.OpenAiChatOptions
 import org.springframework.ai.tokenizer.JTokkitTokenCountEstimator
 import org.springframework.ai.tokenizer.TokenCountEstimator
@@ -15,6 +14,7 @@ import org.springframework.stereotype.Component
 import stillframe42.aicodereviewer.common.Logging
 import stillframe42.aicodereviewer.common.observability.ObservabilityPort
 import stillframe42.aicodereviewer.config.RagCompressionProperties
+import stillframe42.aicodereviewer.rag.domain.model.RagDocument
 import stillframe42.aicodereviewer.rag.domain.port.out.ContextCompressorPort
 
 // gpt-4o-mini 기반 추출 압축 어댑터 — ContextCompressorPort 구현.
@@ -33,16 +33,16 @@ class LlmContextCompressorAdapter(
 
     override suspend fun compress(
         query: String,
-        documents: List<Document>,
-    ): List<Document> {
-        val beforeTokens = documents.sumOf { tokenEstimator.estimate(it.text ?: "") }
+        documents: List<RagDocument>,
+    ): List<RagDocument> {
+        val beforeTokens = documents.sumOf { tokenEstimator.estimate(it.text) }
         val handle = observabilityPort.startSpan(
             name = "rag.compress",
             input = mapOf("query" to query, "document_count" to documents.size, "before_tokens" to beforeTokens),
         )
         return try {
             val result = documents.mapNotNull { doc -> compressOne(query, doc) }
-            val afterTokens = result.sumOf { tokenEstimator.estimate(it.text ?: "") }
+            val afterTokens = result.sumOf { tokenEstimator.estimate(it.text) }
             observabilityPort.endSpan(
                 handle,
                 output = mapOf(
@@ -63,8 +63,9 @@ class LlmContextCompressorAdapter(
     }
 
     // 단일 청크 압축 — 임계값 이하면 우회, 초과면 LLM 호출, 실패 시 원본 fallback, 빈/NONE 결과는 null
-    private suspend fun compressOne(query: String, doc: Document): Document? {
-        val text = doc.text ?: return null
+    private suspend fun compressOne(query: String, doc: RagDocument): RagDocument? {
+        val text = doc.text
+        if (text.isBlank()) return null
         val tokens = tokenEstimator.estimate(text)
 
         // 작은 청크는 압축 우회 (단일 토픽으로 노이즈 적음)
@@ -75,10 +76,7 @@ class LlmContextCompressorAdapter(
             when {
                 compressed.isBlank() -> null
                 compressed == "NONE" -> null
-                else -> Document.builder()
-                    .text(compressed)
-                    .metadata(doc.metadata)
-                    .build()
+                else -> doc.copy(text = compressed)
             }
         }.getOrElse { e ->
             // 코루틴 취소 예외는 상위로 전파해야 함 (구조적 동시성)

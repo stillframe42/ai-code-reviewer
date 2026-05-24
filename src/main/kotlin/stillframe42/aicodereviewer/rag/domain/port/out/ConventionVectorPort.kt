@@ -1,11 +1,11 @@
 package stillframe42.aicodereviewer.rag.domain.port.out
 
-import org.springframework.ai.document.Document
 import stillframe42.aicodereviewer.rag.domain.model.ConventionCategory
+import stillframe42.aicodereviewer.rag.domain.model.RagDocument
 
 // 벡터 저장소 아웃바운드 포트 — VectorStore 구현체를 추상화
 interface ConventionVectorPort {
-    fun save(documents: List<Document>)
+    fun save(documents: List<RagDocument>)
     fun isEmpty(): Boolean
     fun deleteAll()
     // 쿼리 텍스트를 임베딩하여 cosine 유사도 기반으로 상위 topK 청크를 반환한다.
@@ -18,8 +18,8 @@ interface ConventionVectorPort {
         topK: Int = 5,
         category: ConventionCategory? = null,
         similarityThreshold: Double = 0.0,
-    ): List<Document>
+    ): List<RagDocument>
 
-    // 단건 조회 — vector_store row id 로 Document 조회. 미존재/형식 오류 시 null.
-    fun findById(id: String): Document?
+    // 단건 조회 — vector_store row id 로 RagDocument 조회. 미존재/형식 오류 시 null.
+    fun findById(id: String): RagDocument?
 }

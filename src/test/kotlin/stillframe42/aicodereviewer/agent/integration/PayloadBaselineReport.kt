@@ -37,7 +37,7 @@ object PayloadBaselineReport {
         appendLine("## 메타데이터")
         appendLine("- 측정 일시: $timestamp")
         appendLine("- 측정 커밋: $commit")
-        appendLine("- 측정 방식: WireMock 통합 테스트 (AgentReviewService end-to-end)")
+        appendLine("- 측정 방식: WireMock 통합 테스트 (AgentReviewUseCase end-to-end)")
         appendLine("- vector_store: ConventionIndexUseCase.reindex() 직후")
         appendLine()
     }

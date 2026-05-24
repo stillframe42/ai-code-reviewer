@@ -11,7 +11,7 @@ import kotlinx.coroutines.runBlocking
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
-import stillframe42.aicodereviewer.agent.application.AgentReviewService
+import stillframe42.aicodereviewer.agent.domain.port.`in`.AgentReviewUseCase
 import stillframe42.aicodereviewer.github.domain.model.PrFile
 import stillframe42.aicodereviewer.github.domain.model.PrFileStatus
 import stillframe42.aicodereviewer.integration.AbstractIntegrationTest
@@ -19,7 +19,7 @@ import stillframe42.aicodereviewer.integration.support.WireMockStubs
 
 class AgentSessionIdPropagationIT : AbstractIntegrationTest() {
 
-    @Autowired private lateinit var agentReviewService: AgentReviewService
+    @Autowired private lateinit var agentReviewUseCase: AgentReviewUseCase
     @Autowired private lateinit var objectMapper: ObjectMapper
 
     @Test
@@ -27,7 +27,7 @@ class AgentSessionIdPropagationIT : AbstractIntegrationTest() {
         stubRemoteAgent()
         WireMockStubs.stubOpenAiEmbedding(wireMock)
 
-        agentReviewService.review(
+        agentReviewUseCase.review(
             repositoryFullName = "owner/repo",
             pullRequestNumber = 11,
             prDiff = "diff --git a/SecurityFilter.kt b/SecurityFilter.kt",
@@ -48,7 +48,7 @@ class AgentSessionIdPropagationIT : AbstractIntegrationTest() {
         stubRemoteAgent()
         WireMockStubs.stubOpenAiEmbedding(wireMock)
 
-        agentReviewService.review(
+        agentReviewUseCase.review(
             repositoryFullName = "owner/repo",
             pullRequestNumber = 12,
             prDiff = "diff --git a/SecurityFilter.kt b/SecurityFilter.kt",

@@ -4,10 +4,10 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import org.springframework.ai.document.Document
 import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.stereotype.Component
 import stillframe42.aicodereviewer.rag.domain.model.ConventionCategory
+import stillframe42.aicodereviewer.rag.domain.model.RagDocument
 import stillframe42.aicodereviewer.rag.domain.port.out.ConventionKeywordSearchPort
 
 // PostgreSQL Full-text Search(tsvector/tsquery) 기반 키워드 검색 어댑터
@@ -21,7 +21,7 @@ class JdbcConventionKeywordAdapter(
         query: String,
         topK: Int,
         category: ConventionCategory?,
-    ): List<Document> {
+    ): List<RagDocument> {
         // 빈 쿼리는 plainto_tsquery 파싱 오류 방지를 위해 조기 반환
         if (query.isBlank()) return emptyList()
         return withContext(Dispatchers.IO) {
@@ -42,10 +42,10 @@ class JdbcConventionKeywordAdapter(
                 add(topK)
             }.toTypedArray()
             jdbcTemplate.query(sql, { rs, _ ->
-                Document(
-                    rs.getString("id"),
-                    rs.getString("content"),
-                    objectMapper.readValue<Map<String, Any>>(rs.getString("metadata")),
+                RagDocument(
+                    id = rs.getString("id"),
+                    text = rs.getString("content"),
+                    metadata = objectMapper.readValue<Map<String, Any>>(rs.getString("metadata")),
                 )
             }, *args)
         }

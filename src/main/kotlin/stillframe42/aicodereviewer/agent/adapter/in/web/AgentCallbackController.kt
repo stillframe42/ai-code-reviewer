@@ -7,7 +7,7 @@ import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestHeader
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
-import stillframe42.aicodereviewer.agent.adapter.`in`.web.dto.AgentCallbackResult
+import stillframe42.aicodereviewer.agent.adapter.`in`.web.dto.AgentCallbackPayload
 import stillframe42.aicodereviewer.agent.domain.port.`in`.AgentCallbackUseCase
 import stillframe42.aicodereviewer.common.Logging
 import stillframe42.aicodereviewer.common.auth.InternalAuthValidator
@@ -23,13 +23,13 @@ class AgentCallbackController(
     @PostMapping("/callback")
     suspend fun receiveAgentCallback(
         @RequestHeader("X-Internal-Auth", required = false) authToken: String?,
-        @RequestBody result: AgentCallbackResult,
+        @RequestBody payload: AgentCallbackPayload,
     ): ResponseEntity<Unit> {
         if (!authValidator.isAuthorized(authToken)) {
-            logger.warn("agent callback unauthorized: id={}", result.analysisId)
+            logger.warn("agent callback unauthorized: id={}", payload.analysisId)
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build()
         }
-        useCase.handle(result)
+        useCase.handle(payload.toDomain())
         return ResponseEntity.accepted().build()
     }
 }
