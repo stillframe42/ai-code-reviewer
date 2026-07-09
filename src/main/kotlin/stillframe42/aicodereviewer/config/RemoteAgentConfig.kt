@@ -33,6 +33,8 @@ class RemoteAgentConfig {
             .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, properties.connectTimeout.toMillis().toInt())
         return WebClient.builder()
             .baseUrl(properties.url)
+            // ai-agent-service 의 /agent 라우터는 X-Internal-Auth 를 요구 — 콜백과 같은 공유 비밀 사용
+            .defaultHeader("X-Internal-Auth", properties.callback.internalAuthToken)
             .observationRegistry(observationRegistry)
             .clientConnector(ReactorClientHttpConnector(httpClient))
             .codecs {
