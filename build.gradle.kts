@@ -146,13 +146,14 @@ tasks.test {
     }
 }
 
-// 커스텀 Test 태스크는 기본 test 태스크의 클래스패스를 명시적으로 지정해야 한다
+// 커스텀 Test 태스크는 대상 소스셋의 클래스패스를 명시적으로 지정해야 한다
+// experiment 계열 태그 테스트는 전부 evaluationTest 소스셋에 있다 — test 소스셋을 가리키면 매칭 0건으로 조용히 성공한다
 fun registerExperimentTask(name: String, tag: String, description: String) {
     tasks.register<Test>(name) {
         this.description = description
         group = "verification"
-        testClassesDirs = sourceSets["test"].output.classesDirs
-        classpath = sourceSets["test"].runtimeClasspath
+        testClassesDirs = sourceSets["evaluationTest"].output.classesDirs
+        classpath = sourceSets["evaluationTest"].runtimeClasspath
         useJUnitPlatform { includeTags(tag) }
     }
 }

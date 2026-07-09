@@ -13,8 +13,6 @@ import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.http.MediaType
-import org.springframework.test.context.DynamicPropertyRegistry
-import org.springframework.test.context.DynamicPropertySource
 import stillframe42.aicodereviewer.config.GitHubProperties
 import stillframe42.aicodereviewer.github.adapter.`in`.web.computeSignature
 import stillframe42.aicodereviewer.github.adapter.out.persistence.ProcessedPullRequestEventRepository
@@ -31,14 +29,6 @@ import java.util.concurrent.TimeUnit.SECONDS
 // - 보안 파일 포함 PR → AgentReviewUseCase 경로 (agent stub 마커 포함)
 // - 일반 파일만 포함 PR → DefaultReviewService 경로 (agent stub 마커 없음)
 class AgentRoutingIntegrationTest : AbstractIntegrationTest() {
-
-    companion object {
-        @JvmStatic
-        @DynamicPropertySource
-        fun pollOverrides(registry: DynamicPropertyRegistry) {
-            registry.add("agent.remote.poll.interval") { "10ms" }
-        }
-    }
 
     @Autowired
     private lateinit var properties: GitHubProperties
