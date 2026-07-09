@@ -21,6 +21,7 @@ import stillframe42.aicodereviewer.common.Logging
 import stillframe42.aicodereviewer.common.advisor.CostTrackingAdvisor
 import stillframe42.aicodereviewer.common.advisor.LoggingAdvisor
 import stillframe42.aicodereviewer.common.advisor.RetryAdvisor
+import stillframe42.aicodereviewer.common.exception.AiResponseException
 import java.util.UUID
 import stillframe42.aicodereviewer.common.langfuse.LangfuseTraceContextHolder
 import stillframe42.aicodereviewer.common.langfuse.ReviewObservationContextHolder
@@ -85,7 +86,7 @@ class ReviewAdapter(
                 val rawText = buildRequestSpec(code, provider, mode, toolCallCounter, modelName, conventionContext)
                     .call()
                     .content()
-                    ?: throw IllegalStateException("AI로부터 빈 응답을 받았습니다")
+                    ?: throw AiResponseException("AI로부터 빈 응답을 받았습니다")
                 // AI가 preamble 텍스트나 마크다운 코드 펜스를 포함하는 경우 대비
                 val jsonText = extractJson(rawText)
                 converter.convert(jsonText)

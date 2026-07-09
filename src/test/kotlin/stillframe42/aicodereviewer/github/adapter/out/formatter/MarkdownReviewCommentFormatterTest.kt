@@ -2,6 +2,7 @@ package stillframe42.aicodereviewer.github.adapter.out.formatter
 
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
+import stillframe42.aicodereviewer.config.AiReviewerProperties
 import stillframe42.aicodereviewer.review.domain.model.CodeIssue
 import stillframe42.aicodereviewer.review.domain.model.CodeReview
 import stillframe42.aicodereviewer.review.domain.model.IssueCategory
@@ -9,7 +10,9 @@ import stillframe42.aicodereviewer.review.domain.model.IssueSeverity
 
 class MarkdownReviewCommentFormatterTest {
 
-    private val formatter = MarkdownReviewCommentFormatter(modelName = "test-model")
+    private val formatter = MarkdownReviewCommentFormatter(
+        reviewerProperties = AiReviewerProperties(defaultModel = "default-model"),
+    )
 
     @Test
     fun `이슈가 없고 인라인도 없으면 총 0개를 표시한다`() {
@@ -50,6 +53,20 @@ class MarkdownReviewCommentFormatterTest {
         val review = review(issues = issues)
         val result = formatter.format(review)
         assertThat(result).contains("Issues Found (${issues.size})")
+    }
+
+    @Test
+    fun `리뷰에 사용된 모델명이 있으면 footer에 그 모델을 표시한다`() {
+        val review = review(issues = emptyList()).copy(modelName = "claude-sonnet-4-6")
+        val result = formatter.format(review)
+        assertThat(result).contains("모델: claude-sonnet-4-6")
+    }
+
+    @Test
+    fun `리뷰에 모델명이 없으면 footer에 기본 모델을 표시한다`() {
+        val review = review(issues = emptyList())
+        val result = formatter.format(review)
+        assertThat(result).contains("모델: default-model")
     }
 
     private fun review(issues: List<CodeIssue> = emptyList()) = CodeReview(

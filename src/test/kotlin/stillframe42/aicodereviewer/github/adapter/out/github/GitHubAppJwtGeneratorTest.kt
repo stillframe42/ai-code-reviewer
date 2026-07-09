@@ -5,8 +5,6 @@ import com.fasterxml.jackson.module.kotlin.readValue
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.test.context.DynamicPropertyRegistry
-import org.springframework.test.context.DynamicPropertySource
 import stillframe42.aicodereviewer.config.GitHubProperties
 import stillframe42.aicodereviewer.integration.AbstractIntegrationTest
 import java.time.Instant
@@ -14,19 +12,8 @@ import java.util.Base64
 
 // GitHubAppJwtGenerator 통합 테스트
 // RsaKeyLoader + JwtSigner 조합이 올바른 GitHub App JWT를 생성하는지 검증한다
-// 실제 PEM 파일과 GITHUB_APP_ID 환경변수가 설정된 환경에서만 실행된다 (없으면 자동 스킵)
+// integration-test 프로파일의 app-id=1 + test-keys PEM 사용 — 실제 App ID 값은 JWT 구조 검증에 불필요
 class GitHubAppJwtGeneratorTest : AbstractIntegrationTest() {
-
-    companion object {
-        // GITHUB_APP_ID 환경변수를 Spring 프로퍼티에 주입한다
-        // AbstractIntegrationTest의 @DynamicPropertySource와 함께 동작 — datasource는 부모가 처리
-        @JvmStatic
-        @DynamicPropertySource
-        fun registerProperties(registry: DynamicPropertyRegistry) {
-            val appId = System.getenv("GITHUB_APP_ID") ?: "0"
-            registry.add("github.app.app-id") { appId }
-        }
-    }
 
     @Autowired
     private lateinit var jwtGenerator: GitHubAppJwtGenerator
@@ -51,7 +38,6 @@ class GitHubAppJwtGeneratorTest : AbstractIntegrationTest() {
         val payloadJson = decodeJwtPayload(jwt)
         val claims: Map<String, Any> = objectMapper.readValue(payloadJson)
 
-        // properties.app.appId는 @DynamicPropertySource로 주입된 값 (미설정 시 0)
         assertThat(claims["iss"]).isEqualTo(properties.app.appId.toString())
     }
 

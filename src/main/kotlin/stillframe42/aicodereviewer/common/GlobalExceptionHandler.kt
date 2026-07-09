@@ -9,12 +9,15 @@ import org.springframework.web.bind.MethodArgumentNotValidException
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.RestControllerAdvice
 import org.springframework.web.servlet.resource.NoResourceFoundException
+import stillframe42.aicodereviewer.common.exception.AiResponseException
 import stillframe42.aicodereviewer.common.exception.NotFoundException
 
 // 전역 예외 처리 핸들러 — Problem Details 자동 핸들러보다 높은 우선순위로 등록
-@Order(Ordered.HIGHEST_PRECEDENCE)
+// Exception catch-all 이 이후 순위의 모든 advice 를 가리므로, feature 전용 advice
+// (AgentExceptionHandler 등)가 먼저 평가되도록 HIGHEST_PRECEDENCE 보다 낮게 둔다
+@Order(Ordered.HIGHEST_PRECEDENCE + 10)
 @RestControllerAdvice
-class GlobalExceptionHandler {
+class GlobalExceptionHandler : Logging {
 
     // @Valid 검증 실패 시 400 Bad Request 반환
     @ExceptionHandler(MethodArgumentNotValidException::class)
@@ -44,9 +47,20 @@ class GlobalExceptionHandler {
     fun handleIllegalArgument(ex: IllegalArgumentException): ResponseEntity<Map<String, String>> =
         ResponseEntity.badRequest().body(mapOf("error" to (ex.message ?: "잘못된 요청입니다")))
 
+    // AI 응답 수신 실패 — 의도된 사용자 대상 메시지이므로 message 를 그대로 노출한다 (docs/openapi.yml 500 예시와 계약)
+    @ExceptionHandler(AiResponseException::class)
+    fun handleAiResponseException(ex: AiResponseException): ResponseEntity<Map<String, String>> {
+        logger.error("[GLOBAL] AI 응답 실패 — 500 반환: {}", ex.message)
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+            .body(mapOf("error" to (ex.message ?: "AI 응답 처리 중 오류가 발생했습니다")))
+    }
+
     // 일반 예외 처리 — 500 Internal Server Error 반환
+    // 응답은 고정 문구 — 미분류 예외의 message 는 내부 구현 정보라 노출하지 않고 로그로만 남긴다
     @ExceptionHandler(Exception::class)
-    fun handleException(ex: Exception): ResponseEntity<Map<String, String>> =
-        ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-            .body(mapOf("error" to (ex.message ?: "서버 오류가 발생했습니다")))
+    fun handleException(ex: Exception): ResponseEntity<Map<String, String>> {
+        logger.error("[GLOBAL] 미분류 예외 — 500 반환", ex)
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+            .body(mapOf("error" to "서버 오류가 발생했습니다"))
+    }
 }

@@ -45,6 +45,8 @@ class LangfuseClient(
             }
             .bodyToMono<Map<String, Any>>()
             .defaultIfEmpty(emptyMap())
+            // Langfuse 무응답 시 LLM 호출 스레드가 무기한 매달리지 않도록 전체 교환에 타임아웃
+            .timeout(properties.ingestTimeout)
             // ObservationHandler의 동기 콜백에서 호출되므로 블로킹 방식 사용
             .block()
         logger.debug("[LANGFUSE] ingestion 배치 전송 완료: {}건", batch.size)

@@ -1,7 +1,7 @@
 package stillframe42.aicodereviewer.github.adapter.out.formatter
 
-import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Component
+import stillframe42.aicodereviewer.config.AiReviewerProperties
 import stillframe42.aicodereviewer.github.domain.port.out.ReviewCommentFormatterPort
 import stillframe42.aicodereviewer.review.domain.model.CodeReview
 import java.time.ZoneId
@@ -11,8 +11,7 @@ import java.time.format.DateTimeFormatter
 // CodeReview 결과를 GitHub PR 코멘트용 마크다운 문자열로 변환하는 어댑터
 @Component
 class MarkdownReviewCommentFormatter(
-    @param:Value("\${spring.ai.anthropic.chat.options.model:claude-sonnet-4-6}")
-    private val modelName: String,
+    private val reviewerProperties: AiReviewerProperties,
 ) : ReviewCommentFormatterPort {
 
     // 기존 시그니처 — 하위 호환성 유지, 이슈 수는 review.issues.size 기준
@@ -76,6 +75,7 @@ class MarkdownReviewCommentFormatter(
 
         val timestamp = ZonedDateTime.now(ZoneId.of("Asia/Seoul"))
             .format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss z"))
-        append("> 생성 시간: $timestamp | 모델: $modelName")
+        // 동적 모델 선택(AiModelSelector) 결과가 정적 설정과 다를 수 있어 리뷰에 실제 사용된 모델 우선
+        append("> 생성 시간: $timestamp | 모델: ${review.modelName ?: reviewerProperties.defaultModel}")
     }
 }

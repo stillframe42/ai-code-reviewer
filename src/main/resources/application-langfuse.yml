@@ -3,6 +3,7 @@
 langfuse:
   host: ${LANGFUSE_HOST:http://localhost:3000}
   enabled: true
+  ingest-timeout: 3s
 
 spring:
   ai:

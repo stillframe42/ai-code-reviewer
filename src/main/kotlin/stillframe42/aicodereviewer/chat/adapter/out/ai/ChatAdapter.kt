@@ -12,6 +12,7 @@ import stillframe42.aicodereviewer.common.AiPromptBuilder
 import stillframe42.aicodereviewer.common.advisor.CostTrackingAdvisor
 import stillframe42.aicodereviewer.common.advisor.LoggingAdvisor
 import stillframe42.aicodereviewer.common.advisor.RetryAdvisor
+import stillframe42.aicodereviewer.common.exception.AiResponseException
 import stillframe42.aicodereviewer.core.AiProvider
 
 // Spring AI 기반 채팅 출력 어댑터 — AiChatPort 구현체
@@ -37,7 +38,7 @@ class ChatAdapter(
                 .advisors(loggingAdvisor, retryAdvisor, costTrackingAdvisor)
                 .call()
                 .content()
-                ?: throw IllegalStateException("AI로부터 응답을 받지 못했습니다")
+                ?: throw AiResponseException("AI로부터 응답을 받지 못했습니다")
         }
 
     // Spring AI streaming 호출: Flux<String> → Flow<String> 변환 (kotlinx-coroutines-reactor)

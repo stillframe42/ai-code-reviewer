@@ -17,10 +17,15 @@ class GitHubAppJwtGenerator(
         rsaKeyLoader.load(properties.app.privateKeyPath)
     }
 
-    fun generate(): String =
-        jwtSigner.sign(
+    fun generate(): String {
+        // app-id 미설정(yml 기본값 0)이면 GitHub 401 응답까지 원인이 숨는다 — 호출 시점에 fail-fast
+        check(properties.app.appId > 0) {
+            "github.app.app-id 가 설정되지 않았습니다 (현재: ${properties.app.appId}) — application-secret.yml 또는 env 로 주입 필요"
+        }
+        return jwtSigner.sign(
             issuer = properties.app.appId.toString(),
             privateKey = privateKey,
             expirySeconds = 600,  // GitHub App JWT 유효 시간: 10분
         )
+    }
 }

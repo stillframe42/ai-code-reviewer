@@ -5,7 +5,10 @@ import com.github.tomakehurst.wiremock.client.WireMock.equalTo
 import com.github.tomakehurst.wiremock.client.WireMock.post
 import com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor
 import com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo
+import java.time.Duration
 import java.util.Base64
+import java.util.concurrent.TimeoutException
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import stillframe42.aicodereviewer.config.LangfuseProperties
@@ -14,12 +17,13 @@ import stillframe42.aicodereviewer.integration.AbstractIntegrationTest
 // LangfuseClient 통합 테스트 — WireMock으로 Langfuse API 서버를 모킹
 class LangfuseClientTest : AbstractIntegrationTest() {
 
-    private fun buildClient(): LangfuseClient {
+    private fun buildClient(ingestTimeout: Duration = Duration.ofSeconds(3)): LangfuseClient {
         // WireMock 주소를 host로 사용하는 클라이언트 생성
         val testProperties = LangfuseProperties(
             host = "http://localhost:${wireMock.port()}",
             secretKey = "test-secret",
             publicKey = "test-public",
+            ingestTimeout = ingestTimeout,
         )
         return LangfuseClient(testProperties)
     }
@@ -62,5 +66,26 @@ class LangfuseClientTest : AbstractIntegrationTest() {
                 mapOf("type" to "trace-create", "id" to "evt-1", "body" to mapOf("id" to "trace-1"))
             ))
         }
+    }
+
+    @Test
+    fun `응답이 ingest-timeout을 초과하면 무기한 대기하지 않고 TimeoutException을 던진다`() {
+        wireMock.stubFor(
+            post(urlEqualTo("/api/public/ingestion"))
+                .willReturn(
+                    aResponse()
+                        .withStatus(207)
+                        .withHeader("Content-Type", "application/json")
+                        .withBody("""{"successes":[],"errors":[]}""")
+                        .withFixedDelay(2_000)
+                )
+        )
+
+        val client = buildClient(ingestTimeout = Duration.ofMillis(200))
+        assertThatThrownBy {
+            client.ingest(listOf(
+                mapOf("type" to "trace-create", "id" to "evt-1", "body" to mapOf("id" to "trace-1"))
+            ))
+        }.hasRootCauseInstanceOf(TimeoutException::class.java)
     }
 }

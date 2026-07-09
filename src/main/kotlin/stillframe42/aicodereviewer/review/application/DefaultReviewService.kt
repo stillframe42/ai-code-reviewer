@@ -8,6 +8,7 @@ import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
 import org.springframework.stereotype.Service
 import stillframe42.aicodereviewer.common.Logging
+import stillframe42.aicodereviewer.common.exception.AiResponseException
 import stillframe42.aicodereviewer.common.observability.ObservabilityPort
 import stillframe42.aicodereviewer.common.observability.withSpan
 import stillframe42.aicodereviewer.review.domain.service.AiModelSelector
@@ -144,7 +145,7 @@ class DefaultReviewService(
             }
             .takeIf { it.isNotEmpty() }
             ?.let(::aggregate)
-            ?: throw IllegalStateException("모든 파일(${fileDiffs.size}개) 리뷰가 실패했습니다")
+            ?: throw AiResponseException("모든 파일(${fileDiffs.size}개) 리뷰가 실패했습니다")
     }
 
     private fun aggregate(reviews: List<CodeReview>): CodeReview {
