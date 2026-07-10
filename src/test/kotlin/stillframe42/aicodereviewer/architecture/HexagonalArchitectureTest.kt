@@ -9,6 +9,7 @@ import com.tngtech.archunit.lang.syntax.ArchRuleDefinition.classes
 import com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses
 import org.junit.jupiter.api.Test
 import stillframe42.aicodereviewer.agent.application.AgentFallbackMetrics
+import stillframe42.aicodereviewer.github.application.DefaultGitHubWebhookService
 
 // 헥사고날 경계 룰 — Spring 컨텍스트 없이 컴파일된 main 클래스만 분석한다
 // 정책: feature 간 결합은 상대 feature 의 domain(model·port·service·exception)만 허용
@@ -21,17 +22,33 @@ class HexagonalArchitectureTest {
     @Test
     fun `feature 간 의존은 상대 feature 의 domain 패키지만 허용한다`() {
         FEATURES.forEach { feature ->
-            val forbidden = FEATURES.filter { it != feature }
-                .flatMap { listOf("$BASE.$it.application..", "$BASE.$it.adapter..") }
-                .toTypedArray()
+            val others = FEATURES.filter { it != feature }
+            val otherFeaturePackages = others.map { "$BASE.$it.." }.toTypedArray()
+            val otherFeatureDomainPackages = others.map { "$BASE.$it.domain.." }.toTypedArray()
+            val forbidden = resideInAnyPackage(*otherFeaturePackages)
+                .and(not(resideInAnyPackage(*otherFeatureDomainPackages)))
 
-            // AgentFallbackMetrics 동결 예외 — 웹훅 오케스트레이터 분리(구조 감사 #8) 완료 시 제거
-            noClasses().that().resideInAPackage("$BASE.$feature..")
-                .should().dependOnClassesThat(
-                    resideInAnyPackage(*forbidden).and(not(equivalentTo(AgentFallbackMetrics::class.java))),
-                )
-                .because("feature 간 결합은 상대 feature 의 domain(model·port·service·exception)만 허용한다")
-                .check(importedClasses)
+            if (feature == "github") {
+                // AgentFallbackMetrics 동결 예외 — 웹훅 오케스트레이터 분리(구조 감사 #8) 완료 시 제거.
+                // DefaultGitHubWebhookService -> AgentFallbackMetrics 엣지 1건만 예외로 좁힌다.
+                noClasses().that().resideInAPackage("$BASE.$feature..")
+                    .and().areNotAssignableTo(DefaultGitHubWebhookService::class.java)
+                    .should().dependOnClassesThat(forbidden)
+                    .because("feature 간 결합은 상대 feature 의 domain(model·port·service·exception)만 허용한다")
+                    .check(importedClasses)
+
+                noClasses().that().areAssignableTo(DefaultGitHubWebhookService::class.java)
+                    .should().dependOnClassesThat(
+                        forbidden.and(not(equivalentTo(AgentFallbackMetrics::class.java))),
+                    )
+                    .because("feature 간 결합은 상대 feature 의 domain(model·port·service·exception)만 허용한다")
+                    .check(importedClasses)
+            } else {
+                noClasses().that().resideInAPackage("$BASE.$feature..")
+                    .should().dependOnClassesThat(forbidden)
+                    .because("feature 간 결합은 상대 feature 의 domain(model·port·service·exception)만 허용한다")
+                    .check(importedClasses)
+            }
         }
     }
 
