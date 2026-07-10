@@ -7,14 +7,14 @@ import stillframe42.aicodereviewer.agent.domain.port.out.AgentAnalysisPort
 import stillframe42.aicodereviewer.agent.domain.service.AgentFindingMapper
 import stillframe42.aicodereviewer.agent.domain.service.SecurityFileDetector
 import stillframe42.aicodereviewer.github.domain.model.PrFile
-import stillframe42.aicodereviewer.rag.application.ConventionContextService
+import stillframe42.aicodereviewer.rag.domain.port.`in`.ConventionContextUseCase
 import stillframe42.aicodereviewer.review.domain.model.CodeReview
 
 @Service
 class DefaultAgentReviewService(
     private val agentAnalysisPort: AgentAnalysisPort,
     private val agentPoller: AgentPoller,
-    private val conventionContextService: ConventionContextService,
+    private val conventionContextUseCase: ConventionContextUseCase,
 ) : AgentReviewUseCase {
 
     override suspend fun review(
@@ -25,7 +25,7 @@ class DefaultAgentReviewService(
         reviewRequestId: Long?,
     ): CodeReview {
         val securityFile = SecurityFileDetector.firstSecurityFile(prFiles)
-        val contextIds = conventionContextService.buildContextIds(
+        val contextIds = conventionContextUseCase.buildContextIds(
             query = SECURITY_QUERY,
             filePath = securityFile?.filename,
         )

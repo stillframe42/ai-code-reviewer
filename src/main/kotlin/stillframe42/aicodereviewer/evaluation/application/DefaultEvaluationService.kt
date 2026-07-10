@@ -7,7 +7,7 @@ import stillframe42.aicodereviewer.evaluation.domain.model.EvaluationResult
 import stillframe42.aicodereviewer.evaluation.domain.model.GoldenCase
 import stillframe42.aicodereviewer.evaluation.domain.port.`in`.EvaluationUseCase
 import stillframe42.aicodereviewer.evaluation.domain.port.out.RagEvaluationPort
-import stillframe42.aicodereviewer.rag.application.HybridConventionSearchService
+import stillframe42.aicodereviewer.rag.domain.port.`in`.ConventionSearchUseCase
 import stillframe42.aicodereviewer.rag.domain.service.FileCategoryMapper
 import stillframe42.aicodereviewer.rag.domain.service.PatchQueryExtractor
 import stillframe42.aicodereviewer.review.domain.port.`in`.ReviewUseCase
@@ -16,7 +16,7 @@ import java.time.Instant
 @Service
 class DefaultEvaluationService(
     private val ragEvaluationPort: RagEvaluationPort,
-    private val hybridSearchService: HybridConventionSearchService,
+    private val conventionSearchUseCase: ConventionSearchUseCase,
     private val reviewUseCase: ReviewUseCase,
 ) : EvaluationUseCase, Logging {
 
@@ -51,7 +51,7 @@ class DefaultEvaluationService(
 
             // 3. 컨벤션 검색 — 프로덕션(DefaultReviewService)과 동일한 PatchQueryExtractor 로 쿼리 생성 (drift 방지)
             val query = PatchQueryExtractor.extract(patchContent, filePath = fileName)
-            val retrievedDocs = hybridSearchService.search(
+            val retrievedDocs = conventionSearchUseCase.search(
                 query = query,
                 topK = topK,
                 category = category,

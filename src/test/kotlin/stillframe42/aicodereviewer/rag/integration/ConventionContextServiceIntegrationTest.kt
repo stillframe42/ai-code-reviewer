@@ -11,13 +11,13 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.jdbc.core.JdbcTemplate
 import stillframe42.aicodereviewer.integration.AbstractIntegrationTest
 import stillframe42.aicodereviewer.integration.support.WireMockStubs
-import stillframe42.aicodereviewer.rag.application.ConventionContextService
+import stillframe42.aicodereviewer.rag.domain.port.`in`.ConventionContextUseCase
 import stillframe42.aicodereviewer.rag.domain.port.`in`.ConventionIndexUseCase
 
 class ConventionContextServiceIntegrationTest : AbstractIntegrationTest() {
 
     @Autowired
-    private lateinit var conventionContextService: ConventionContextService
+    private lateinit var conventionContextService: ConventionContextUseCase
 
     @Autowired
     private lateinit var conventionIndexUseCase: ConventionIndexUseCase

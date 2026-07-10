@@ -24,7 +24,7 @@ import org.yaml.snakeyaml.Yaml
 import stillframe42.aicodereviewer.core.AiProvider
 import stillframe42.aicodereviewer.integration.AbstractIntegrationTest
 import stillframe42.aicodereviewer.integration.support.WireMockStubs
-import stillframe42.aicodereviewer.rag.application.ConventionContextService
+import stillframe42.aicodereviewer.rag.domain.port.`in`.ConventionContextUseCase
 import stillframe42.aicodereviewer.rag.domain.port.`in`.ConventionIndexUseCase
 import stillframe42.aicodereviewer.review.domain.model.CodeReview
 import stillframe42.aicodereviewer.review.domain.model.DiffFilterOptions
@@ -139,7 +139,7 @@ class RagQualityComparisonIT {
     // 진단 목적 — reviewAfter 완료 후 같은 filePath로 buildContext를 read-only 재호출하여
     // 파일별 retrieval 길이를 샘플링하는 용도. 실제 assertion은 리뷰 출력에 기반한다.
     @Autowired
-    private lateinit var conventionContextService: ConventionContextService
+    private lateinit var conventionContextService: ConventionContextUseCase
 
     @Autowired
     private lateinit var conventionIndexUseCase: ConventionIndexUseCase
