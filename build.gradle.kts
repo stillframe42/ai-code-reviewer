@@ -83,6 +83,9 @@ dependencies {
 
     // Test — Awaitility Kotlin DSL
     testImplementation("org.awaitility:awaitility-kotlin:4.2.2")
+
+    // Test — ArchUnit (헥사고날 경계 룰)
+    testImplementation("com.tngtech.archunit:archunit-junit5:1.4.1")
 }
 
 dependencyManagement {
