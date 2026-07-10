@@ -1,4 +1,4 @@
-package stillframe42.aicodereviewer.common.metrics
+package stillframe42.aicodereviewer.review.adapter.out.metrics
 
 import io.micrometer.core.instrument.Counter
 import io.micrometer.core.instrument.DistributionSummary

@@ -1,4 +1,4 @@
-package stillframe42.aicodereviewer.common.metrics
+package stillframe42.aicodereviewer.review.adapter.out.metrics
 
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry
 import org.assertj.core.api.Assertions.assertThat

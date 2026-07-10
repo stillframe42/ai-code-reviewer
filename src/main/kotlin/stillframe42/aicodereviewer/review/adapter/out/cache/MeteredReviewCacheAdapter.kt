@@ -2,7 +2,7 @@ package stillframe42.aicodereviewer.review.adapter.out.cache
 
 import org.springframework.stereotype.Component
 import stillframe42.aicodereviewer.common.Logging
-import stillframe42.aicodereviewer.common.metrics.ReviewMetrics
+import stillframe42.aicodereviewer.review.adapter.out.metrics.ReviewMetrics
 import stillframe42.aicodereviewer.review.domain.model.CodeReview
 import stillframe42.aicodereviewer.review.domain.port.out.ReviewCachePort
 import stillframe42.aicodereviewer.review.domain.port.out.ReviewCacheStatsPort

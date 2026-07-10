@@ -11,7 +11,7 @@ import stillframe42.aicodereviewer.agent.domain.exception.AgentException
 import stillframe42.aicodereviewer.agent.domain.exception.AgentUnavailableException
 import stillframe42.aicodereviewer.agent.domain.service.SecurityFileDetector
 import stillframe42.aicodereviewer.common.Logging
-import stillframe42.aicodereviewer.common.metrics.event.ReviewCompletedEvent
+import stillframe42.aicodereviewer.review.domain.model.ReviewCompletedEvent
 import stillframe42.aicodereviewer.core.AiProvider
 import stillframe42.aicodereviewer.github.domain.model.PrFile
 import stillframe42.aicodereviewer.github.domain.model.PrReview

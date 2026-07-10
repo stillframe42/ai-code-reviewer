@@ -1,6 +1,4 @@
-package stillframe42.aicodereviewer.common.metrics.event
-
-import stillframe42.aicodereviewer.review.domain.model.CodeIssue
+package stillframe42.aicodereviewer.review.domain.model
 
 // PR 리뷰 완료 이벤트 — 성공(DONE) 또는 실패(FAILED) 시 발행
 data class ReviewCompletedEvent(
