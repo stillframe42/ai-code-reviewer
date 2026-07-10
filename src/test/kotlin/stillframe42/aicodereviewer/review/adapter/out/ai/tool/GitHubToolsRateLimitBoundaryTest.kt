@@ -10,8 +10,7 @@ import stillframe42.aicodereviewer.integration.AbstractIntegrationTest
 import stillframe42.aicodereviewer.integration.support.WireMockStubs
 import java.time.Instant
 
-// Rate Limit 차단 임계 경계(< 10) 전용 테스트 — GitHubRateLimitChecker 단위 테스트 삭제로 사라진
-// remaining=10 통과 / remaining=9 차단 / 정보 없음 통과 경계 커버리지를 통합 레벨에서 복원한다
+// Rate Limit 차단 임계 경계를 고정한다 — remaining 10 통과 / 9 차단 / 정보 없음 통과
 class GitHubToolsRateLimitBoundaryTest : AbstractIntegrationTest() {
 
     @Autowired
@@ -42,7 +41,7 @@ class GitHubToolsRateLimitBoundaryTest : AbstractIntegrationTest() {
             toolContext = ToolContext(mapOf("installationId" to installationId)),
         )
 
-        assertThat(result).doesNotContain("Rate Limit 임박")
+        assertThat(result).isEqualTo("file content")
     }
 
     @Test
@@ -73,6 +72,6 @@ class GitHubToolsRateLimitBoundaryTest : AbstractIntegrationTest() {
             toolContext = ToolContext(mapOf("installationId" to installationId)),
         )
 
-        assertThat(result).doesNotContain("Rate Limit 임박")
+        assertThat(result).isEqualTo("file content")
     }
 }
