@@ -24,7 +24,8 @@ import stillframe42.aicodereviewer.common.advisor.RetryAdvisor
 import stillframe42.aicodereviewer.common.exception.AiResponseException
 import java.util.UUID
 import stillframe42.aicodereviewer.common.langfuse.LangfuseTraceContextHolder
-import stillframe42.aicodereviewer.common.langfuse.ReviewObservationContextHolder
+import stillframe42.aicodereviewer.common.langfuse.ObservationSessionContext
+import stillframe42.aicodereviewer.common.langfuse.ObservationSessionContextHolder
 import stillframe42.aicodereviewer.core.AiProvider
 import stillframe42.aicodereviewer.review.adapter.out.ai.dto.CodeReviewAiResponse
 import stillframe42.aicodereviewer.review.adapter.out.ai.tool.GitHubTools
@@ -80,7 +81,7 @@ class ReviewAdapter(
         return withTimeout(timeout) {
             withContext(
                 Dispatchers.IO +
-                    ReviewObservationContextHolder.asElement(reviewContext) +
+                    ObservationSessionContextHolder.asElement(reviewContext?.toObservationSessionContext()) +
                     LangfuseTraceContextHolder.asElement(traceId),
             ) {
                 val rawText = buildRequestSpec(code, provider, mode, toolCallCounter, modelName, conventionContext)
@@ -167,6 +168,16 @@ $conventionContext
             "format" to converter.getFormat(),
         )
     }
+
+    // Langfuse metadata 키 계약 — LangfuseObservationHandlerTest 가 이 키/값 형식을 검증한다
+    private fun ReviewContext.toObservationSessionContext() = ObservationSessionContext(
+        sessionId = reviewRequestId.toString(),
+        metadata = mapOf(
+            "review.request.id" to reviewRequestId.toString(),
+            "review.pr.number" to prNumber.toString(),
+            "review.repo" to repoFullName,
+        ),
+    )
 
     companion object {
         // ReviewMode에 따라 전체 타임아웃을 분기한다

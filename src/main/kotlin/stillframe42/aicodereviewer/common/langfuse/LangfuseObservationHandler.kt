@@ -8,7 +8,6 @@ import java.util.IdentityHashMap
 import java.util.UUID
 import org.springframework.ai.chat.observation.ChatModelObservationContext
 import stillframe42.aicodereviewer.common.Logging
-import stillframe42.aicodereviewer.review.domain.model.ReviewContext
 
 // Spring AI LLM 호출 관찰 이벤트를 수신해 Langfuse Trace/Generation으로 기록하는 핸들러
 // Langfuse 전송 실패는 메인 플로우를 중단시키지 않는다
@@ -38,9 +37,9 @@ class LangfuseObservationHandler(
             traceInfoMap[context] = TraceInfo(traceId, generationId, startTime)
             // (LangfuseTraceContextHolder.set 호출 불필요 — 코루틴 컨텍스트가 이미 설정됨)
 
-            val reviewContext = ReviewObservationContextHolder.local.get()
-            val metadata = buildMetadata(reviewContext)
-            val sessionId = reviewContext?.reviewRequestId?.toString()
+            val sessionContext = ObservationSessionContextHolder.local.get()
+            val metadata = sessionContext?.metadata ?: emptyMap()
+            val sessionId = sessionContext?.sessionId
 
             // trace-create + generation-create를 한 번의 배치로 전송
             // 같은 traceId가 이미 있으면 trace-create는 Langfuse에서 멱등 처리됨
@@ -103,14 +102,6 @@ class LangfuseObservationHandler(
             logger.warn("[LANGFUSE] onError 전송 실패 (무시): {}", e.message)
         }
     }
-
-    // ReviewContext → Langfuse metadata Map 변환
-    private fun buildMetadata(reviewContext: ReviewContext?): Map<String, String> =
-        if (reviewContext != null) mapOf(
-            "review.request.id" to reviewContext.reviewRequestId.toString(),
-            "review.pr.number" to reviewContext.prNumber.toString(),
-            "review.repo" to reviewContext.repoFullName,
-        ) else emptyMap()
 
     private fun buildTraceCreate(
         traceId: String,

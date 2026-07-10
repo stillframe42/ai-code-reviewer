@@ -12,7 +12,6 @@ import org.mockito.Mockito.times
 import org.mockito.Mockito.verify
 import org.mockito.Mockito.`when`
 import org.springframework.ai.chat.observation.ChatModelObservationContext
-import stillframe42.aicodereviewer.review.domain.model.ReviewContext
 
 // LangfuseObservationHandler 단위 테스트 — Spring 컨텍스트 없이 직접 호출
 class LangfuseObservationHandlerTest {
@@ -24,14 +23,14 @@ class LangfuseObservationHandlerTest {
     fun setUp() {
         langfuseClient = mock(LangfuseClient::class.java)
         handler = LangfuseObservationHandler(langfuseClient)
-        ReviewObservationContextHolder.local.remove()
+        ObservationSessionContextHolder.local.remove()
         LangfuseTraceContextHolder.clear()
     }
 
     @AfterEach
     fun tearDown() {
         LangfuseTraceContextHolder.clear()
-        ReviewObservationContextHolder.local.remove()
+        ObservationSessionContextHolder.local.remove()
     }
 
     @Test
@@ -84,9 +83,16 @@ class LangfuseObservationHandlerTest {
 
     @Test
     @Suppress("UNCHECKED_CAST")
-    fun `ReviewContext가 있으면 trace-create 이벤트 metadata에 포함된다`() {
-        ReviewObservationContextHolder.local.set(
-            ReviewContext(reviewRequestId = 42L, prNumber = 7, repoFullName = "owner/repo")
+    fun `세션 컨텍스트가 있으면 trace-create 이벤트 metadata에 포함된다`() {
+        ObservationSessionContextHolder.local.set(
+            ObservationSessionContext(
+                sessionId = "42",
+                metadata = mapOf(
+                    "review.request.id" to "42",
+                    "review.pr.number" to "7",
+                    "review.repo" to "owner/repo",
+                ),
+            )
         )
         val context = mock(ChatModelObservationContext::class.java)
 
@@ -111,9 +117,16 @@ class LangfuseObservationHandlerTest {
 
     @Test
     @Suppress("UNCHECKED_CAST")
-    fun `ReviewContext가 있으면 trace-create body 에 sessionId가 reviewRequestId 문자열로 부착된다`() {
-        ReviewObservationContextHolder.local.set(
-            ReviewContext(reviewRequestId = 42L, prNumber = 7, repoFullName = "owner/repo")
+    fun `세션 컨텍스트가 있으면 trace-create body 에 sessionId가 reviewRequestId 문자열로 부착된다`() {
+        ObservationSessionContextHolder.local.set(
+            ObservationSessionContext(
+                sessionId = "42",
+                metadata = mapOf(
+                    "review.request.id" to "42",
+                    "review.pr.number" to "7",
+                    "review.repo" to "owner/repo",
+                ),
+            )
         )
         val context = mock(ChatModelObservationContext::class.java)
 
@@ -133,7 +146,7 @@ class LangfuseObservationHandlerTest {
 
     @Test
     @Suppress("UNCHECKED_CAST")
-    fun `ReviewContext가 없으면 trace-create body 에 sessionId 키가 없다`() {
+    fun `세션 컨텍스트가 없으면 trace-create body 에 sessionId 키가 없다`() {
         val context = mock(ChatModelObservationContext::class.java)
 
         var capturedBatch: List<Map<String, Any>>? = null
