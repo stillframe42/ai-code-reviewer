@@ -13,20 +13,18 @@ import org.springframework.stereotype.Component
 import org.springframework.web.reactive.function.client.WebClientResponseException
 import stillframe42.aicodereviewer.common.Logging
 import stillframe42.aicodereviewer.common.langfuse.LangfuseTraceContextHolder
-import stillframe42.aicodereviewer.github.adapter.out.github.client.GitHubHttpClient
-import stillframe42.aicodereviewer.github.adapter.out.github.dto.DirectoryEntryResponse
-import stillframe42.aicodereviewer.github.adapter.out.github.ratelimit.GitHubRateLimitChecker
-import stillframe42.aicodereviewer.github.domain.port.out.GitHubTokenPort
+import stillframe42.aicodereviewer.github.domain.model.RepositoryEntry
+import stillframe42.aicodereviewer.github.domain.model.RepositoryEntryType
+import stillframe42.aicodereviewer.github.domain.port.out.GitHubContentPort
+import stillframe42.aicodereviewer.github.domain.port.out.GitHubRateLimitPort
 import stillframe42.aicodereviewer.review.domain.port.out.ToolObservationPort
-import java.util.Base64
 import java.util.concurrent.atomic.AtomicInteger
 
 @Component
 class GitHubTools(
-    private val gitHubHttpClient: GitHubHttpClient,
-    private val tokenPort: GitHubTokenPort,
+    private val contentPort: GitHubContentPort,
+    private val rateLimitPort: GitHubRateLimitPort,
     private val toolCallLogger: ToolCallLogger,
-    private val rateLimitChecker: GitHubRateLimitChecker,
     private val toolObservationPort: ToolObservationPort,
 ) : Logging {
 
@@ -41,9 +39,8 @@ class GitHubTools(
         toolName = "getFileContent",
         argsLog = "repo=$repositoryFullName, path=$path, ref=$ref",
         notFoundMessage = "파일을 찾을 수 없습니다: $path (ref=$ref)",
-    ) { token, installationId ->
-        gitHubHttpClient.fetchFileContent(repositoryFullName, path, ref, token, installationId)
-            .let { Base64.getMimeDecoder().decode(it.content).toString(Charsets.UTF_8) }
+    ) { installationId ->
+        contentPort.getFileContent(repositoryFullName, path, ref, installationId)
     }
 
     @Tool(description = "리뷰 중인 파일과 관련된 다른 파일을 조회합니다")
@@ -57,12 +54,12 @@ class GitHubTools(
         toolName = "getRelatedFile",
         argsLog = "repo=$repositoryFullName, filePath=$filePath, ref=$ref",
         notFoundMessage = "디렉토리를 찾을 수 없습니다: ${filePath.substringBeforeLast("/", missingDelimiterValue = "(루트)")}",
-    ) { token, installationId ->
+    ) { installationId ->
         val sameDir = filePath.substringBeforeLast("/", missingDelimiterValue = "")
         val parentDir = sameDir.substringBeforeLast("/", missingDelimiterValue = "")
-        val sameDirJob = async { gitHubHttpClient.fetchDirectoryContents(repositoryFullName, sameDir, ref, token, installationId) }
+        val sameDirJob = async { contentPort.getDirectoryEntries(repositoryFullName, sameDir, ref, installationId) }
         val parentDirJob = if (sameDir != parentDir) {
-            async { gitHubHttpClient.fetchDirectoryContents(repositoryFullName, parentDir, ref, token, installationId) }
+            async { contentPort.getDirectoryEntries(repositoryFullName, parentDir, ref, installationId) }
         } else null
         formatRelatedFiles(filePath, sameDir, sameDirJob.await(), parentDir, parentDirJob?.await())
     }
@@ -77,10 +74,10 @@ class GitHubTools(
         toolName = "getPRDescription",
         argsLog = "repo=$repositoryFullName, prNumber=$prNumber",
         notFoundMessage = "PR을 찾을 수 없습니다: #$prNumber",
-    ) { token, installationId ->
-        val response = gitHubHttpClient.fetchPrDescription(repositoryFullName, prNumber, token, installationId)
-        val body = response.body?.takeIf { it.isNotBlank() } ?: "(설명 없음)"
-        "제목: ${response.title}\n설명: $body"
+    ) { installationId ->
+        val description = contentPort.getPrDescription(repositoryFullName, prNumber, installationId)
+        val body = description.body?.takeIf { it.isNotBlank() } ?: "(설명 없음)"
+        "제목: ${description.title}\n설명: $body"
     }
 
     @Tool(description = "해당 파일의 최근 커밋 이력 최대 5건을 가져옵니다")
@@ -93,24 +90,23 @@ class GitHubTools(
         toolName = "getFileHistory",
         argsLog = "repo=$repositoryFullName, filePath=$filePath",
         notFoundMessage = "파일을 찾을 수 없습니다: $filePath",
-    ) { token, installationId ->
-        val commits = gitHubHttpClient.fetchFileCommitHistory(repositoryFullName, filePath, token, installationId)
+    ) { installationId ->
+        val commits = contentPort.getFileCommitHistory(repositoryFullName, filePath, installationId)
         if (commits.isEmpty()) return@executeToolCall "커밋 이력이 없습니다: $filePath"
         commits.mapIndexed { index, commit ->
             val shortSha = commit.sha.take(7)
-            val message = commit.commit.message.lines().first()
-            val author = commit.commit.author.name
-            val date = commit.commit.author.date.take(10)
-            "[${index + 1}] $shortSha — $message\n    작성자: $author | $date"
+            val message = commit.message.lines().first()
+            val date = commit.date.take(10)
+            "[${index + 1}] $shortSha — $message\n    작성자: ${commit.authorName} | $date"
         }.joinToString("\n")
     }
 
     private fun formatRelatedFiles(
         filePath: String,
         sameDir: String,
-        sameDirEntries: List<DirectoryEntryResponse>,
+        sameDirEntries: List<RepositoryEntry>,
         parentDir: String,
-        parentDirEntries: List<DirectoryEntryResponse>?,
+        parentDirEntries: List<RepositoryEntry>?,
     ): String = buildString {
         appendDirectorySection("[같은 디렉토리: ${sameDir.ifEmpty { "(루트)" }}]", sameDirEntries, filePath)
         parentDirEntries?.let {
@@ -121,11 +117,11 @@ class GitHubTools(
 
     private fun StringBuilder.appendDirectorySection(
         label: String,
-        entries: List<DirectoryEntryResponse>,
+        entries: List<RepositoryEntry>,
         excludePath: String,
     ) {
         appendLine(label)
-        val files = entries.filter { it.type == "file" && it.path != excludePath }
+        val files = entries.filter { it.type == RepositoryEntryType.FILE && it.path != excludePath }
         if (files.isEmpty()) appendLine("(파일 없음)")
         else files.forEach { appendLine("- ${it.path}") }
     }
@@ -136,10 +132,10 @@ class GitHubTools(
         toolName: String,
         argsLog: String,
         notFoundMessage: String,
-        block: suspend CoroutineScope.(token: String, installationId: Long) -> String,
+        block: suspend CoroutineScope.(installationId: Long) -> String,
     ): String {
         val installationId = toolContext.installationId()
-        rateLimitChecker.checkOrNull(installationId)?.let { return it }
+        rateLimitGuardMessage(installationId)?.let { return it }
 
         // Tool 호출 횟수 추적 — Simple 모드에서는 카운터가 없으므로 null 허용
         val counter = toolContext.toolCallCounter()
@@ -163,6 +159,14 @@ class GitHubTools(
         }
     }
 
+    // 잔여량이 임계값 미만이면 LLM에 반환할 안내 메시지를 생성한다 — 카운터 소모 없는 조기 반환용
+    private fun rateLimitGuardMessage(installationId: Long): String? {
+        val rateLimit = rateLimitPort.currentRateLimit(installationId) ?: return null
+        return if (rateLimit.remaining < RATE_LIMIT_MIN_REMAINING) {
+            "GitHub API Rate Limit 임박: ${rateLimit.remaining}건 남음, ${rateLimit.resetAt} 초기화 예정"
+        } else null
+    }
+
     // Span 생명주기 관리 + 실제 실행 + 에러 메시지 변환
     // CoroutineScope 수신자: getRelatedFile의 async { } 호출을 위해 block에 CoroutineScope를 전달한다
     private suspend fun CoroutineScope.executeInSpan(
@@ -171,14 +175,13 @@ class GitHubTools(
         count: Int,
         notFoundMessage: String,
         installationId: Long,
-        block: suspend CoroutineScope.(token: String, installationId: Long) -> String,
+        block: suspend CoroutineScope.(installationId: Long) -> String,
     ): String {
         logger.info("{} 호출 ({}번째): {}", toolName, count, argsLog)
         val spanId = toolObservationPort.startSpan(toolName, mapOf("args" to argsLog, "count" to count))
         return runCatching {
-            val token = tokenPort.getInstallationToken(installationId)
             withTimeout(TOOL_CALL_TIMEOUT) {
-                block(token, installationId)
+                block(installationId)
             }
         }.onSuccess { result ->
             // Span은 추적용이므로 대용량 파일 내용 전송 방지를 위해 500자로 제한
@@ -206,6 +209,7 @@ class GitHubTools(
     companion object {
         private const val MAX_TOOL_CALLS = 5           // 최대 Tool 호출 횟수 — 테스트 후 조정 예정
         private const val WARN_TOOL_CALLS = 3          // 경고 로그 임계값
+        private const val RATE_LIMIT_MIN_REMAINING = 10
         private val TOOL_CALL_TIMEOUT = 10.seconds     // Tool 호출 당 타임아웃 (GitHub API hang 방지)
     }
 }
