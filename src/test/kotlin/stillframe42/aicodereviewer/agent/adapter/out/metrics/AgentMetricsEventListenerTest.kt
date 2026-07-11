@@ -3,7 +3,6 @@ package stillframe42.aicodereviewer.agent.adapter.out.metrics
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
-import stillframe42.aicodereviewer.agent.application.AgentFallbackMetrics
 import stillframe42.aicodereviewer.agent.domain.model.AgentFallbackEvent
 
 class AgentMetricsEventListenerTest {
