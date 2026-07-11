@@ -1,5 +1,7 @@
 # ai-code-reviewer
 
+[![CI](https://github.com/stillframe42/ai-code-reviewer/actions/workflows/ci.yml/badge.svg)](https://github.com/stillframe42/ai-code-reviewer/actions/workflows/ci.yml)
+
 > Spring Boot 4.0.3 + Kotlin + Spring AI 기반의 AI 코드 리뷰 자동화 시스템
 
 ---
