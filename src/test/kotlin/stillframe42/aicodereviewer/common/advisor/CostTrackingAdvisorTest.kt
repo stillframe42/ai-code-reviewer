@@ -19,7 +19,7 @@ import stillframe42.aicodereviewer.common.port.CostLogEntry
 import stillframe42.aicodereviewer.common.port.CostLogPort
 import stillframe42.aicodereviewer.config.LlmCostProperties
 
-// RetryAdvisorTest와 같은 평문 단위 테스트 패턴 — 비용 계산·저장 로직을 fake 포트로 검증
+// 평문 단위 테스트 — 비용 계산·저장 로직을 fake 포트로 검증
 class CostTrackingAdvisorTest {
 
     private val savedEntries = mutableListOf<CostLogEntry>()

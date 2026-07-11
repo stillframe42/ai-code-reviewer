@@ -11,7 +11,6 @@ import stillframe42.aicodereviewer.chat.domain.port.out.AiChatPort
 import stillframe42.aicodereviewer.common.AiPromptBuilder
 import stillframe42.aicodereviewer.common.advisor.CostTrackingAdvisor
 import stillframe42.aicodereviewer.common.advisor.LoggingAdvisor
-import stillframe42.aicodereviewer.common.advisor.RetryAdvisor
 import stillframe42.aicodereviewer.common.exception.AiResponseException
 import stillframe42.aicodereviewer.core.AiProvider
 
@@ -20,7 +19,6 @@ import stillframe42.aicodereviewer.core.AiProvider
 class ChatAdapter(
     private val promptBuilder: AiPromptBuilder,
     private val loggingAdvisor: LoggingAdvisor,
-    private val retryAdvisor: RetryAdvisor,
     private val costTrackingAdvisor: CostTrackingAdvisor,
 
     @param:Value("\${app.prompt.chat-system}")
@@ -35,14 +33,14 @@ class ChatAdapter(
         // Spring AI blocking HTTP 호출을 IO 디스패처에서 격리 실행
         withContext(Dispatchers.IO) {
             promptBuilder.build(systemPromptResource, userPromptResource, buildVariables(message, conventionContext), provider)
-                .advisors(loggingAdvisor, retryAdvisor, costTrackingAdvisor)
+                .advisors(loggingAdvisor, costTrackingAdvisor)
                 .call()
                 .content()
                 ?: throw AiResponseException("AI로부터 응답을 받지 못했습니다")
         }
 
     // Spring AI streaming 호출: Flux<String> → Flow<String> 변환 (kotlinx-coroutines-reactor)
-    // RetryAdvisor, CostTrackingAdvisor는 CallAdvisor만 구현하므로 스트리밍에서는 제외
+    // CostTrackingAdvisor는 CallAdvisor만 구현하므로 스트리밍에서는 제외
     override fun streamChat(message: String, provider: AiProvider, conventionContext: String?): Flow<String> =
         promptBuilder.build(systemPromptResource, userPromptResource, buildVariables(message, conventionContext), provider)
             .advisors(loggingAdvisor)
