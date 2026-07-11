@@ -58,14 +58,14 @@ spring:
     anthropic:
       api-key: ${anthropic.api-key}
       chat:
-        options:
-          model: claude-haiku-4-5-20251001
-          max-tokens: 4096
+        model: claude-haiku-4-5-20251001
+        max-tokens: 4096
+        # 2.0 GA 가 프레임워크 기본 temperature(0.7)를 제거 — 마이그레이션 전 실효값을 명시해 동작 보존
+        temperature: 0.7
     openai:
       api-key: ${openai.api-key}
       chat:
-        options:
-          max-tokens: 4096
+        max-tokens: 4096
+        temperature: 0.7
       embedding:
-        options:
-          model: text-embedding-3-small
+        model: text-embedding-3-small

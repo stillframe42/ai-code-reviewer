@@ -61,6 +61,8 @@ dependencies {
 
     // Kotlin
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
+    // Spring AI 2.0 의 BeanOutputConverter(Jackson 3)가 Kotlin data class 를 역직렬화하기 위해 필요
+    implementation("tools.jackson.module:jackson-module-kotlin")
     implementation("org.jetbrains.kotlin:kotlin-reflect")
 
     // Coroutines
@@ -90,7 +92,7 @@ dependencies {
 
 dependencyManagement {
     imports {
-        mavenBom("org.springframework.ai:spring-ai-bom:2.0.0-M2")
+        mavenBom("org.springframework.ai:spring-ai-bom:2.0.0")
     }
 }
 

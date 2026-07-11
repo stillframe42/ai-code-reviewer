@@ -63,7 +63,8 @@ abstract class AbstractIntegrationTest {
             registry.add("github.api.base-url") { "http://localhost:${wireMock.port()}" }
             // Spring AI (Anthropic + OpenAI) → WireMock
             registry.add("spring.ai.anthropic.base-url") { "http://localhost:${wireMock.port()}" }
-            registry.add("spring.ai.openai.base-url") { "http://localhost:${wireMock.port()}" }
+            // openai-java SDK 는 base-url 에 /v1 이 포함되는 규약 (경로에는 /embeddings 만 붙임) — 스텁 경로(/v1/*)와 정렬
+            registry.add("spring.ai.openai.base-url") { "http://localhost:${wireMock.port()}/v1" }
             // Langfuse API → WireMock
             registry.add("langfuse.host") { "http://localhost:${wireMock.port()}" }
             // Remote Agent → WireMock

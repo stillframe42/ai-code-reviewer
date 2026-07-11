@@ -188,7 +188,7 @@ class ConventionChunkingExperimentUpdateTest {
 
         return runCatching {
             val content = chatClient.prompt()
-                .options(OpenAiChatOptions.builder().model("gpt-4o-mini").build())
+                .options(OpenAiChatOptions.builder().model("gpt-4o-mini"))
                 .user(prompt)
                 .call()
                 .content()

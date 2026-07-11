@@ -110,8 +110,7 @@ class EvaluationAdapter(
                 .options(
                     OpenAiChatOptions.builder()
                         .model(evaluationProperties.model)
-                        .temperature(0.0)
-                        .build(),
+                        .temperature(0.0),
                 )
                 .call()
                 .content()

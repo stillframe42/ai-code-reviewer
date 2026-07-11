@@ -1,9 +1,5 @@
 package stillframe42.aicodereviewer.review.adapter.out.ai
 
-import com.fasterxml.jackson.core.JsonParser
-import com.fasterxml.jackson.databind.DeserializationFeature
-import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
@@ -20,7 +16,6 @@ import stillframe42.aicodereviewer.common.AiPromptBuilder
 import stillframe42.aicodereviewer.common.Logging
 import stillframe42.aicodereviewer.common.advisor.CostTrackingAdvisor
 import stillframe42.aicodereviewer.common.advisor.LoggingAdvisor
-import stillframe42.aicodereviewer.common.advisor.RetryAdvisor
 import stillframe42.aicodereviewer.common.exception.AiResponseException
 import java.util.UUID
 import stillframe42.aicodereviewer.common.langfuse.LangfuseTraceContextHolder
@@ -33,6 +28,10 @@ import stillframe42.aicodereviewer.review.domain.model.CodeReview
 import stillframe42.aicodereviewer.review.domain.model.ReviewContext
 import stillframe42.aicodereviewer.review.domain.model.ReviewMode
 import stillframe42.aicodereviewer.review.domain.port.out.AiReviewPort
+import tools.jackson.core.json.JsonReadFeature
+import tools.jackson.databind.DeserializationFeature
+import tools.jackson.databind.json.JsonMapper
+import tools.jackson.module.kotlin.kotlinModule
 
 // Spring AI 기반 코드 리뷰 출력 어댑터 — AiReviewPort 구현체
 @Component
@@ -40,7 +39,6 @@ class ReviewAdapter(
     private val promptBuilder: AiPromptBuilder,
     private val gitHubTools: GitHubTools,
     private val loggingAdvisor: LoggingAdvisor,
-    private val retryAdvisor: RetryAdvisor,
     private val costTrackingAdvisor: CostTrackingAdvisor,
 
     @param:Value("\${app.prompt.review-system}")
@@ -49,16 +47,6 @@ class ReviewAdapter(
     @param:Value("classpath:prompts/review/review-user.st")
     private val userPromptResource: Resource,
 ) : AiReviewPort, Logging {
-
-    // LLM이 Kotlin/Shell 코드의 $ 앞에 \를 붙이는 경우가 있어 \$ → $ 전처리 허용
-    // Kotlin data class 역직렬화를 위해 KotlinModule 등록 필수
-    private val lenientMapper = ObjectMapper().apply {
-        registerKotlinModule()
-        configure(JsonParser.Feature.ALLOW_BACKSLASH_ESCAPING_ANY_CHARACTER, true)
-        // AI가 알 수 없는 필드(title, suggestions 등)를 포함하는 경우 무시
-        configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
-    }
-    private val converter = BeanOutputConverter(CodeReviewAiResponse::class.java, lenientMapper)
 
     // toolCallCounter: 요청별 독립 생성 — 병렬 리뷰 시 파일별로 카운터가 분리됨
     override suspend fun reviewCode(
@@ -90,7 +78,7 @@ class ReviewAdapter(
                     ?: throw AiResponseException("AI로부터 빈 응답을 받았습니다")
                 // AI가 preamble 텍스트나 마크다운 코드 펜스를 포함하는 경우 대비
                 val jsonText = extractJson(rawText)
-                converter.convert(jsonText)
+                reviewResponseConverter.convert(jsonText)
                     .toDomain()
                     .copy(toolCallCount = toolCallCounter.get())
             }
@@ -129,11 +117,11 @@ class ReviewAdapter(
             buildVariables(code, conventionContext),
             provider,
         )
-            .advisors(loggingAdvisor, retryAdvisor, costTrackingAdvisor)
+            .advisors(loggingAdvisor, costTrackingAdvisor)
             .let { spec ->
                 // modelName이 지정된 경우 ChatClient 기본 모델을 오버라이드
                 if (modelName != null)
-                    spec.options(AnthropicChatOptions.builder().model(modelName).build())
+                    spec.options(AnthropicChatOptions.builder().model(modelName))
                 else spec
             }
             .let { baseSpec ->
@@ -165,7 +153,7 @@ $conventionContext
         return mapOf(
             "code" to code,
             "convention_section" to conventionSection,
-            "format" to converter.getFormat(),
+            "format" to reviewResponseConverter.getFormat(),
         )
     }
 
@@ -187,3 +175,16 @@ $conventionContext
         private val TOOL_TIMEOUT: Duration = 180.seconds
     }
 }
+
+// LLM이 Kotlin/Shell 코드의 $ 앞에 \를 붙이는 경우가 있어 \$ → $ 전처리 허용
+// Kotlin data class 역직렬화를 위해 KotlinModule 등록 필수
+// AI가 알 수 없는 필드(title, suggestions 등)를 포함하는 경우 무시 (Jackson 3 기본값이지만 계약으로 명시)
+// 파일 레벨 internal — CodeReviewAiResponseParsingTest 가 운영과 동일한 인스턴스로 lenient 계약을 검증한다
+internal val reviewResponseConverter: BeanOutputConverter<CodeReviewAiResponse> = BeanOutputConverter(
+    CodeReviewAiResponse::class.java,
+    JsonMapper.builder()
+        .addModule(kotlinModule())
+        .enable(JsonReadFeature.ALLOW_BACKSLASH_ESCAPING_ANY_CHARACTER)
+        .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
+        .build(),
+)

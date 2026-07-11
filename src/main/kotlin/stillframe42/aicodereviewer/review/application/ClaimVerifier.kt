@@ -34,7 +34,7 @@ class ClaimVerifier(
                 chatClient.prompt()
                     .system(prompt)
                     .user("위 지침에 따라 검증하고 JSON으로 응답하세요.")
-                    .options(AnthropicChatOptions.builder().temperature(0.0).build())
+                    .options(AnthropicChatOptions.builder().temperature(0.0))
                     .call()
                     .content()
                     ?.trim()
