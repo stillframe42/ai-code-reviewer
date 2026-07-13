@@ -91,13 +91,7 @@ class EvaluationSweepIT {
     private val sweepResultsDir = File("plans/202604-3w/sweep-results").also { it.mkdirs() }
 
     // 골든 데이터셋 로드 — 20개 케이스
-    protected fun loadGoldenCases(): List<GoldenCase> {
-        val json = javaClass.classLoader
-            .getResourceAsStream("fixtures/evaluation/golden-dataset.json")!!
-            .bufferedReader().readText()
-        val root = objectMapper.readTree(json)
-        return objectMapper.readValue(root["cases"].toString())
-    }
+    protected fun loadGoldenCases(): List<GoldenCase> = GoldenDatasetLoader.load()
 
     // 단일 sweep run 결과를 JSON 파일에 incremental append
     protected fun writeRunResult(
