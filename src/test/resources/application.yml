@@ -48,15 +48,16 @@ spring:
 
   # 환경변수가 있으면 실제 키 사용, 없으면 더미 키 폴백 (실제 AI 호출 스킵됨)
   # application-ai.yml을 import하지 않으므로 모델 설정을 여기서 명시 (미설정 시 Spring AI 기본값 사용)
+  # 키 구조는 main application-ai.yml 과 동기화 필요 — GA 평탄화 형식 (.options 세그먼트 없음)
   ai:
     anthropic:
       api-key: ${ANTHROPIC_API_KEY:test-dummy-key}
       chat:
-        options:
-          model: claude-haiku-4-5-20251001
-          max-tokens: 4096
+        model: claude-haiku-4-5-20251001
+        max-tokens: 4096
+        temperature: 0.7
     openai:
       api-key: ${OPENAI_API_KEY:test-dummy-key}
       chat:
-        options:
-          max-tokens: 4096
+        max-tokens: 4096
+        temperature: 0.7

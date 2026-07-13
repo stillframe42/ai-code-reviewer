@@ -50,7 +50,8 @@ class ReviewQualityComparisonTest {
             registry.add("spring.datasource.password") { pg.password }
             registry.add("github.api.base-url") { "http://localhost:${wm.port()}" }
             registry.add("spring.ai.anthropic.base-url") { "http://localhost:${wm.port()}" }
-            registry.add("spring.ai.openai.base-url") { "http://localhost:${wm.port()}" }
+            // openai-java SDK 는 base-url 에 /v1 이 포함되는 규약 — 스텁 경로(/v1/*)와 정렬
+            registry.add("spring.ai.openai.base-url") { "http://localhost:${wm.port()}/v1" }
             val appId = System.getenv("GITHUB_APP_ID") ?: "0"
             registry.add("github.app.app-id") { appId }
         }

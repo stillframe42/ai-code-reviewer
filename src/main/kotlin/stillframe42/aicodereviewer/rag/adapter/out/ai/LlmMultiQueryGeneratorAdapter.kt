@@ -31,7 +31,7 @@ class LlmMultiQueryGeneratorAdapter(
                 chatClient.prompt()
                     .system(prompt)
                     .user("위 지침에 따라 변형을 생성하세요.")
-                    .options(AnthropicChatOptions.builder().temperature(0.0).build())
+                    .options(AnthropicChatOptions.builder().temperature(0.0))
                     .call()
                     .content()
                     ?.trim()

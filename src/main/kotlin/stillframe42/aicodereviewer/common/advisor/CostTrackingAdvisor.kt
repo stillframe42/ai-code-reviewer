@@ -32,7 +32,8 @@ class CostTrackingAdvisor(
 
     override fun getName(): String = "CostTrackingAdvisor"
 
-    // LoggingAdvisor(HIGHEST_PRECEDENCE), RetryAdvisor(HIGHEST_PRECEDENCE+1) 다음에 실행
+    // LoggingAdvisor(HIGHEST_PRECEDENCE) 다음, 자동 등록되는 ToolCallingAdvisor(HIGHEST+300)보다 바깥에 위치
+    // — tool loop 전체가 안쪽에서 돌므로 이 advisor 는 최종 교환 1회의 usage 만 관찰한다
     // LOWEST_PRECEDENCE(Integer.MAX_VALUE)는 Spring AI 내부 advisor와 충돌 가능성이 있어 사용하지 않는다
     override fun getOrder(): Int = order
 

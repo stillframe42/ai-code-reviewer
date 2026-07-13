@@ -24,7 +24,8 @@ data class CodeIssueAiResponse(
     val line: Int?,
 
     // AI가 "severity" 대신 "level" 필드명을 사용하는 경우를 대비해 alias 추가
-    @field:JsonAlias("level")
+    // Jackson 3 는 생성자 기반 역직렬화에서 field 타겟 alias 를 병합하지 않으므로 param 타겟 필수
+    @param:JsonAlias("level")
     @field:JsonPropertyDescription("이슈 심각도: CRITICAL(운영 장애/보안 취약점), MAJOR(잠재적 버그/성능 저하), MINOR(컨벤션/가독성), SUGGESTION(선택적 개선)")
     val severity: String = "MINOR",
 

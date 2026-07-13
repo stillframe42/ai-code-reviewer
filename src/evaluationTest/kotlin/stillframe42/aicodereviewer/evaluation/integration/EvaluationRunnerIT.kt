@@ -1,7 +1,5 @@
 package stillframe42.aicodereviewer.evaluation.integration
 
-import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.module.kotlin.readValue
 import kotlinx.coroutines.runBlocking
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
@@ -81,20 +79,12 @@ class EvaluationRunnerIT {
     @Autowired
     private lateinit var conventionIndexUseCase: ConventionIndexUseCase
 
-    @Autowired
-    private lateinit var objectMapper: ObjectMapper
-
     @Test
     fun `골든 데이터셋 20개 케이스 일괄 평가 실행`() = runBlocking {
         // 벡터 스토어에 컨벤션 문서 인덱싱 — 테스트 환경에서는 WireMock으로 인해 자동 인덱싱 실패하므로 수동 실행
         conventionIndexUseCase.reindex()
 
-        val json = javaClass.classLoader
-            .getResourceAsStream("fixtures/evaluation/golden-dataset.json")!!
-            .bufferedReader().readText()
-
-        val root = objectMapper.readTree(json)
-        val cases: List<GoldenCase> = objectMapper.readValue(root["cases"].toString())
+        val cases: List<GoldenCase> = GoldenDatasetLoader.load()
 
         // production RagProperties default 와 동일한 값을 명시 전달
         val results = evaluationUseCase.evaluateAll(cases, topK = 3, threshold = 0.7)
