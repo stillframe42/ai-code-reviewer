@@ -1,9 +1,5 @@
 package stillframe42.aicodereviewer.common.observability
 
-import kotlin.coroutines.CoroutineContext
-import kotlin.coroutines.EmptyCoroutineContext
-import kotlinx.coroutines.asContextElement
-import kotlinx.coroutines.test.runTest
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
@@ -11,7 +7,7 @@ import org.junit.jupiter.api.Test
 class WithSpanTest {
 
     @Test
-    fun `정상 완료 시 endSpan이 호출되고 결과가 반환된다`() = runTest {
+    fun `정상 완료 시 endSpan이 호출되고 결과가 반환된다`() {
         val recorder = RecordingObservabilityAdapter()
 
         val result = recorder.withSpan("test.span", mapOf("key" to "value")) { "hello" }
@@ -24,14 +20,12 @@ class WithSpanTest {
     }
 
     @Test
-    fun `예외 발생 시 endSpanWithError가 호출되고 예외가 재전파된다`() = runTest {
+    fun `예외 발생 시 endSpanWithError가 호출되고 예외가 재전파된다`() {
         val recorder = RecordingObservabilityAdapter()
 
         assertThatThrownBy {
-            kotlinx.coroutines.runBlocking {
-                recorder.withSpan<Nothing>("fail.span") {
-                    throw IllegalStateException("test error")
-                }
+            recorder.withSpan<Nothing>("fail.span") {
+                throw IllegalStateException("test error")
             }
         }.isInstanceOf(IllegalStateException::class.java)
 
@@ -42,7 +36,7 @@ class WithSpanTest {
     }
 
     @Test
-    fun `outputMapper로 결과를 output에 매핑한다`() = runTest {
+    fun `outputMapper로 결과를 output에 매핑한다`() {
         val recorder = RecordingObservabilityAdapter()
 
         recorder.withSpan(
@@ -55,7 +49,7 @@ class WithSpanTest {
     }
 
     @Test
-    fun `중첩된 withSpan 안에서 시작된 자식 span 은 부모 spanId 를 활성 부모로 인식한다`() = runTest {
+    fun `중첩된 withSpan 안에서 시작된 자식 span 은 부모 spanId 를 활성 부모로 인식한다`() {
         val recorder = RecordingObservabilityAdapter()
 
         recorder.withSpan("parent.span") {
@@ -65,6 +59,18 @@ class WithSpanTest {
         assertThat(recorder.started.map { it.first }).containsExactly("parent.span", "child.span")
         assertThat(recorder.parentSpanIdsAtStart[0]).isNull()
         assertThat(recorder.parentSpanIdsAtStart[1]).isEqualTo("test-span-1")
+    }
+
+    @Test
+    fun `parent span 종료 후 활성 span 이 이전 값으로 복원된다`() {
+        val recorder = RecordingObservabilityAdapter()
+
+        recorder.withSpan("parent.span") {
+            recorder.withSpan("child.span") { "result" }
+            assertThat(recorder.currentSpanId()).isEqualTo("test-span-1")
+        }
+
+        assertThat(recorder.currentSpanId()).isNull()
     }
 }
 
@@ -76,9 +82,11 @@ class RecordingObservabilityAdapter : ObservabilityPort {
 
     private val activeSpanId: ThreadLocal<String?> = ThreadLocal.withInitial { null }
 
-    override fun spanContext(spanId: String): CoroutineContext =
-        if (spanId.isEmpty()) EmptyCoroutineContext
-        else activeSpanId.asContextElement(spanId)
+    override fun currentSpanId(): String? = activeSpanId.get()
+
+    override fun activateSpan(spanId: String?) {
+        if (spanId == null) activeSpanId.remove() else activeSpanId.set(spanId)
+    }
 
     override fun startSpan(name: String, input: Map<String, Any>, metadata: Map<String, Any>): SpanHandle {
         started.add(name to input)
