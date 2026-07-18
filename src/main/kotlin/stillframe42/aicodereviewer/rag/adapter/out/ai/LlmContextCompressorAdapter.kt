@@ -1,8 +1,5 @@
 package stillframe42.aicodereviewer.rag.adapter.out.ai
 
-import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import org.springframework.ai.chat.client.ChatClient
 import org.springframework.ai.openai.OpenAiChatOptions
 import org.springframework.ai.tokenizer.JTokkitTokenCountEstimator
@@ -31,7 +28,7 @@ class LlmContextCompressorAdapter(
     // cl100k_base 토큰 카운터 — 압축 임계값 판정용
     private val tokenEstimator: TokenCountEstimator = JTokkitTokenCountEstimator()
 
-    override suspend fun compress(
+    override fun compress(
         query: String,
         documents: List<RagDocument>,
     ): List<RagDocument> {
@@ -63,7 +60,7 @@ class LlmContextCompressorAdapter(
     }
 
     // 단일 청크 압축 — 임계값 이하면 우회, 초과면 LLM 호출, 실패 시 원본 fallback, 빈/NONE 결과는 null
-    private suspend fun compressOne(query: String, doc: RagDocument): RagDocument? {
+    private fun compressOne(query: String, doc: RagDocument): RagDocument? {
         val text = doc.text
         if (text.isBlank()) return null
         val tokens = tokenEstimator.estimate(text)
@@ -72,15 +69,13 @@ class LlmContextCompressorAdapter(
         if (tokens <= properties.compressionThresholdTokens) return doc
 
         return runCatching {
-            val compressed = withContext(Dispatchers.IO) { callCompressor(query, text) }
+            val compressed = callCompressor(query, text)
             when {
                 compressed.isBlank() -> null
                 compressed == "NONE" -> null
                 else -> doc.copy(text = compressed)
             }
         }.getOrElse { e ->
-            // 코루틴 취소 예외는 상위로 전파해야 함 (구조적 동시성)
-            if (e is CancellationException) throw e
             logger.warn(
                 "청크 압축 실패 — 원본 fallback. query={}, source={}, error={}",
                 query, doc.metadata["source"], e.message,

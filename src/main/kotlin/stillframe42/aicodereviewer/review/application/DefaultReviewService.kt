@@ -5,7 +5,6 @@ import java.util.concurrent.Callable
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.FutureTask
 import java.util.concurrent.Semaphore
-import kotlinx.coroutines.runBlocking
 import org.springframework.stereotype.Service
 import stillframe42.aicodereviewer.common.Logging
 import stillframe42.aicodereviewer.common.exception.AiResponseException
@@ -103,14 +102,11 @@ class DefaultReviewService(
         reviewCachePort.get(key)?.let { return it }
 
         // 캐시 미스 시에만 RAG 호출 (캐시 히트는 이미 컨벤션 컨텍스트가 반영된 결과)
-        // ConventionContextUseCase는 rag 기능(Task 9 대상)이라 아직 suspend — 동기 전환 전까지 로컬 브리지로 호출
         val conventionContext = filePath?.let {
-            runBlocking {
-                conventionContextUseCase.buildContext(
-                    query = PatchQueryExtractor.extract(diff, filePath = it),
-                    filePath = it,
-                )
-            }
+            conventionContextUseCase.buildContext(
+                query = PatchQueryExtractor.extract(diff, filePath = it),
+                filePath = it,
+            )
         }
         val rawReview = aiReviewPort.reviewCode(
             diff, provider, mode, reviewContext = null, modelName = modelName,

@@ -25,7 +25,7 @@ class RagContextController(
 ) : Logging {
 
     @GetMapping("/{contextId}")
-    suspend fun get(
+    fun get(
         @PathVariable contextId: String,
         @RequestHeader("X-Internal-Auth", required = false) authToken: String?,
     ): ResponseEntity<RagContextResponse> {

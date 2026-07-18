@@ -1,6 +1,5 @@
 package stillframe42.aicodereviewer.rag.integration
 
-import kotlinx.coroutines.runBlocking
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
@@ -16,9 +15,7 @@ class ConventionContextIdsDisabledIT : AbstractIntegrationTest() {
 
     @Test
     fun `buildContextIds — RAG OFF 시 빈 리스트 반환`() {
-        val ids = runBlocking {
-            conventionContextService.buildContextIds(query = "any")
-        }
+        val ids = conventionContextService.buildContextIds(query = "any")
         assertThat(ids).isEmpty()
     }
 }

@@ -1,8 +1,5 @@
 package stillframe42.aicodereviewer.config
 
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
 import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
@@ -12,16 +9,16 @@ import org.springframework.web.client.RestClient
 import stillframe42.aicodereviewer.github.adapter.out.github.ratelimit.GitHubRateLimitState
 import java.time.Duration
 import java.time.Instant
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
 
 @Configuration
 @EnableConfigurationProperties(GitHubProperties::class)
 class GitHubConfig {
 
-    // Webhook fire-and-forget 처리용 애플리케이션 코루틴 스코프
-    // SupervisorJob: 개별 코루틴 실패가 스코프 전체를 취소하지 않도록 함
-    @Bean("applicationScope")
-    fun applicationScope(): CoroutineScope =
-        CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    // Webhook fire-and-forget 처리용 가상 스레드 executor — 태스크별 새 가상 스레드 생성
+    @Bean("applicationExecutor")
+    fun applicationExecutor(): ExecutorService = Executors.newVirtualThreadPerTaskExecutor()
 
     // GitHub REST API 호출용 RestClient — 응답 타임아웃 30초
     // 인터셉터로 Rate Limit 헤더를 자동으로 캡처한다

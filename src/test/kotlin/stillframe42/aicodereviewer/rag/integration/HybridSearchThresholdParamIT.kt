@@ -3,7 +3,6 @@ package stillframe42.aicodereviewer.rag.integration
 import com.github.tomakehurst.wiremock.client.WireMock.aResponse
 import com.github.tomakehurst.wiremock.client.WireMock.post
 import com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo
-import kotlinx.coroutines.runBlocking
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -37,7 +36,7 @@ class HybridSearchThresholdParamIT : AbstractIntegrationTest() {
     }
 
     @Test
-    fun `threshold 파라미터를 명시 전달해도 정상 응답한다`(): Unit = runBlocking {
+    fun `threshold 파라미터를 명시 전달해도 정상 응답한다`() {
         conventionIndexUseCase.reindex()
 
         val loose = hybridSearchService.searchRaw(

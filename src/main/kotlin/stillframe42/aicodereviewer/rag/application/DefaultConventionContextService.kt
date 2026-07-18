@@ -13,7 +13,7 @@ class DefaultConventionContextService(
     private val observabilityPort: ObservabilityPort,
     @param:Value("\${rag.enabled:true}") private val ragEnabled: Boolean,
 ) : ConventionContextUseCase {
-    override suspend fun buildContext(query: String, filePath: String?): String {
+    override fun buildContext(query: String, filePath: String?): String {
         if (!ragEnabled) return ""
 
         val category = filePath?.let { FileCategoryMapper.selectCategory(it) }
@@ -33,7 +33,7 @@ class DefaultConventionContextService(
         }
     }
 
-    override suspend fun buildContextIds(query: String, filePath: String?): List<String> {
+    override fun buildContextIds(query: String, filePath: String?): List<String> {
         if (!ragEnabled) return emptyList()
 
         val category = filePath?.let { FileCategoryMapper.selectCategory(it) }

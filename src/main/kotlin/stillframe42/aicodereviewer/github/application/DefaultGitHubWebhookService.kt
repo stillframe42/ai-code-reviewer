@@ -1,6 +1,5 @@
 package stillframe42.aicodereviewer.github.application
 
-import kotlinx.coroutines.CancellationException
 import org.springframework.stereotype.Service
 import stillframe42.aicodereviewer.common.Logging
 import stillframe42.aicodereviewer.github.domain.model.PrFile
@@ -40,7 +39,7 @@ class DefaultGitHubWebhookService(
         val files: List<PrFile>,
     )
 
-    override suspend fun handlePullRequestEvent(event: PullRequestEvent) {
+    override fun handlePullRequestEvent(event: PullRequestEvent) {
         logger.info(
             "PR 이벤트 처리 시작: repo={}, pr={}, action={}",
             event.repositoryFullName, event.pullRequestNumber, event.action,
@@ -68,7 +67,7 @@ class DefaultGitHubWebhookService(
     )
 
     // 중복 처리 방지 — 동일 (레포, PR번호, SHA) 조합은 스킵
-    private suspend fun skipIfAlreadyProcessed(event: PullRequestEvent): Boolean {
+    private fun skipIfAlreadyProcessed(event: PullRequestEvent): Boolean {
         if (!processedEventPort.isAlreadyProcessed(
                 repositoryFullName = event.repositoryFullName,
                 pullRequestNumber = event.pullRequestNumber,
@@ -84,7 +83,7 @@ class DefaultGitHubWebhookService(
     }
 
     // PR diff + 변경 파일 목록 조회. diff 가 비어 있으면 null 반환 (메타데이터만 변경된 PR)
-    private suspend fun fetchPrInputsOrNull(event: PullRequestEvent): PrInputs? {
+    private fun fetchPrInputsOrNull(event: PullRequestEvent): PrInputs? {
         val prDiff = gitHubApiPort.getPrDiff(
             repositoryFullName = event.repositoryFullName,
             pullRequestNumber = event.pullRequestNumber,
@@ -109,7 +108,7 @@ class DefaultGitHubWebhookService(
     }
 
     // 이전 리뷰 dismiss — 실패해도 새 리뷰 등록은 계속 진행
-    private suspend fun dismissPreviousReview(event: PullRequestEvent) {
+    private fun dismissPreviousReview(event: PullRequestEvent) {
         val previousReviewId = processedEventPort.findLatestReviewId(
             repositoryFullName = event.repositoryFullName,
             pullRequestNumber = event.pullRequestNumber,
@@ -129,7 +128,7 @@ class DefaultGitHubWebhookService(
     }
 
     // PR Reviews API 등록. 리뷰 실패 시 에러 안내 코멘트로 등록
-    private suspend fun submitReviewToGitHub(
+    private fun submitReviewToGitHub(
         event: PullRequestEvent,
         review: CodeReview?,
         prDiff: String,
@@ -152,7 +151,7 @@ class DefaultGitHubWebhookService(
     }
 
     // 처리 완료 기록 (중복 방지) — review_id 포함하여 저장. 리뷰 실패 시 호출 안 함 (다음 이벤트에서 재처리 허용)
-    private suspend fun markProcessed(event: PullRequestEvent, newReviewId: Long) {
+    private fun markProcessed(event: PullRequestEvent, newReviewId: Long) {
         processedEventPort.markAsProcessed(
             repositoryFullName = event.repositoryFullName,
             pullRequestNumber = event.pullRequestNumber,
@@ -174,9 +173,8 @@ class DefaultGitHubWebhookService(
         )
     }
 
-    // CancellationException은 재전파, 그 외 예외는 경고 로그 후 null 반환
-    private suspend fun <T> runOrWarn(warnMessage: String, block: suspend () -> T): T? =
+    // 예외는 경고 로그 후 null 반환 — 이전 리뷰 dismiss 실패가 새 리뷰 등록 흐름을 막지 않도록 격리
+    private fun <T> runOrWarn(warnMessage: String, block: () -> T): T? =
         try { block() }
-        catch (e: CancellationException) { throw e }
         catch (e: Exception) { logger.warn(warnMessage, e); null }
 }

@@ -17,7 +17,7 @@ class DefaultAgentReviewService(
     private val conventionContextUseCase: ConventionContextUseCase,
 ) : AgentReviewUseCase {
 
-    override suspend fun review(
+    override fun review(
         repositoryFullName: String,
         pullRequestNumber: Int,
         prDiff: String,

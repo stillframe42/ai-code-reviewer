@@ -11,7 +11,7 @@ import stillframe42.aicodereviewer.common.Logging
 @Component
 class DefaultAgentCallbackHandler : AgentCallbackUseCase, Logging {
 
-    override suspend fun handle(result: AgentCallbackResult) {
+    override fun handle(result: AgentCallbackResult) {
         logger.info(
             "agent callback received: id={}, status={}, issues={}, hasError={}",
             result.analysisId,

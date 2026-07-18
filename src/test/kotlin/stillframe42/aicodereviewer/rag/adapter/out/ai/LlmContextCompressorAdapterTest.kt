@@ -4,7 +4,6 @@ import com.github.tomakehurst.wiremock.client.WireMock.containing
 import com.github.tomakehurst.wiremock.client.WireMock.exactly
 import com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor
 import com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo
-import kotlinx.coroutines.runBlocking
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -46,7 +45,7 @@ class LlmContextCompressorAdapterTest : AbstractIntegrationTest() {
         )
 
     @Test
-    fun `임계값 미만 청크는 LLM 호출 없이 원본 통과`() = runBlocking {
+    fun `임계값 미만 청크는 LLM 호출 없이 원본 통과`() {
         // OpenAI stub 등록 안 함 — 호출되면 안 됨
         val docs = listOf(smallDoc(), smallDoc())
 
@@ -58,7 +57,7 @@ class LlmContextCompressorAdapterTest : AbstractIntegrationTest() {
     }
 
     @Test
-    fun `임계값 초과 청크는 LLM 호출 후 압축 결과 반환`() = runBlocking {
+    fun `임계값 초과 청크는 LLM 호출 후 압축 결과 반환`() {
         WireMockStubs.stubOpenAiChatResponse(wireMock, body = "발췌된 핵심 내용")
         val largeDoc = docOfSize(800)
 
@@ -71,7 +70,7 @@ class LlmContextCompressorAdapterTest : AbstractIntegrationTest() {
     }
 
     @Test
-    fun `LLM이 NONE을 반환하면 청크 제외`() = runBlocking {
+    fun `LLM이 NONE을 반환하면 청크 제외`() {
         WireMockStubs.stubOpenAiChatResponse(wireMock, body = "NONE")
         val largeDoc = docOfSize(800)
 
@@ -81,7 +80,7 @@ class LlmContextCompressorAdapterTest : AbstractIntegrationTest() {
     }
 
     @Test
-    fun `LLM이 빈 문자열을 반환하면 청크 제외`() = runBlocking {
+    fun `LLM이 빈 문자열을 반환하면 청크 제외`() {
         WireMockStubs.stubOpenAiChatResponse(wireMock, body = "")
         val largeDoc = docOfSize(800)
 
@@ -91,7 +90,7 @@ class LlmContextCompressorAdapterTest : AbstractIntegrationTest() {
     }
 
     @Test
-    fun `LLM 호출 실패 시 원본 청크로 fallback`() = runBlocking<Unit> {
+    fun `LLM 호출 실패 시 원본 청크로 fallback`() {
         WireMockStubs.stubOpenAiChatError(wireMock)
         val largeDoc = docOfSize(800)
         val originalText = largeDoc.text
@@ -103,7 +102,7 @@ class LlmContextCompressorAdapterTest : AbstractIntegrationTest() {
     }
 
     @Test
-    fun `압축 프롬프트에 쿼리 텍스트가 포함된다`() = runBlocking {
+    fun `압축 프롬프트에 쿼리 텍스트가 포함된다`() {
         WireMockStubs.stubOpenAiChatResponse(wireMock, body = "발췌")
         val largeDoc = docOfSize(800)
 

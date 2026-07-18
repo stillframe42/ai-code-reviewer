@@ -1,8 +1,7 @@
 package stillframe42.aicodereviewer.common.advisor
 
 import java.math.BigDecimal
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
+import java.util.concurrent.Executor
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito.mock
@@ -33,8 +32,8 @@ class CostTrackingAdvisorTest {
             }
         },
         eventPublisher = ApplicationEventPublisher { publishedEvents.add(it) },
-        // Unconfined: launch 블록을 호출 스레드에서 즉시 실행 — 비동기 대기(awaitility) 없이 저장 결과 검증
-        scope = CoroutineScope(Dispatchers.Unconfined),
+        // 호출 스레드에서 즉시 실행하는 동기 Executor — 비동기 대기(awaitility) 없이 저장 결과 검증
+        executor = Executor { it.run() },
     )
 
     // 알려진 usage(promptTokens, completionTokens)가 담긴 ChatClientResponse mock 생성

@@ -2,8 +2,6 @@ package stillframe42.aicodereviewer.github.adapter.`in`.web
 
 import tools.jackson.core.JacksonException
 import tools.jackson.databind.ObjectMapper
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.launch
 import org.springframework.beans.factory.annotation.Qualifier
 import stillframe42.aicodereviewer.common.Logging
 import org.springframework.http.HttpStatus
@@ -15,6 +13,7 @@ import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
 import stillframe42.aicodereviewer.github.adapter.`in`.web.dto.WebhookPayloadDto
 import stillframe42.aicodereviewer.github.domain.port.`in`.GitHubWebhookUseCase
+import java.util.concurrent.ExecutorService
 
 // GitHub App Webhook 수신 컨트롤러
 // 서명 검증 → 이벤트 필터링 → fire-and-forget 처리 흐름을 담당한다
@@ -24,7 +23,7 @@ class WebhookController(
     private val gitHubWebhookUseCase: GitHubWebhookUseCase,
     private val signatureVerifier: HmacSignatureVerifier,
     private val objectMapper: ObjectMapper,
-    @param:Qualifier("applicationScope") private val applicationScope: CoroutineScope,
+    @param:Qualifier("applicationExecutor") private val applicationExecutor: ExecutorService,
 ) : Logging {
 
     @PostMapping("/webhook")
@@ -56,8 +55,8 @@ class WebhookController(
             eventType, event.action, event.repositoryFullName, event.pullRequestNumber,
         )
 
-        // 4단계: fire-and-forget — 즉시 202 반환 후 백그라운드에서 AI 리뷰 처리
-        applicationScope.launch {
+        // 4단계: fire-and-forget — 즉시 202 반환 후 백그라운드 가상 스레드에서 AI 리뷰 처리
+        applicationExecutor.submit {
             runCatching { gitHubWebhookUseCase.handlePullRequestEvent(event) }
                 .onFailure {
                     logger.error(

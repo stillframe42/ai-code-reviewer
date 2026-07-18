@@ -2,7 +2,6 @@ package stillframe42.aicodereviewer.integration
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
-import kotlinx.coroutines.runBlocking
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -45,14 +44,12 @@ class ReviewObservabilityIntegrationTest : AbstractIntegrationTest() {
              }
         """.trimIndent()
 
-        runBlocking {
-            reviewUseCase.reviewCode(
-                code = diff,
-                provider = AiProvider.ANTHROPIC,
-                diffOptions = DiffFilterOptions(),
-                mode = ReviewMode.Simple,
-            )
-        }
+        reviewUseCase.reviewCode(
+            code = diff,
+            provider = AiProvider.ANTHROPIC,
+            diffOptions = DiffFilterOptions(),
+            mode = ReviewMode.Simple,
+        )
 
         val allEvents = extractAllEvents()
         val eventTypes = allEvents.map { it["type"] as? String }

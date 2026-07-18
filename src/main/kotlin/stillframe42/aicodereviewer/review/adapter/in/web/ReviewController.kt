@@ -18,7 +18,7 @@ import stillframe42.aicodereviewer.review.domain.port.`in`.ReviewUseCase
 class ReviewController(private val reviewUseCase: ReviewUseCase) {
 
     @PostMapping
-    suspend fun review(@RequestBody @Valid request: ReviewRequest): ResponseEntity<CodeReviewResponse> {
+    fun review(@RequestBody @Valid request: ReviewRequest): ResponseEntity<CodeReviewResponse> {
         val mode = when (request.reviewMode) {
             null, ReviewModeRequest.WITHOUT_TOOLS -> ReviewMode.Simple
             ReviewModeRequest.WITH_TOOLS -> {

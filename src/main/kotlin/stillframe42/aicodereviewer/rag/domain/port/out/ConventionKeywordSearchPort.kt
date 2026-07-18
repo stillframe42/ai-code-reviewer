@@ -5,7 +5,7 @@ import stillframe42.aicodereviewer.rag.domain.model.RagDocument
 
 // 키워드 기반(Full-text Search) 컨벤션 검색 아웃바운드 포트
 interface ConventionKeywordSearchPort {
-    suspend fun search(
+    fun search(
         query: String,
         topK: Int,
         category: ConventionCategory? = null,

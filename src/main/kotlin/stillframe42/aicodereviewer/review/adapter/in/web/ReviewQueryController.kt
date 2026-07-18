@@ -17,7 +17,7 @@ class ReviewQueryController(private val reviewQueryUseCase: ReviewQueryUseCase) 
 
     // 특정 PR의 최신 리뷰 조회 — 없으면 404
     @GetMapping("/{owner}/{repo}/{prNumber}")
-    suspend fun getReviewByPr(
+    fun getReviewByPr(
         @PathVariable owner: String,
         @PathVariable repo: String,
         @PathVariable prNumber: Int,
@@ -30,7 +30,7 @@ class ReviewQueryController(private val reviewQueryUseCase: ReviewQueryUseCase) 
 
     // 전체 리뷰 통계 조회
     @GetMapping("/stats")
-    suspend fun getStats(): ReviewStatsResponse = reviewQueryUseCase.getStats().toResponse()
+    fun getStats(): ReviewStatsResponse = reviewQueryUseCase.getStats().toResponse()
 }
 
 private fun ReviewSummaryResult.toResponse() = ReviewSummaryResponse(

@@ -160,7 +160,7 @@ class MetricsIntegrationTest : AbstractIntegrationTest() {
         sendWebhook()
         // PR 리뷰 등록 완료 대기 (postPrReview 성공 확인) — 이후 CostTrackingAdvisor 저장을 기다린다
         waitForReviewPosted()
-        // CostTrackingAdvisor는 백그라운드 코루틴에서 LlmCostLog를 저장 — DB 저장 완료를 기다린 후 메트릭을 검증한다
+        // CostTrackingAdvisor는 백그라운드 가상 스레드에서 LlmCostLog를 저장 — DB 저장 완료를 기다린 후 메트릭을 검증한다
         await.atMost(10, SECONDS).until { llmCostLogRepository.count() > 0 }
 
         val promptAfter = meterRegistry.get("llm.tokens.used")
@@ -181,7 +181,7 @@ class MetricsIntegrationTest : AbstractIntegrationTest() {
         sendWebhook()
         // PR 리뷰 등록 완료 대기 (postPrReview 성공 확인) — 이후 CostTrackingAdvisor 저장을 기다린다
         waitForReviewPosted()
-        // CostTrackingAdvisor는 백그라운드 코루틴에서 LlmCostLog를 저장 — DB 저장 완료를 기다린 후 메트릭을 검증한다
+        // CostTrackingAdvisor는 백그라운드 가상 스레드에서 LlmCostLog를 저장 — DB 저장 완료를 기다린 후 메트릭을 검증한다
         await.atMost(10, SECONDS).until { llmCostLogRepository.count() > 0 }
 
         val after = meterRegistry.get("llm.cost.total")

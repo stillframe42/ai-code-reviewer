@@ -3,7 +3,6 @@ package stillframe42.aicodereviewer.rag.integration
 import com.github.tomakehurst.wiremock.client.WireMock.aResponse
 import com.github.tomakehurst.wiremock.client.WireMock.post
 import com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo
-import kotlinx.coroutines.runBlocking
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -44,18 +43,16 @@ class HybridConventionSearchIntegrationTest : AbstractIntegrationTest() {
 
     @Test
     fun `빈 DB에서 검색하면 빈 결과를 반환한다`() {
-        val results = runBlocking { hybridSearchService.search("OWASP injection") }
+        val results = hybridSearchService.search("OWASP injection")
 
         assertThat(results).isEmpty()
     }
 
     @Test
     fun `category SECURITY 필터 적용 시 반환 문서가 모두 SECURITY 카테고리다`() {
-        runBlocking { conventionIndexUseCase.reindex() }
+        conventionIndexUseCase.reindex()
 
-        val results = runBlocking {
-            hybridSearchService.search("OWASP injection", topK = 5, category = ConventionCategory.SECURITY)
-        }
+        val results = hybridSearchService.search("OWASP injection", topK = 5, category = ConventionCategory.SECURITY)
 
         assertThat(results).isNotEmpty()
         assertThat(results).allSatisfy { doc ->

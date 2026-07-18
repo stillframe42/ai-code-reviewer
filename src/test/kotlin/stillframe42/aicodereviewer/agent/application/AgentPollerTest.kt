@@ -1,6 +1,5 @@
 package stillframe42.aicodereviewer.agent.application
 
-import kotlinx.coroutines.test.runTest
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import stillframe42.aicodereviewer.agent.domain.exception.AgentAnalysisFailedException
@@ -48,7 +47,7 @@ class AgentPollerTest {
         AgentAnalysisResult(analysisId = "id-1", status = status, findings = emptyList(), error = error)
 
     @Test
-    fun `IN_PROGRESS 후 DONE 시퀀스에서 결과 반환`() = runTest {
+    fun `IN_PROGRESS 후 DONE 시퀀스에서 결과 반환`() {
         val port = FakeAgentAnalysisPort(listOf(result("PROCESSING"), result("DONE")))
         val poller = AgentPoller(port, props(maxAttempts = 5))
 
@@ -59,7 +58,7 @@ class AgentPollerTest {
     }
 
     @Test
-    fun `maxAttempts 모두 PROCESSING 이면 max attempts 메시지로 timeout`() = runTest {
+    fun `maxAttempts 모두 PROCESSING 이면 max attempts 메시지로 timeout`() {
         val port = FakeAgentAnalysisPort(listOf(result("PROCESSING")))
         val poller = AgentPoller(
             port,
@@ -74,7 +73,7 @@ class AgentPollerTest {
     }
 
     @Test
-    fun `wall-clock timeout 이 먼저 도달하면 wall-clock 메시지로 timeout`() = runTest {
+    fun `wall-clock timeout 이 먼저 도달하면 wall-clock 메시지로 timeout`() {
         val port = FakeAgentAnalysisPort(listOf(result("PROCESSING")))
         val poller = AgentPoller(
             port,
@@ -88,7 +87,7 @@ class AgentPollerTest {
     }
 
     @Test
-    fun `FAILED 즉시 AgentAnalysisFailedException`() = runTest {
+    fun `FAILED 즉시 AgentAnalysisFailedException`() {
         val port = FakeAgentAnalysisPort(listOf(result("FAILED", error = "분석 중단")))
         val poller = AgentPoller(port, props())
 
@@ -100,7 +99,7 @@ class AgentPollerTest {
     }
 
     @Test
-    fun `port 의 IOException 은 catch 통과 후 호출자에게 전파`() = runTest {
+    fun `port 의 IOException 은 catch 통과 후 호출자에게 전파`() {
         val port = FakeAgentAnalysisPort(listOf(result("PROCESSING")), ioExceptionAfter = 1)
         val poller = AgentPoller(port, props(maxAttempts = 5))
 

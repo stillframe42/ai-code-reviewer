@@ -1,7 +1,5 @@
 package stillframe42.aicodereviewer.rag.application
 
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import org.springframework.stereotype.Service
 import stillframe42.aicodereviewer.common.observability.ObservabilityPort
 import stillframe42.aicodereviewer.config.RagProperties
@@ -26,7 +24,7 @@ class HybridConventionSearchService(
     // 일반 검색 — 벡터 + 키워드 + RRF + 압축 (전체 파이프라인). 프로덕션 진입점.
     // ARCH 카테고리만 압축을 우회한다: 파일명 쿼리와 ARCH 룰의 표면적 거리가 커서
     // context-compressor 가 NONE 판정으로 통째 drop 하는 regression 이 관찰됐음.
-    override suspend fun search(
+    override fun search(
         query: String,
         topK: Int?,
         category: ConventionCategory?,
@@ -47,7 +45,7 @@ class HybridConventionSearchService(
     }
 
     // 압축 우회 검색 — 벡터 + 키워드 + RRF만 (압축 전/후 비교 측정용, 프로덕션은 search() 사용)
-    suspend fun searchRaw(
+    fun searchRaw(
         query: String,
         topK: Int = ragProperties.topK,
         category: ConventionCategory? = null,
@@ -70,10 +68,7 @@ class HybridConventionSearchService(
         return try {
             val candidateSize = topK * 2
 
-            // ConventionVectorPort.search()는 suspend가 아닌 블로킹 함수 — IO 스레드풀에서 실행
-            val vectorResults = withContext(Dispatchers.IO) {
-                vectorPort.search(query, candidateSize, effectiveCategory, threshold)
-            }
+            val vectorResults = vectorPort.search(query, candidateSize, effectiveCategory, threshold)
             // 벡터·키워드 동일한 effectiveCategory 범위로 검색하여 RRF 결과의 카테고리 일관성 보장
             val keywordResults = keywordPort.search(query, candidateSize, effectiveCategory)
 

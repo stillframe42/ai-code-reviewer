@@ -3,5 +3,5 @@ package stillframe42.aicodereviewer.agent.domain.port.`in`
 import stillframe42.aicodereviewer.agent.domain.model.AgentCallbackResult
 
 interface AgentCallbackUseCase {
-    suspend fun handle(result: AgentCallbackResult)
+    fun handle(result: AgentCallbackResult)
 }
