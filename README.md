@@ -430,7 +430,7 @@ src/main/kotlin/stillframe42/aicodereviewer/
 │   ├── AiClientConfig.kt / AdvisorConfig.kt / ReviewConfig.kt
 │   ├── GitHubConfig.kt / RedisConfig.kt / JacksonConfig.kt
 │   ├── LangfuseObservationConfig.kt / ToolObservationConfig.kt
-│   ├── RemoteAgentConfig.kt           # WebClient + ObservationRegistry (traceparent 자동 주입)
+│   ├── RemoteAgentConfig.kt           # RestClient + ObservationRegistry (traceparent 자동 주입)
 │   └── *Properties.kt                 # @ConfigurationProperties (Ai/GitHub/Langfuse/Llm/Remote/Rag/Review/...)
 ├── common/                            # 기능 횡단 공통 컴포넌트
 │   ├── GlobalExceptionHandler.kt / AiPromptBuilder.kt / TokenEstimator.kt / Logging.kt
@@ -568,7 +568,7 @@ ANTHROPIC_API_KEY=sk-ant-... OPENAI_API_KEY=sk-... ./gradlew evaluationTest
 
 ### Grafana Tempo (분산 trace)
 
-- **W3C `traceparent` 자동 주입**: Spring Boot `RemoteAgentClient` 의 WebClient 가 `ObservationRegistry` 연결로 Micrometer Tracing 이 헤더 자동 주입
+- **W3C `traceparent` 자동 주입**: Spring Boot `RemoteAgentClient` 의 RestClient 가 `ObservationRegistry` 연결로 Micrometer Tracing 이 헤더 자동 주입
 - **Python FastAPI 자동 계측**: `FastAPIInstrumentor` 가 수신 trace 를 부모 context 로 채택
 - **trace 조회**: Grafana → Explore → Tempo datasource → TraceQL 로 두 서비스 span 의 단일 trace 연결 확인
 
