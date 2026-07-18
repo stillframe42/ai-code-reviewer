@@ -7,7 +7,9 @@ import kotlinx.coroutines.asContextElement
 object LangfuseSpanContextHolder {
     private val current: ThreadLocal<String?> = ThreadLocal.withInitial { null }
 
+    fun set(spanId: String) = current.set(spanId)
     fun get(): String? = current.get()
+    fun clear() = current.remove()
 
     fun asElement(spanId: String?) = current.asContextElement(spanId)
 }
