@@ -20,7 +20,6 @@
 - **RAG 기반 컨벤션 리뷰**: 프로젝트 코딩 컨벤션 문서를 벡터·키워드 하이브리드 검색(RRF)으로 조회하고, LLM 컨텍스트 압축 후 리뷰에 반영. multi-query retrieval 로 검색 다양성 확보
 - **diff 전처리**: 테스트 파일·잠금 파일 자동 제거, context 줄 수 조정, 토큰 한도 초과 시 변경량 적은 청크 우선 제거로 토큰 절감
 - **Tool Calling 리뷰**: GitHub API를 도구로 활용해 파일별 상세 정보를 조회하는 고급 리뷰 모드
-- **AI 채팅**: 단일 응답 및 SSE 스트리밍 방식으로 자유 형식 AI 대화 지원
 - **다양한 AI 백엔드**: Anthropic Claude / OpenAI GPT 프로바이더 선택 지원
 - **리뷰 이력 관리**: 리뷰 결과 PostgreSQL 저장, PR별·통계 조회 API 제공
 - **통합 옵저버빌리티**:
@@ -34,7 +33,7 @@
 |------|------|
 | 언어 | Kotlin 2.2.21 |
 | 프레임워크 | Spring Boot 4.0.3 |
-| AI 통합 | Spring AI 2.0.0-M2 |
+| AI 통합 | Spring AI 2.0.0 |
 | 외부 에이전트 | Python `ai-agent-service` (LangGraph, 별도 저장소) |
 | 동시성 | JDK 21 가상 스레드 (virtual threads) |
 | 빌드 도구 | Gradle (Kotlin DSL) |
@@ -419,7 +418,7 @@ Flyway로 마이그레이션을 관리합니다. `src/main/resources/db/migratio
 
 ## 프로젝트 구조
 
-7개 기능 패키지가 모두 동일한 헥사고날 layer 패턴 (domain / application / adapter) 을 따릅니다.
+5개 기능 패키지(review·rag·agent·evaluation·github)가 모두 동일한 헥사고날 layer 패턴 (domain / application / adapter) 을 따릅니다.
 
 ```
 src/main/kotlin/stillframe42/aicodereviewer/
@@ -428,7 +427,7 @@ src/main/kotlin/stillframe42/aicodereviewer/
 │   └── AiProvider.kt                  # ANTHROPIC, OPENAI 열거형
 ├── config/                            # 전역 빈 설정
 │   ├── AiClientConfig.kt / AdvisorConfig.kt / ReviewConfig.kt
-│   ├── GitHubConfig.kt / RedisConfig.kt / JacksonConfig.kt
+│   ├── GitHubConfig.kt / JacksonConfig.kt      # GitHubConfig: RestClient + applicationExecutor(가상 스레드)
 │   ├── LangfuseObservationConfig.kt / ToolObservationConfig.kt
 │   ├── RemoteAgentConfig.kt           # RestClient + ObservationRegistry (traceparent 자동 주입)
 │   └── *Properties.kt                 # @ConfigurationProperties (Ai/GitHub/Langfuse/Llm/Remote/Rag/Review/...)
@@ -438,7 +437,8 @@ src/main/kotlin/stillframe42/aicodereviewer/
 │   ├── exception/NotFoundException.kt
 │   ├── advisor/                       # Spring AI Advisor: Cost/Logging/Retry
 │   ├── cache/AbstractRedisCacheAdapter.kt
-│   ├── langfuse/                      # Langfuse REST 클라이언트 (기술 종속)
+│   ├── concurrent/BlockingTimeout.kt  # 가상 스레드 벽시계 타임아웃 (코루틴 withTimeout 대체)
+│   ├── langfuse/                      # Langfuse REST 클라이언트 + 트레이스 ThreadLocal 홀더/전파 (TraceContextPropagation)
 │   ├── metrics/                       # Micrometer 메트릭 + 이벤트
 │   ├── observability/                 # 기술 중립 관측 포트 (ObservabilityPort, WithSpan)
 │   └── port/CostLogPort.kt
@@ -447,9 +447,9 @@ src/main/kotlin/stillframe42/aicodereviewer/
 │   │   ├── model/                     # CodeReview, CodeIssue, DiffFilterOptions, PrImportance 등
 │   │   ├── service/                   # DiffPreprocessor(object), PrImportanceAnalyzer, AiModelSelector, FileExtensionClassifier
 │   │   └── port/
-│   │       ├── in/{ReviewUseCase, ReviewQueryUseCase, ReviewSummaryResult}.kt
+│   │       ├── in/{ReviewUseCase, ReviewQueryUseCase, PrReviewOrchestrationUseCase, ReviewSummaryResult}.kt
 │   │       └── out/{AiReviewPort, ReviewPersistencePort, ReviewQueryPort, ReviewCachePort, ReviewCacheStatsPort, ...}.kt
-│   ├── application/{DefaultReviewService, DefaultReviewQueryService, ClaimVerifier}.kt
+│   ├── application/{DefaultReviewService, DefaultPrReviewOrchestrationService, DefaultReviewQueryService, ClaimVerifier}.kt
 │   └── adapter/
 │       ├── in/web/{ReviewController, ReviewQueryController}.kt
 │       └── out/
@@ -491,7 +491,7 @@ src/main/kotlin/stillframe42/aicodereviewer/
     ├── domain/
     │   ├── model/                     # PullRequestEvent, PrFile, PrReviewLineComment 등
     │   ├── service/DiffPositionResolver.kt   # diff line → GitHub position 매핑 (object)
-    │   └── port/{in/GitHubWebhookUseCase, out/{GitHubApiPort, GitHubTokenPort, ProcessedEventPort, ReviewCommentFormatterPort}}.kt
+    │   └── port/{in/GitHubWebhookUseCase, out/{GitHubApiPort, GitHubContentPort, GitHubTokenPort, GitHubRateLimitPort, ProcessedEventPort, ReviewCommentFormatterPort}}.kt
     ├── application/DefaultGitHubWebhookService.kt
     └── adapter/
         ├── in/web/{WebhookController, HmacSignatureVerifier}.kt
@@ -527,7 +527,7 @@ src/e2eTest/          # E2E 시나리오 (실제 Remote 에이전트 컨테이�
 
 ### 일반 테스트
 
-AI API 호출이 없는 단위/통합 테스트. Testcontainers 로 PostgreSQL 을 자동 실행하며, 외부 API 는 WireMock 으로 모킹합니다. Spring 컨텍스트 9개 / wall time ~49s.
+AI API 호출이 없는 단위/통합 테스트. Testcontainers 로 PostgreSQL 을 자동 실행하며, 외부 API 는 WireMock 으로 모킹합니다. Spring 컨텍스트 8개 / wall time ~50s.
 
 ```bash
 ./gradlew test
