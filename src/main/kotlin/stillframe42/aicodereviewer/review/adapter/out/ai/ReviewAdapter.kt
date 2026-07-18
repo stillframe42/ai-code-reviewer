@@ -1,11 +1,9 @@
 package stillframe42.aicodereviewer.review.adapter.out.ai
 
+import java.util.UUID
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
-import kotlinx.coroutines.withTimeout
 import org.springframework.ai.anthropic.AnthropicChatOptions
 import org.springframework.ai.chat.client.ChatClient
 import org.springframework.ai.converter.BeanOutputConverter
@@ -16,8 +14,8 @@ import stillframe42.aicodereviewer.common.AiPromptBuilder
 import stillframe42.aicodereviewer.common.Logging
 import stillframe42.aicodereviewer.common.advisor.CostTrackingAdvisor
 import stillframe42.aicodereviewer.common.advisor.LoggingAdvisor
+import stillframe42.aicodereviewer.common.concurrent.BlockingTimeout
 import stillframe42.aicodereviewer.common.exception.AiResponseException
-import java.util.UUID
 import stillframe42.aicodereviewer.common.langfuse.LangfuseTraceContextHolder
 import stillframe42.aicodereviewer.common.langfuse.ObservationSessionContext
 import stillframe42.aicodereviewer.common.langfuse.ObservationSessionContextHolder
@@ -49,7 +47,7 @@ class ReviewAdapter(
 ) : AiReviewPort, Logging {
 
     // toolCallCounter: 요청별 독립 생성 — 병렬 리뷰 시 파일별로 카운터가 분리됨
-    override suspend fun reviewCode(
+    override fun reviewCode(
         code: String,
         provider: AiProvider,
         mode: ReviewMode,
@@ -62,16 +60,15 @@ class ReviewAdapter(
             is ReviewMode.WithGitHubTools -> TOOL_TIMEOUT
         }
         val toolCallCounter = AtomicInteger(0)
-        // 상위에서 이미 설정된 traceId가 있으면 재사용한다 (review.root span 이 생성한 trace).
-        // 없으면 새로 생성하여 LangfuseObservationHandler.onStart()에서 재사용하고,
-        // Tool 실행(executeToolCall)에서 LangfuseTraceContextHolder.get()으로 안전하게 접근할 수 있다.
-        val traceId = LangfuseTraceContextHolder.get() ?: UUID.randomUUID().toString()
-        return withTimeout(timeout) {
-            withContext(
-                Dispatchers.IO +
-                    ObservationSessionContextHolder.asElement(reviewContext?.toObservationSessionContext()) +
-                    LangfuseTraceContextHolder.asElement(traceId),
-            ) {
+        // 상위(review.root)에서 이미 설정된 traceId가 있으면 재사용, 없으면 새로 생성 —
+        // LangfuseObservationHandler.onStart()와 Tool 실행(executeToolCall)이 같은 값을 읽는다
+        val previousTraceId = LangfuseTraceContextHolder.get()
+        val traceId = previousTraceId ?: UUID.randomUUID().toString()
+        val previousSession = ObservationSessionContextHolder.local.get()
+        LangfuseTraceContextHolder.set(traceId)
+        reviewContext?.let { ObservationSessionContextHolder.local.set(it.toObservationSessionContext()) }
+        try {
+            return BlockingTimeout.run(timeout) {
                 val rawText = buildRequestSpec(code, provider, mode, toolCallCounter, modelName, conventionContext)
                     .call()
                     .content()
@@ -82,6 +79,9 @@ class ReviewAdapter(
                     .toDomain()
                     .copy(toolCallCount = toolCallCounter.get())
             }
+        } finally {
+            if (previousTraceId != null) LangfuseTraceContextHolder.set(previousTraceId) else LangfuseTraceContextHolder.clear()
+            if (previousSession != null) ObservationSessionContextHolder.local.set(previousSession) else ObservationSessionContextHolder.local.remove()
         }
     }
 

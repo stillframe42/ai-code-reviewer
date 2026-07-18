@@ -2,7 +2,6 @@ package stillframe42.aicodereviewer.review.adapter.out.ai
 
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
-import kotlinx.coroutines.runBlocking
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -41,7 +40,7 @@ class LangfuseObservationVerificationTest : AbstractIntegrationTest() {
     }
 
     @Test
-    fun `Simple 리뷰 시 Langfuse에 trace-create, generation-create, generation-update가 전송된다`() = runBlocking {
+    fun `Simple 리뷰 시 Langfuse에 trace-create, generation-create, generation-update가 전송된다`() {
         WireMockStubs.stubAnthropicReview(wireMock)
         val reviewContext = ReviewContext(
             reviewRequestId = 1L,
@@ -68,12 +67,10 @@ class LangfuseObservationVerificationTest : AbstractIntegrationTest() {
         val updateBody = generationUpdate["body"] as Map<String, Any>
         assertThat(updateBody).containsKey("usage")
         assertThat(updateBody).containsKey("endTime")
-
-        Unit
     }
 
     @Test
-    fun `Tool Calling 리뷰 시 Langfuse에 span-create와 span-update가 전송된다`() = runBlocking {
+    fun `Tool Calling 리뷰 시 Langfuse에 span-create와 span-update가 전송된다`() {
         WireMockStubs.stubAnthropicWithToolCall(wireMock)
         WireMockStubs.stubGitHubPrDescription(wireMock, WireMockStubs.TEST_REPO, WireMockStubs.TEST_PR_NUMBER)
 
@@ -108,12 +105,10 @@ class LangfuseObservationVerificationTest : AbstractIntegrationTest() {
 
         // span에 Tool 이름이 포함되는지 확인
         assertThat(spanBody["name"]).isEqualTo("getPRDescription")
-
-        Unit
     }
 
     @Test
-    fun `ReviewContext 메타데이터가 Trace에 포함된다`() = runBlocking {
+    fun `ReviewContext 메타데이터가 Trace에 포함된다`() {
         WireMockStubs.stubAnthropicReview(wireMock)
         val reviewContext = ReviewContext(
             reviewRequestId = 99L,
@@ -139,7 +134,5 @@ class LangfuseObservationVerificationTest : AbstractIntegrationTest() {
         assertThat(metadata["review.request.id"]).isEqualTo("99")
         assertThat(metadata["review.pr.number"]).isEqualTo("7")
         assertThat(metadata["review.repo"]).isEqualTo("test-owner/test-repo")
-
-        Unit
     }
 }

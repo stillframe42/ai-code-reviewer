@@ -4,7 +4,6 @@ import com.github.tomakehurst.wiremock.client.WireMock.containing
 import com.github.tomakehurst.wiremock.client.WireMock.notContaining
 import com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor
 import com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo
-import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
@@ -25,7 +24,7 @@ class ReviewAdapterConventionTest : AbstractIntegrationTest() {
     }
 
     @Test
-    fun `format 스키마가 Anthropic 요청 본문에 포함된다`() = runBlocking {
+    fun `format 스키마가 Anthropic 요청 본문에 포함된다`() {
         aiReviewPort.reviewCode(
             code = "fun foo() {}",
             provider = AiProvider.ANTHROPIC,
@@ -39,7 +38,7 @@ class ReviewAdapterConventionTest : AbstractIntegrationTest() {
     }
 
     @Test
-    fun `conventionContext가 제공되면 MAJOR 위반 지시문이 요청 본문에 포함된다`() = runBlocking {
+    fun `conventionContext가 제공되면 MAJOR 위반 지시문이 요청 본문에 포함된다`() {
         aiReviewPort.reviewCode(
             code = "fun foo() {}",
             provider = AiProvider.ANTHROPIC,
@@ -53,7 +52,7 @@ class ReviewAdapterConventionTest : AbstractIntegrationTest() {
     }
 
     @Test
-    fun `conventionContext가 null이면 convention 지시문 없이 format은 포함된다`() = runBlocking {
+    fun `conventionContext가 null이면 convention 지시문 없이 format은 포함된다`() {
         aiReviewPort.reviewCode(
             code = "fun foo() {}",
             provider = AiProvider.ANTHROPIC,

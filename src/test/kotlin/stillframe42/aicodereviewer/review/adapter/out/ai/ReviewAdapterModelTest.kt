@@ -3,7 +3,6 @@ package stillframe42.aicodereviewer.review.adapter.out.ai
 import com.github.tomakehurst.wiremock.client.WireMock.containing
 import com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor
 import com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo
-import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
@@ -25,7 +24,7 @@ class ReviewAdapterModelTest : AbstractIntegrationTest() {
     }
 
     @Test
-    fun `modelName이 지정되면 Anthropic API 요청에 해당 모델이 사용된다`() = runBlocking {
+    fun `modelName이 지정되면 Anthropic API 요청에 해당 모델이 사용된다`() {
         aiReviewPort.reviewCode(
             code = "fun foo() {}",
             provider = AiProvider.ANTHROPIC,
@@ -39,7 +38,7 @@ class ReviewAdapterModelTest : AbstractIntegrationTest() {
     }
 
     @Test
-    fun `modelName이 null이면 기본 설정 모델이 사용된다`() = runBlocking {
+    fun `modelName이 null이면 기본 설정 모델이 사용된다`() {
         aiReviewPort.reviewCode(
             code = "fun foo() {}",
             provider = AiProvider.ANTHROPIC,

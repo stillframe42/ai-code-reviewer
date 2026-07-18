@@ -1,6 +1,5 @@
 package stillframe42.aicodereviewer.review.adapter.out.ai
 
-import kotlinx.coroutines.runBlocking
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -34,7 +33,7 @@ class ReviewAdapterToolCallingTest : AbstractIntegrationTest() {
     """.trimIndent()
 
     @Test
-    fun `WithGitHubTools 모드로 코드 리뷰 요청 시 CodeReview 결과를 반환한다`() = runBlocking {
+    fun `WithGitHubTools 모드로 코드 리뷰 요청 시 CodeReview 결과를 반환한다`() {
         // WireMock이 stop_reason=end_turn을 반환하므로 Tool 호출 없이 리뷰가 완료된다
         val result = reviewAdapter.reviewCode(
             code = sampleDiff,
@@ -45,11 +44,10 @@ class ReviewAdapterToolCallingTest : AbstractIntegrationTest() {
         assertThat(result).isNotNull()
         assertThat(result.summary).isNotBlank()
         assertThat(result.overallScore).isBetween(0, 10)
-        Unit
     }
 
     @Test
-    fun `WithGitHubTools 모드로 리뷰 시 toolCallCount가 0 이상으로 설정된다`() = runBlocking {
+    fun `WithGitHubTools 모드로 리뷰 시 toolCallCount가 0 이상으로 설정된다`() {
         val result = reviewAdapter.reviewCode(
             code = sampleDiff,
             provider = AiProvider.ANTHROPIC,
@@ -57,11 +55,10 @@ class ReviewAdapterToolCallingTest : AbstractIntegrationTest() {
         )
 
         assertThat(result.toolCallCount).isGreaterThanOrEqualTo(0)
-        Unit
     }
 
     @Test
-    fun `Simple 모드로 리뷰 시 toolCallCount는 0이다`() = runBlocking {
+    fun `Simple 모드로 리뷰 시 toolCallCount는 0이다`() {
         val result = reviewAdapter.reviewCode(
             code = "fun add(a: Int, b: Int) = a + b",
             provider = AiProvider.ANTHROPIC,
@@ -69,6 +66,5 @@ class ReviewAdapterToolCallingTest : AbstractIntegrationTest() {
         )
 
         assertThat(result.toolCallCount).isEqualTo(0)
-        Unit
     }
 }
