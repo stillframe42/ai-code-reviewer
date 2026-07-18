@@ -3,7 +3,6 @@ package stillframe42.aicodereviewer.review.application
 import com.github.tomakehurst.wiremock.client.WireMock.exactly
 import com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor
 import com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo
-import kotlinx.coroutines.runBlocking
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -37,7 +36,7 @@ class DefaultReviewServiceCacheTest : AbstractIntegrationTest() {
     }
 
     @Test
-    fun `동일 diff를 두 번 리뷰하면 두 번째는 캐시에서 반환되어 AI 호출이 발생하지 않는다`(): Unit = runBlocking {
+    fun `동일 diff를 두 번 리뷰하면 두 번째는 캐시에서 반환되어 AI 호출이 발생하지 않는다`() {
         val diff = """
             diff --git a/src/MyService.kt b/src/MyService.kt
             --- a/src/MyService.kt
@@ -66,7 +65,7 @@ class DefaultReviewServiceCacheTest : AbstractIntegrationTest() {
     }
 
     @Test
-    fun `다른 diff는 캐시를 공유하지 않아 각각 AI를 호출한다`(): Unit = runBlocking {
+    fun `다른 diff는 캐시를 공유하지 않아 각각 AI를 호출한다`() {
         val diff1 = """
             diff --git a/src/FooService.kt b/src/FooService.kt
             +++ b/src/FooService.kt
@@ -86,7 +85,7 @@ class DefaultReviewServiceCacheTest : AbstractIntegrationTest() {
     }
 
     @Test
-    fun `캐시 히트 시 임베딩 API는 호출되지 않는다`(): Unit = runBlocking {
+    fun `캐시 히트 시 임베딩 API는 호출되지 않는다`() {
         val diff = """
             diff --git a/src/main/kotlin/CacheMissOnly.kt b/src/main/kotlin/CacheMissOnly.kt
             --- a/src/main/kotlin/CacheMissOnly.kt
@@ -106,7 +105,7 @@ class DefaultReviewServiceCacheTest : AbstractIntegrationTest() {
     }
 
     @Test
-    fun `캐시 키는 설정된 keyVersion prefix를 포함하여 저장된다`(): Unit = runBlocking {
+    fun `캐시 키는 설정된 keyVersion prefix를 포함하여 저장된다`() {
         val diff = """
             diff --git a/src/main/kotlin/Versioned.kt b/src/main/kotlin/Versioned.kt
             --- a/src/main/kotlin/Versioned.kt
@@ -131,7 +130,7 @@ class DefaultReviewServiceCacheTest : AbstractIntegrationTest() {
     }
 
     @Test
-    fun `캐시 히트 시 Redis hit 카운터와 miss 카운터가 각각 1씩 증가한다`(): Unit = runBlocking {
+    fun `캐시 히트 시 Redis hit 카운터와 miss 카운터가 각각 1씩 증가한다`() {
         val diff = """
             diff --git a/src/Counter.kt b/src/Counter.kt
             --- a/src/Counter.kt

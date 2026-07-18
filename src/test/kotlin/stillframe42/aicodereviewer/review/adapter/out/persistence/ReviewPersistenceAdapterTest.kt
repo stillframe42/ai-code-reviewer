@@ -1,6 +1,5 @@
 package stillframe42.aicodereviewer.review.adapter.out.persistence
 
-import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
@@ -39,7 +38,7 @@ class ReviewPersistenceAdapterTest : AbstractIntegrationTest() {
     }
 
     @Test
-    fun `saveReviewRequest는 PENDING 상태로 저장하고 ID를 반환한다`() = runTest {
+    fun `saveReviewRequest는 PENDING 상태로 저장하고 ID를 반환한다`() {
         val id = adapter.saveReviewRequest(
             repoFullName = "owner/repo",
             prNumber = 10,
@@ -54,7 +53,7 @@ class ReviewPersistenceAdapterTest : AbstractIntegrationTest() {
     }
 
     @Test
-    fun `updateReviewStatus는 상태와 completedAt을 변경한다`() = runTest {
+    fun `updateReviewStatus는 상태와 completedAt을 변경한다`() {
         val id = adapter.saveReviewRequest("owner/repo", 11, "def456")
         adapter.updateReviewStatus(id, ReviewRequestStatus.DONE, Instant.now())
 
@@ -64,7 +63,7 @@ class ReviewPersistenceAdapterTest : AbstractIntegrationTest() {
     }
 
     @Test
-    fun `saveReviewResult는 ReviewResultEntity와 카테고리 행을 저장한다`() = runTest {
+    fun `saveReviewResult는 ReviewResultEntity와 카테고리 행을 저장한다`() {
         val requestId = adapter.saveReviewRequest("owner/repo", 12, "ghi789")
         val review = CodeReview(
             overallScore = 7,
@@ -108,7 +107,7 @@ class ReviewPersistenceAdapterTest : AbstractIntegrationTest() {
     }
 
     @Test
-    fun `saveToolCallLog은 예외 없이 완료된다`() = runTest {
+    fun `saveToolCallLog은 예외 없이 완료된다`() {
         // Tool 호출 로그 저장은 현재 no-op 구현이므로 예외 없이 완료되어야 한다
         adapter.saveToolCallLog(
             reviewRequestId = 999L,
@@ -122,7 +121,7 @@ class ReviewPersistenceAdapterTest : AbstractIntegrationTest() {
     }
 
     @Test
-    fun `updateReviewStatus에서 completedAt이 null이면 기존 값을 유지한다`() = runTest {
+    fun `updateReviewStatus에서 completedAt이 null이면 기존 값을 유지한다`() {
         val id = adapter.saveReviewRequest("owner/repo", 20, "sha999")
         val originalCompletedAt = Instant.now()
         // 먼저 completedAt을 설정한다

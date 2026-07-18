@@ -1,7 +1,5 @@
 package stillframe42.aicodereviewer.review.adapter.out.persistence
 
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Pageable
@@ -21,18 +19,18 @@ class ReviewQueryAdapter(
     private val llmCostLogRepository: LlmCostLogRepository,
 ) : ReviewQueryPort {
 
-    override suspend fun findLatestByRepoAndPr(
+    override fun findLatestByRepoAndPr(
         repoFullName: String,
         prNumber: Int,
-    ): ReviewSummaryResult? = withContext(Dispatchers.IO) {
+    ): ReviewSummaryResult? {
         val request = reviewRequestRepository
             .findTopByRepoFullNameAndPrNumberOrderByCreatedAtDesc(repoFullName, prNumber)
-            ?: return@withContext null
+            ?: return null
         val result = reviewResultRepository.findByReviewRequestId(request.id)
         val issueCount = result?.let {
             reviewIssueCategoryRepository.countByReviewResultId(it.id).toInt()
         } ?: 0
-        ReviewSummaryResult(
+        return ReviewSummaryResult(
             repoFullName = request.repoFullName,
             prNumber = request.prNumber,
             headSha = request.headSha,
@@ -46,35 +44,29 @@ class ReviewQueryAdapter(
         )
     }
 
-    override suspend fun countTotalReviews(): Long = withContext(Dispatchers.IO) {
-        reviewRequestRepository.count()
-    }
+    override fun countTotalReviews(): Long = reviewRequestRepository.count()
 
-    override suspend fun countByCategory(): Map<IssueCategory, Long> = withContext(Dispatchers.IO) {
+    override fun countByCategory(): Map<IssueCategory, Long> =
         chunkedSequence { reviewIssueCategoryRepository.findAllBy(it) }
             .groupingBy { it.category }
             .fold(0L) { acc, _ -> acc + 1L }
             .let { counts -> IssueCategory.entries.associateWith { counts[it] ?: 0L } }
-    }
 
-    override suspend fun averageToolCallCount(): Double = withContext(Dispatchers.IO) {
+    override fun averageToolCallCount(): Double =
         chunkedSequence { reviewResultRepository.findAllBy(it) }
             .map { it.toolCallCount.toLong() }
             .fold(0L to 0L) { (sum, count), v -> (sum + v) to (count + 1L) }
             .let { (sum, count) -> if (count == 0L) 0.0 else sum.toDouble() / count }
-    }
 
-    override suspend fun sumCostByModel(): Map<String, BigDecimal> = withContext(Dispatchers.IO) {
+    override fun sumCostByModel(): Map<String, BigDecimal> =
         chunkedSequence { llmCostLogRepository.findAllBy(it) }
             .groupingBy { it.modelName }
             .fold(BigDecimal.ZERO) { acc, entity -> acc + entity.estimatedCostUsd }
-    }
 
-    override suspend fun totalLlmCostSummary(): LlmCostSummary = withContext(Dispatchers.IO) {
+    override fun totalLlmCostSummary(): LlmCostSummary =
         chunkedSequence { llmCostLogRepository.findAllBy(it) }
             .fold(BigDecimal.ZERO to 0L) { (sum, count), entity -> (sum + entity.estimatedCostUsd) to (count + 1L) }
             .let { (totalCost, totalCalls) -> LlmCostSummary(totalCost = totalCost, totalCalls = totalCalls) }
-    }
 
     // 청크(1000건) 단위로 전체 레코드를 순회하는 Sequence — 집계 쿼리 대신 I/O 분산
     private fun <T : Any> chunkedSequence(fetch: (Pageable) -> Page<T>): Sequence<T> =

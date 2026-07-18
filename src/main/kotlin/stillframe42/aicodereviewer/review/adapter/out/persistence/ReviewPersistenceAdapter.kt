@@ -1,7 +1,5 @@
 package stillframe42.aicodereviewer.review.adapter.out.persistence
 
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import org.springframework.stereotype.Component
 import com.fasterxml.jackson.databind.ObjectMapper
 import org.springframework.transaction.support.TransactionTemplate
@@ -14,7 +12,6 @@ import stillframe42.aicodereviewer.review.domain.port.out.ReviewPersistencePort
 import java.time.Instant
 
 // ReviewPersistencePort 구현체 — JPA를 통해 리뷰 요청/결과/카테고리를 저장한다
-// JPA는 블로킹 API이므로 모든 메서드를 Dispatchers.IO에서 실행한다
 @Component
 class ReviewPersistenceAdapter(
     private val reviewRequestRepository: ReviewRequestRepository,
@@ -24,26 +21,24 @@ class ReviewPersistenceAdapter(
     private val transactionTemplate: TransactionTemplate,
 ) : ReviewPersistencePort {
 
-    override suspend fun saveReviewRequest(
+    override fun saveReviewRequest(
         repoFullName: String,
         prNumber: Int,
         headSha: String,
-    ): Long = withContext(Dispatchers.IO) {
-        reviewRequestRepository.save(
-            ReviewRequestEntity(
-                repoFullName = repoFullName,
-                prNumber = prNumber,
-                headSha = headSha,
-                status = ReviewRequestStatus.PENDING,
-            ),
-        ).id
-    }
+    ): Long = reviewRequestRepository.save(
+        ReviewRequestEntity(
+            repoFullName = repoFullName,
+            prNumber = prNumber,
+            headSha = headSha,
+            status = ReviewRequestStatus.PENDING,
+        ),
+    ).id
 
-    override suspend fun updateReviewStatus(
+    override fun updateReviewStatus(
         id: Long,
         status: ReviewRequestStatus,
         completedAt: Instant?,
-    ): Unit = withContext(Dispatchers.IO) {
+    ) {
         val entity = reviewRequestRepository.findById(id).orElseThrow {
             IllegalArgumentException("ReviewRequest not found: $id")
         }
@@ -62,11 +57,11 @@ class ReviewPersistenceAdapter(
 
     // @Transactional은 private 메서드에 적용 불가(Spring AOP 프록시 한계)
     // TransactionTemplate으로 명시적 트랜잭션 경계를 설정한다
-    override suspend fun saveReviewResult(
+    override fun saveReviewResult(
         reviewRequestId: Long,
         review: CodeReview,
         modelName: String?,
-    ): Unit = withContext(Dispatchers.IO) {
+    ) {
         val issuesJson = objectMapper.writeValueAsString(review.issues)
         transactionTemplate.executeWithoutResult {
             val saved = reviewResultRepository.save(
@@ -92,7 +87,7 @@ class ReviewPersistenceAdapter(
     }
 
     // Tool 호출 이력 저장은 추후 ToolCallLogger 연동으로 구현 예정
-    override suspend fun saveToolCallLog(
+    override fun saveToolCallLog(
         reviewRequestId: Long,
         toolName: String,
         argumentsJson: String?,
