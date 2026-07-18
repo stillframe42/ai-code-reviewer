@@ -24,7 +24,7 @@ repositories {
 dependencies {
     // Web
     implementation("org.springframework.boot:spring-boot-starter-web")
-    implementation("org.springframework.boot:spring-boot-starter-webflux") // ReactiveAdapterRegistry(suspend MVC 브릿지), ReactiveRedisTemplate, WebClient
+    implementation("org.springframework.boot:spring-boot-starter-webflux") // ReactiveAdapterRegistry(suspend MVC 브릿지), WebClient
     implementation("org.springframework.boot:spring-boot-starter-validation")
 
     // Data
@@ -35,7 +35,7 @@ dependencies {
     runtimeOnly("org.postgresql:postgresql")
 
     // Redis
-    implementation("org.springframework.boot:spring-boot-starter-data-redis-reactive")
+    implementation("org.springframework.boot:spring-boot-starter-data-redis")
 
     // Actuator
     implementation("org.springframework.boot:spring-boot-starter-actuator")

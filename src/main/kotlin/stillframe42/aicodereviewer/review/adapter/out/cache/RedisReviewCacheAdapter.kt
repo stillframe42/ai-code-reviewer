@@ -1,7 +1,7 @@
 package stillframe42.aicodereviewer.review.adapter.out.cache
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import org.springframework.data.redis.core.ReactiveRedisTemplate
+import org.springframework.data.redis.core.StringRedisTemplate
 import org.springframework.stereotype.Component
 import stillframe42.aicodereviewer.common.cache.AbstractRedisCacheAdapter
 import stillframe42.aicodereviewer.config.AiReviewerProperties
@@ -12,7 +12,7 @@ import stillframe42.aicodereviewer.review.domain.model.CodeReview
 // ReviewCachePort 포트는 MeteredReviewCacheAdapter가 이 어댑터를 감싸 메트릭/로그를 더한 형태로 제공한다.
 @Component
 class RedisReviewCacheAdapter(
-    redisTemplate: ReactiveRedisTemplate<String, String>,
+    redisTemplate: StringRedisTemplate,
     objectMapper: ObjectMapper,
     properties: AiReviewerProperties,
 ) : AbstractRedisCacheAdapter<CodeReview>(

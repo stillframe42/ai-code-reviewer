@@ -11,7 +11,7 @@ import org.junit.jupiter.api.BeforeEach
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.test.web.server.LocalServerPort
-import org.springframework.data.redis.core.ReactiveRedisTemplate
+import org.springframework.data.redis.core.StringRedisTemplate
 import org.springframework.test.context.ActiveProfiles
 import org.springframework.test.context.DynamicPropertyRegistry
 import org.springframework.test.context.DynamicPropertySource
@@ -86,18 +86,14 @@ abstract class AbstractIntegrationTest {
     protected lateinit var client: RestTestClient
 
     @Autowired
-    protected lateinit var redisTemplate: ReactiveRedisTemplate<String, String>
+    protected lateinit var redisTemplate: StringRedisTemplate
 
     @BeforeEach
     fun setUpBase() {
         // 테스트 간 stub 오염 방지 — 각 테스트는 깨끗한 WireMock 상태에서 시작
         wireMock.resetAll()
         // 테스트 간 Redis 캐시 오염 방지 — 이전 테스트에서 저장된 리뷰 캐시를 제거한다
-        redisTemplate.connectionFactory
-            .reactiveConnection
-            .serverCommands()
-            .flushAll()
-            .block()
+        redisTemplate.connectionFactory!!.connection.serverCommands().flushAll()
         client = RestTestClient.bindToServer()
             .baseUrl("http://localhost:$port")
             .build()

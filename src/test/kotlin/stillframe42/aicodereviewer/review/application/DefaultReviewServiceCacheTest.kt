@@ -3,7 +3,6 @@ package stillframe42.aicodereviewer.review.application
 import com.github.tomakehurst.wiremock.client.WireMock.exactly
 import com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor
 import com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo
-import kotlinx.coroutines.reactor.awaitSingle
 import kotlinx.coroutines.runBlocking
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
@@ -125,7 +124,7 @@ class DefaultReviewServiceCacheTest : AbstractIntegrationTest() {
 
         // 현재 설정된 keyVersion (기본 v1) prefix 를 그대로 사용한 키만 조회되어야 한다
         val expectedPrefix = "review:cache:${aiReviewerProperties.cache.keyVersion}:"
-        val versionedKeys = redisTemplate.keys("$expectedPrefix*").collectList().awaitSingle()
+        val versionedKeys = redisTemplate.keys("$expectedPrefix*").toList()
         assertThat(versionedKeys)
             .hasSize(1)
             .allSatisfy { key -> assertThat(key).startsWith(expectedPrefix) }

@@ -19,7 +19,7 @@ class MeteredReviewCacheAdapter(
     private val reviewCacheStatsStore: ReviewCacheStatsPort,
 ) : ReviewCachePort, Logging {
 
-    override suspend fun get(key: String): CodeReview? {
+    override fun get(key: String): CodeReview? {
         val cached = delegate.get(key)
         if (cached != null) {
             logger.debug("캐시 히트: key={}", key)
@@ -33,7 +33,7 @@ class MeteredReviewCacheAdapter(
         return cached
     }
 
-    override suspend fun put(key: String, value: CodeReview) {
+    override fun put(key: String, value: CodeReview) {
         runCatching { delegate.put(key, value) }
             .onFailure { e -> logger.warn("캐시 저장 실패 (무시): {}", e.message) }
     }

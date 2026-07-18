@@ -13,7 +13,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
-import org.springframework.data.redis.core.ReactiveRedisTemplate
+import org.springframework.data.redis.core.StringRedisTemplate
 import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.test.context.ActiveProfiles
 import org.springframework.test.context.DynamicPropertyRegistry
@@ -148,7 +148,7 @@ class RagQualityComparisonIT {
     private lateinit var jdbcTemplate: JdbcTemplate
 
     @Autowired
-    private lateinit var redisTemplate: ReactiveRedisTemplate<String, String>
+    private lateinit var redisTemplate: StringRedisTemplate
 
     @BeforeEach
     fun setUp() {
@@ -158,11 +158,7 @@ class RagQualityComparisonIT {
         // Langfuse 스텁 (리뷰 완료 후 관측 데이터 전송 시 필요)
         WireMockStubs.stubLangfuseIngestion(wireMock)
         // Redis 캐시 초기화 — 이전 리뷰 캐시 제거
-        redisTemplate.connectionFactory
-            .reactiveConnection
-            .serverCommands()
-            .flushAll()
-            .block()
+        redisTemplate.connectionFactory!!.connection.serverCommands().flushAll()
     }
 
     @Test
@@ -452,11 +448,7 @@ class RagQualityComparisonIT {
     // Redis 전체 flush. DefaultReviewService가 쓰는 review 캐시를 제거해
     // 같은 diff에 대한 이전 실행 결과가 캐시 히트로 재사용되지 않게 한다.
     private fun flushRedis() {
-        redisTemplate.connectionFactory
-            .reactiveConnection
-            .serverCommands()
-            .flushAll()
-            .block()
+        redisTemplate.connectionFactory!!.connection.serverCommands().flushAll()
     }
 
 }
