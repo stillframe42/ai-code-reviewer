@@ -3,7 +3,6 @@ package stillframe42.aicodereviewer.agent.application
 import kotlinx.coroutines.test.runTest
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
-import org.springframework.util.unit.DataSize
 import stillframe42.aicodereviewer.agent.domain.exception.AgentAnalysisFailedException
 import stillframe42.aicodereviewer.agent.domain.exception.AgentAnalysisTimeoutException
 import stillframe42.aicodereviewer.agent.domain.model.AgentAnalysisCommand
@@ -23,7 +22,6 @@ class AgentPollerTest {
         url = "http://test",
         connectTimeout = Duration.ofSeconds(1),
         readTimeout = Duration.ofSeconds(1),
-        maxInMemorySize = DataSize.ofMegabytes(1),
         poll = RemoteAgentProperties.PollProperties(maxAttempts, interval, timeout),
         callback = RemoteAgentProperties.CallbackProperties(internalAuthToken = ""),
     )
@@ -35,15 +33,15 @@ class AgentPollerTest {
         var calls = 0
             private set
 
-        override suspend fun requestDeepAnalysis(command: AgentAnalysisCommand): AgentAnalysisResult =
+        override fun requestDeepAnalysis(command: AgentAnalysisCommand): AgentAnalysisResult =
             error("not used in poller test")
 
-        override suspend fun getAnalysisResult(analysisId: String): AgentAnalysisResult {
+        override fun getAnalysisResult(analysisId: String): AgentAnalysisResult {
             if (calls == ioExceptionAfter) throw IOException("simulated IO failure")
             return responses[calls++.coerceAtMost(responses.lastIndex)]
         }
 
-        override suspend fun checkHealth() = true
+        override fun checkHealth() = true
     }
 
     private fun result(status: String, error: String? = null) =

@@ -1,13 +1,10 @@
 package stillframe42.aicodereviewer.agent.adapter.out.remote
 
-import java.net.ConnectException
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.stereotype.Component
-import org.springframework.web.reactive.function.client.WebClient
-import org.springframework.web.reactive.function.client.WebClientRequestException
-import org.springframework.web.reactive.function.client.WebClientResponseException
-import org.springframework.web.reactive.function.client.awaitBodilessEntity
-import org.springframework.web.reactive.function.client.awaitBody
+import org.springframework.web.client.ResourceAccessException
+import org.springframework.web.client.RestClient
+import org.springframework.web.client.RestClientResponseException
 import stillframe42.aicodereviewer.agent.adapter.out.remote.dto.AgentAnalysisRequest
 import stillframe42.aicodereviewer.agent.adapter.out.remote.dto.AgentAnalysisResponse
 import stillframe42.aicodereviewer.agent.adapter.out.remote.dto.AgentIssue
@@ -22,11 +19,11 @@ import stillframe42.aicodereviewer.common.Logging
 // 도메인 예외 한 번에 처리하도록. 4xx 는 호출자 버그이므로 재전파 (디버그 가능성 유지).
 @Component
 class RemoteAgentClient(
-    @param:Qualifier("remoteAgentWebClient")
-    private val webClient: WebClient,
+    @param:Qualifier("remoteAgentRestClient")
+    private val restClient: RestClient,
 ) : AgentAnalysisPort, Logging {
 
-    override suspend fun requestDeepAnalysis(
+    override fun requestDeepAnalysis(
         command: AgentAnalysisCommand,
     ): AgentAnalysisResult = mapHttpExceptions {
         logger.info(
@@ -37,41 +34,39 @@ class RemoteAgentClient(
             command.diff.length,
         )
         val request = command.toDto()
-        val response: AgentAnalysisResponse = webClient.post()
+        val response = restClient.post()
             .uri("/agent/analyze")
-            .bodyValue(request)
+            .body(request)
             .retrieve()
-            .awaitBody()
+            .body(AgentAnalysisResponse::class.java)!!
         response.toDomain()
     }
 
-    override suspend fun getAnalysisResult(analysisId: String): AgentAnalysisResult = mapHttpExceptions {
-        val response: AgentAnalysisResponse = webClient.get()
+    override fun getAnalysisResult(analysisId: String): AgentAnalysisResult = mapHttpExceptions {
+        val response = restClient.get()
             .uri("/agent/analyze/{id}", analysisId)
             .retrieve()
-            .awaitBody()
+            .body(AgentAnalysisResponse::class.java)!!
         response.toDomain()
     }
 
-    override suspend fun checkHealth(): Boolean =
+    override fun checkHealth(): Boolean =
         runCatching {
-            webClient.get().uri("/health").retrieve().awaitBodilessEntity()
+            restClient.get().uri("/health").retrieve().toBodilessEntity()
         }.isSuccess
 
-    // WebClient 네트워크/5xx 예외만 AgentUnavailableException 으로 변환한다.
+    // RestClient 네트워크/5xx 예외만 AgentUnavailableException 으로 변환한다.
     // 4xx 는 호출자(우리) 의 버그이므로 그대로 위로 던진다.
-    private suspend fun <T> mapHttpExceptions(block: suspend () -> T): T =
+    private fun <T> mapHttpExceptions(block: () -> T): T =
         try {
             block()
-        } catch (e: WebClientResponseException) {
+        } catch (e: RestClientResponseException) {
             if (e.statusCode.is5xxServerError) {
                 throw AgentUnavailableException("HTTP ${e.statusCode.value()}", e)
             }
             throw e
-        } catch (e: WebClientRequestException) {
+        } catch (e: ResourceAccessException) {
             throw AgentUnavailableException("network: ${e.message}", e)
-        } catch (e: ConnectException) {
-            throw AgentUnavailableException("connect failed: ${e.message}", e)
         }
 }
 

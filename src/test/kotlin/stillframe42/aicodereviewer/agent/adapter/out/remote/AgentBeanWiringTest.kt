@@ -1,6 +1,5 @@
 package stillframe42.aicodereviewer.agent.adapter.out.remote
 
-import kotlinx.coroutines.test.runTest
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
@@ -20,7 +19,7 @@ class AgentBeanWiringTest : AbstractIntegrationTest() {
     }
 
     @Test
-    fun `remoteAgentWebClient 가 주입되고 WireMock 응답을 도메인 결과로 매핑한다`() = runTest {
+    fun `remoteAgentRestClient 가 주입되고 WireMock 응답을 도메인 결과로 매핑한다`() {
         WireMockStubs.stubRemoteAgentAnalyze(wireMock)
 
         val result = agentPort.requestDeepAnalysis(

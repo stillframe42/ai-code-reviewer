@@ -7,7 +7,6 @@ import com.github.tomakehurst.wiremock.client.WireMock.okJson
 import com.github.tomakehurst.wiremock.client.WireMock.post
 import com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor
 import com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo
-import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import stillframe42.aicodereviewer.agent.domain.model.AgentAnalysisCommand
@@ -22,7 +21,7 @@ class RemoteAgentTracePropagationTest : AbstractIntegrationTest() {
     private lateinit var remoteAgentClient: RemoteAgentClient
 
     @Test
-    fun `requestDeepAnalysis - 요청에 W3C traceparent 헤더가 주입된다`() = runTest {
+    fun `requestDeepAnalysis - 요청에 W3C traceparent 헤더가 주입된다`() {
         wireMock.stubFor(
             post(urlPathEqualTo("/agent/analyze"))
                 .willReturn(okJson("""{"analysis_id":"x","status":"DONE","issues":[]}""")),
@@ -39,7 +38,7 @@ class RemoteAgentTracePropagationTest : AbstractIntegrationTest() {
     }
 
     @Test
-    fun `getAnalysisResult - 폴링 요청에 W3C traceparent 헤더가 주입된다`() = runTest {
+    fun `getAnalysisResult - 폴링 요청에 W3C traceparent 헤더가 주입된다`() {
         wireMock.stubFor(
             get(urlPathEqualTo("/agent/analyze/id-1"))
                 .willReturn(okJson("""{"analysis_id":"id-1","status":"IN_PROGRESS","issues":[]}""")),
