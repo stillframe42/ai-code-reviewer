@@ -1,10 +1,10 @@
 package stillframe42.aicodereviewer.common.langfuse
 
+import java.net.http.HttpClient
 import java.util.Base64
 import org.springframework.http.MediaType
-import org.springframework.web.reactive.function.client.WebClient
-import org.springframework.web.reactive.function.client.bodyToMono
-import reactor.core.publisher.Mono
+import org.springframework.http.client.JdkClientHttpRequestFactory
+import org.springframework.web.client.RestClient
 import stillframe42.aicodereviewer.common.Logging
 import stillframe42.aicodereviewer.config.LangfuseProperties
 
@@ -20,8 +20,16 @@ class LangfuseClient(
         "Basic ${Base64.getEncoder().encodeToString(credentials.toByteArray())}"
     }
 
-    private val webClient: WebClient by lazy {
-        WebClient.builder()
+    private val restClient: RestClient by lazy {
+        val httpClient = HttpClient.newBuilder()
+            // JDK HttpClient 의 HTTP/2 우선 협상이 h2 미지원 서버(WireMock 포함)에서 업그레이드 실패를 유발 — HTTP/1.1 고정
+            .version(HttpClient.Version.HTTP_1_1)
+            .build()
+        val requestFactory = JdkClientHttpRequestFactory(httpClient)
+        // Langfuse 무응답 시 LLM 호출 스레드가 무기한 매달리지 않도록 타임아웃
+        requestFactory.setReadTimeout(properties.ingestTimeout)
+        RestClient.builder()
+            .requestFactory(requestFactory)
             .baseUrl(properties.host)
             .defaultHeader("Authorization", authHeader)
             .build()
@@ -31,24 +39,16 @@ class LangfuseClient(
     // 실패 시 RuntimeException throw — 호출부에서 try-catch로 처리할 것
     fun ingest(batch: List<Map<String, Any>>) {
         val body = mapOf("batch" to batch)
-        webClient.post()
+        restClient.post()
             .uri("/api/public/ingestion")
             .contentType(MediaType.APPLICATION_JSON)
-            .bodyValue(body)
+            .body(body)
             .retrieve()
-            .onStatus({ it.isError }) { response ->
-                response.bodyToMono(String::class.java)
-                    .defaultIfEmpty("응답 바디 없음")
-                    .flatMap { responseBody ->
-                        Mono.error(RuntimeException("Langfuse ingestion 실패: ${response.statusCode()} — $responseBody"))
-                    }
+            .onStatus({ it.isError }) { _, response ->
+                val responseBody = response.body.readAllBytes().toString(Charsets.UTF_8).ifEmpty { "응답 바디 없음" }
+                throw RuntimeException("Langfuse ingestion 실패: ${response.statusCode} — $responseBody")
             }
-            .bodyToMono<Map<String, Any>>()
-            .defaultIfEmpty(emptyMap())
-            // Langfuse 무응답 시 LLM 호출 스레드가 무기한 매달리지 않도록 전체 교환에 타임아웃
-            .timeout(properties.ingestTimeout)
-            // ObservationHandler의 동기 콜백에서 호출되므로 블로킹 방식 사용
-            .block()
+            .toBodilessEntity()
         logger.debug("[LANGFUSE] ingestion 배치 전송 완료: {}건", batch.size)
     }
 }
