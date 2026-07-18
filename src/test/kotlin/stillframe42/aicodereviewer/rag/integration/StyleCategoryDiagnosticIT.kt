@@ -3,7 +3,6 @@ package stillframe42.aicodereviewer.rag.integration
 import com.github.tomakehurst.wiremock.client.WireMock.aResponse
 import com.github.tomakehurst.wiremock.client.WireMock.post
 import com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo
-import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
@@ -45,7 +44,7 @@ class StyleCategoryDiagnosticIT : AbstractIntegrationTest() {
     }
 
     @Test
-    fun `STYLE 카테고리 검색 진단`(): Unit = runBlocking {
+    fun `STYLE 카테고리 검색 진단`() {
         // 인덱싱 보장
         conventionIndexUseCase.reindex()
 

@@ -2,10 +2,8 @@ package stillframe42.aicodereviewer.common.advisor
 
 import java.math.BigDecimal
 import java.math.RoundingMode
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.launch
+import java.util.concurrent.Executor
+import java.util.concurrent.Executors
 import org.springframework.ai.chat.client.ChatClientRequest
 import org.springframework.ai.chat.client.ChatClientResponse
 import org.springframework.ai.chat.client.advisor.api.CallAdvisor
@@ -24,9 +22,8 @@ class CostTrackingAdvisor(
     private val costProperties: LlmCostProperties,
     private val costLogPort: CostLogPort,
     private val eventPublisher: ApplicationEventPublisher,
-    // CoroutineScope 주입 — 테스트에서 교체 가능하도록 설계
-    // SupervisorJob: 개별 저장 실패가 scope를 취소하지 않도록 격리
-    private val scope: CoroutineScope = CoroutineScope(Dispatchers.IO + SupervisorJob()),
+    // Executor 주입 — 테스트에서 동기 실행 Executor로 교체 가능하도록 설계
+    private val executor: Executor = Executors.newVirtualThreadPerTaskExecutor(),
     private val order: Int = Ordered.HIGHEST_PRECEDENCE + 2,
 ) : CallAdvisor, Logging {
 
@@ -40,7 +37,7 @@ class CostTrackingAdvisor(
     override fun adviseCall(request: ChatClientRequest, chain: CallAdvisorChain): ChatClientResponse {
         val response = chain.nextCall(request)
         // 메인 플로우를 블로킹하지 않고 백그라운드에서 비용 저장
-        scope.launch {
+        executor.execute {
             try {
                 saveCostLog(response)
             } catch (e: Exception) {

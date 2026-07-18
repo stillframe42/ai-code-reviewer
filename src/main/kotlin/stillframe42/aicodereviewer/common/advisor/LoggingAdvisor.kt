@@ -1,21 +1,18 @@
 package stillframe42.aicodereviewer.common.advisor
 
-import org.springframework.ai.chat.client.ChatClientMessageAggregator
 import org.springframework.ai.chat.client.ChatClientRequest
 import org.springframework.ai.chat.client.ChatClientResponse
 import org.springframework.ai.chat.client.advisor.api.CallAdvisor
 import org.springframework.ai.chat.client.advisor.api.CallAdvisorChain
-import org.springframework.ai.chat.client.advisor.api.StreamAdvisor
-import org.springframework.ai.chat.client.advisor.api.StreamAdvisorChain
 import org.springframework.core.Ordered
-import reactor.core.publisher.Flux
 import stillframe42.aicodereviewer.common.Logging
 import stillframe42.aicodereviewer.common.TokenEstimator
 
 // AI 호출 시 토큰 수와 소요 시간을 로그로 기록하는 어드바이저
+// chat 기능(스트리밍) 제거로 CallAdvisor 경로만 남는다 — StreamAdvisor는 구현하지 않는다
 class LoggingAdvisor(
     private val order: Int = Ordered.HIGHEST_PRECEDENCE,
-) : CallAdvisor, StreamAdvisor, Logging {
+) : CallAdvisor, Logging {
 
     override fun getName(): String = "LoggingAdvisor"
     override fun getOrder(): Int = order
@@ -29,18 +26,6 @@ class LoggingAdvisor(
         val elapsedMs = System.currentTimeMillis() - startTime
         logResponse(request, response, elapsedMs)
         return response
-    }
-
-    override fun adviseStream(
-        request: ChatClientRequest,
-        chain: StreamAdvisorChain,
-    ): Flux<ChatClientResponse> {
-        val startTime = System.currentTimeMillis()
-        return ChatClientMessageAggregator()
-            .aggregateChatClientResponse(chain.nextStream(request)) { aggregated ->
-                val elapsedMs = System.currentTimeMillis() - startTime
-                logResponse(request, aggregated, elapsedMs)
-            }
     }
 
     // 응답 메타데이터(모델, 토큰 수, 소요 시간, 종료 이유)를 INFO 레벨로 기록

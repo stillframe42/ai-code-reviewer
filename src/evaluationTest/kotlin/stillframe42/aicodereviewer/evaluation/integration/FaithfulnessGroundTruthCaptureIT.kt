@@ -2,7 +2,6 @@ package stillframe42.aicodereviewer.evaluation.integration
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
-import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable
 import org.springframework.beans.factory.annotation.Autowired
@@ -88,7 +87,7 @@ class FaithfulnessGroundTruthCaptureIT {
     private lateinit var objectMapper: ObjectMapper
 
     @Test
-    fun `Few-shot 5 + GT 5 patch에 대해 RAG context + v13 review 캡처`() = runBlocking {
+    fun `Few-shot 5 + GT 5 patch에 대해 RAG context + v13 review 캡처`() {
         conventionIndexUseCase.reindex()
 
         val golden = loadGolden()

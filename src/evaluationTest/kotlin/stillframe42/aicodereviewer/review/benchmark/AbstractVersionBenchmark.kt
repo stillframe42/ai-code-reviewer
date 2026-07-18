@@ -1,6 +1,5 @@
 package stillframe42.aicodereviewer.review.benchmark
 
-import kotlinx.coroutines.runBlocking
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.Assumptions.assumeTrue
@@ -81,12 +80,12 @@ abstract class AbstractVersionBenchmark {
         assumeTrue(isApiKeyAvailable(), "실제 ANTHROPIC_API_KEY가 설정된 환경에서만 실행됩니다")
 
         val code = loadFixture(fixtureName)
-        var review = runBlocking { reviewUseCase.reviewCode(code, AiProvider.ANTHROPIC) }
+        var review = reviewUseCase.reviewCode(code, AiProvider.ANTHROPIC)
         var durationMs = 0L
 
         // 실제 측정은 measureTimeMillis로 재실행
         durationMs = measureTimeMillis {
-            review = runBlocking { reviewUseCase.reviewCode(code, AiProvider.ANTHROPIC) }
+            review = reviewUseCase.reviewCode(code, AiProvider.ANTHROPIC)
         }
 
         val issuesByCategory = review.issues

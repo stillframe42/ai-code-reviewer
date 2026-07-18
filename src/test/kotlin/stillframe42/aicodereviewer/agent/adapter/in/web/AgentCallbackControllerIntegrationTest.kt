@@ -100,7 +100,7 @@ class SpyCallbackConfig {
 
 class SpyAgentCallbackHandler : AgentCallbackUseCase {
     val invocations = mutableListOf<AgentCallbackResult>()
-    override suspend fun handle(result: AgentCallbackResult) {
+    override fun handle(result: AgentCallbackResult) {
         invocations.add(result)
     }
 }

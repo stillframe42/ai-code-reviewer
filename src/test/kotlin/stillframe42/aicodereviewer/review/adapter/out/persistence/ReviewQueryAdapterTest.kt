@@ -1,6 +1,5 @@
 package stillframe42.aicodereviewer.review.adapter.out.persistence
 
-import kotlinx.coroutines.test.runTest
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -56,7 +55,7 @@ class ReviewQueryAdapterTest : AbstractIntegrationTest() {
     }
 
     @Test
-    fun `findLatestByRepoAndPr는 요청과 결과를 조합하여 반환한다`() = runTest {
+    fun `findLatestByRepoAndPr는 요청과 결과를 조합하여 반환한다`() {
         // 리뷰 요청 저장
         val request = reviewRequestRepository.save(
             ReviewRequestEntity(
@@ -100,7 +99,7 @@ class ReviewQueryAdapterTest : AbstractIntegrationTest() {
     }
 
     @Test
-    fun `findLatestByRepoAndPr는 데이터가 없으면 null을 반환한다`() = runTest {
+    fun `findLatestByRepoAndPr는 데이터가 없으면 null을 반환한다`() {
         val result = adapter.findLatestByRepoAndPr("nobody/norepo", 999)
 
         // 저장된 데이터가 없으면 null이어야 한다
@@ -108,7 +107,7 @@ class ReviewQueryAdapterTest : AbstractIntegrationTest() {
     }
 
     @Test
-    fun `countTotalReviews는 저장된 요청 수를 반환한다`() = runTest {
+    fun `countTotalReviews는 저장된 요청 수를 반환한다`() {
         // 리뷰 요청 3건 저장
         reviewRequestRepository.saveAll(
             listOf(
@@ -122,7 +121,7 @@ class ReviewQueryAdapterTest : AbstractIntegrationTest() {
     }
 
     @Test
-    fun `countByCategory는 없는 카테고리를 0으로 포함한다`() = runTest {
+    fun `countByCategory는 없는 카테고리를 0으로 포함한다`() {
         // 요청 → 결과 → 카테고리(SECURITY만) 저장
         val request = reviewRequestRepository.save(
             ReviewRequestEntity(
@@ -156,13 +155,13 @@ class ReviewQueryAdapterTest : AbstractIntegrationTest() {
     }
 
     @Test
-    fun `averageToolCallCount는 결과가 없으면 0_0을 반환한다`() = runTest {
+    fun `averageToolCallCount는 결과가 없으면 0_0을 반환한다`() {
         // 저장된 결과 없음
         assertEquals(0.0, adapter.averageToolCallCount())
     }
 
     @Test
-    fun `sumCostByModel은 모델별 누적 비용 합계를 반환한다`() = runTest {
+    fun `sumCostByModel은 모델별 누적 비용 합계를 반환한다`() {
         llmCostLogRepository.saveAll(listOf(
             LlmCostLogEntity(
                 modelName = "claude-haiku-4-5-20251001",
@@ -191,12 +190,12 @@ class ReviewQueryAdapterTest : AbstractIntegrationTest() {
     }
 
     @Test
-    fun `sumCostByModel은 데이터가 없으면 빈 맵을 반환한다`() = runTest {
+    fun `sumCostByModel은 데이터가 없으면 빈 맵을 반환한다`() {
         assertThat(adapter.sumCostByModel()).isEmpty()
     }
 
     @Test
-    fun `totalLlmCostSummary는 전체 비용 합계와 호출 수를 반환한다`() = runTest {
+    fun `totalLlmCostSummary는 전체 비용 합계와 호출 수를 반환한다`() {
         llmCostLogRepository.saveAll(listOf(
             LlmCostLogEntity(
                 modelName = "claude-haiku-4-5-20251001",
@@ -219,7 +218,7 @@ class ReviewQueryAdapterTest : AbstractIntegrationTest() {
     }
 
     @Test
-    fun `totalLlmCostSummary는 데이터가 없으면 ZERO와 0을 반환한다`() = runTest {
+    fun `totalLlmCostSummary는 데이터가 없으면 ZERO와 0을 반환한다`() {
         val summary = adapter.totalLlmCostSummary()
 
         assertThat(summary.totalCost).isEqualByComparingTo(BigDecimal.ZERO)

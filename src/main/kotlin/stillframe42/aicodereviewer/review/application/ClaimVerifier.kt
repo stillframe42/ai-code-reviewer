@@ -2,8 +2,6 @@ package stillframe42.aicodereviewer.review.application
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import org.springframework.ai.anthropic.AnthropicChatOptions
 import org.springframework.ai.chat.client.ChatClient
 import org.springframework.beans.factory.annotation.Qualifier
@@ -22,7 +20,7 @@ class ClaimVerifier(
     private val objectMapper: ObjectMapper,
 ) : Logging {
 
-    suspend fun verify(issues: List<CodeIssue>, context: String): List<CodeIssue> {
+    fun verify(issues: List<CodeIssue>, context: String): List<CodeIssue> {
         if (issues.isEmpty() || context.isBlank()) return issues
         val issuesText = issues.joinToString("\n") { "${it.id}: [${it.severity}] ${it.description}" }
         val prompt = promptResource.getContentAsString(Charsets.UTF_8)
@@ -30,16 +28,14 @@ class ClaimVerifier(
             .replace("{issues}", issuesText)
 
         return runCatching {
-            val raw = withContext(Dispatchers.IO) {
-                chatClient.prompt()
-                    .system(prompt)
-                    .user("위 지침에 따라 검증하고 JSON으로 응답하세요.")
-                    .options(AnthropicChatOptions.builder().temperature(0.0))
-                    .call()
-                    .content()
-                    ?.trim()
-                    ?: ""
-            }
+            val raw = chatClient.prompt()
+                .system(prompt)
+                .user("위 지침에 따라 검증하고 JSON으로 응답하세요.")
+                .options(AnthropicChatOptions.builder().temperature(0.0))
+                .call()
+                .content()
+                ?.trim()
+                ?: ""
             val verdict: Map<String, Any> = objectMapper.readValue(extractJson(raw))
             @Suppress("UNCHECKED_CAST")
             val verifiedIds = (verdict["verified"] as? List<String>)?.toSet() ?: emptySet()

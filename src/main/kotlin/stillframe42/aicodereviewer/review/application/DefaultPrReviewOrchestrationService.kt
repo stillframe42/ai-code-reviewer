@@ -1,6 +1,5 @@
 package stillframe42.aicodereviewer.review.application
 
-import kotlinx.coroutines.CancellationException
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
 import stillframe42.aicodereviewer.agent.domain.exception.AgentAnalysisFailedException
@@ -32,7 +31,7 @@ class DefaultPrReviewOrchestrationService(
     private val eventPublisher: ApplicationEventPublisher,
 ) : PrReviewOrchestrationUseCase, Logging {
 
-    override suspend fun orchestrate(command: PrReviewCommand): CodeReview? {
+    override fun orchestrate(command: PrReviewCommand): CodeReview? {
         val startNanos = System.nanoTime()
         val reviewRequestId = startPersistedReview(command)
         val review = runAiReview(command, reviewRequestId)
@@ -42,7 +41,7 @@ class DefaultPrReviewOrchestrationService(
     }
 
     // 리뷰 요청 PENDING 저장 후 PROCESSING 으로 전환. 저장 실패가 리뷰 흐름을 중단시키지 않도록 격리
-    private suspend fun startPersistedReview(command: PrReviewCommand): Long? {
+    private fun startPersistedReview(command: PrReviewCommand): Long? {
         val reviewRequestId = runOrWarn("리뷰 요청 저장 실패 (리뷰는 계속 진행)") {
             reviewPersistencePort.saveReviewRequest(
                 repoFullName = command.repositoryFullName,
@@ -58,7 +57,7 @@ class DefaultPrReviewOrchestrationService(
     }
 
     // 리뷰 결과 저장 + 상태 종료. saveReviewResult 실패 시에도 상태 업데이트(DONE)가 반드시 실행되도록 블록을 분리한다
-    private suspend fun finalizePersistedReview(reviewRequestId: Long?, review: CodeReview?) {
+    private fun finalizePersistedReview(reviewRequestId: Long?, review: CodeReview?) {
         if (reviewRequestId == null) return
         val now = Instant.now()
         val status = if (review != null) {
@@ -75,7 +74,7 @@ class DefaultPrReviewOrchestrationService(
     }
 
     // AI 리뷰 실행 — 보안 파일 포함 시 agent 경로 우선, AgentException 발생 시 Spring AI 경로로 폴백
-    private suspend fun runAiReview(command: PrReviewCommand, reviewRequestId: Long?): CodeReview? {
+    private fun runAiReview(command: PrReviewCommand, reviewRequestId: Long?): CodeReview? {
         if (!SecurityFileDetector.hasSecurityFile(command.prFiles)) {
             return runDefaultReview(command)
         }
@@ -92,8 +91,6 @@ class DefaultPrReviewOrchestrationService(
                     command.repositoryFullName, command.pullRequestNumber, it.overallScore,
                 )
             }
-        } catch (e: CancellationException) {
-            throw e
         } catch (e: AgentException) {
             fallbackToSpringAI(e.toFallbackReason(), command, e)
         } catch (e: Exception) {
@@ -105,7 +102,7 @@ class DefaultPrReviewOrchestrationService(
 
     // 분류된 reason 으로 이벤트/로그를 남기고 Spring AI 기본 리뷰 경로로 위임한다.
     // 메트릭 기록은 AgentMetricsEventListener 가 담당 — agent application 구체 클래스 직접 의존을 피한다
-    private suspend fun fallbackToSpringAI(
+    private fun fallbackToSpringAI(
         reason: String,
         command: PrReviewCommand,
         cause: Throwable,
@@ -120,7 +117,7 @@ class DefaultPrReviewOrchestrationService(
     }
 
     // Spring AI 기본 리뷰 경로 — agent 가 비활성화되거나 실패한 경우 사용
-    private suspend fun runDefaultReview(command: PrReviewCommand): CodeReview? =
+    private fun runDefaultReview(command: PrReviewCommand): CodeReview? =
         try {
             reviewUseCase.reviewCode(
                 code = command.prDiff,
@@ -133,8 +130,6 @@ class DefaultPrReviewOrchestrationService(
                     command.repositoryFullName, command.pullRequestNumber, review.overallScore,
                 )
             }
-        } catch (e: CancellationException) {
-            throw e
         } catch (e: Exception) {
             logger.error(
                 "리뷰 생성 실패: repo={}, pr={}",
@@ -155,10 +150,9 @@ class DefaultPrReviewOrchestrationService(
         )
     }
 
-    // CancellationException은 재전파, 그 외 예외는 경고 로그 후 null 반환
-    private suspend fun <T> runOrWarn(warnMessage: String, block: suspend () -> T): T? =
+    // 예외는 경고 로그 후 null 반환 — 저장 실패가 리뷰 흐름 전체를 막지 않도록 격리
+    private fun <T> runOrWarn(warnMessage: String, block: () -> T): T? =
         try { block() }
-        catch (e: CancellationException) { throw e }
         catch (e: Exception) { logger.warn(warnMessage, e); null }
 }
 

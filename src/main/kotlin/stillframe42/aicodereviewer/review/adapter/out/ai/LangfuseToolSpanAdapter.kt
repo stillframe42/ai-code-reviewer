@@ -2,8 +2,6 @@ package stillframe42.aicodereviewer.review.adapter.out.ai
 
 import java.time.Instant
 import java.util.UUID
-import kotlin.coroutines.CoroutineContext
-import kotlin.coroutines.EmptyCoroutineContext
 import stillframe42.aicodereviewer.common.Logging
 import stillframe42.aicodereviewer.common.langfuse.LangfuseClient
 import stillframe42.aicodereviewer.common.langfuse.LangfuseSpanContextHolder
@@ -17,17 +15,20 @@ class LangfuseToolSpanAdapter(
     private val langfuseClient: LangfuseClient,
 ) : ToolObservationPort, Logging {
 
-    // traceId 를 생성하고 코루틴 컨텍스트 요소로 반환한다
-    // withContext(traceContext()) 로 감싸면 하위 모든 코루틴/스레드에서 동일한 traceId 접근 가능
-    override fun traceContext(): CoroutineContext {
-        val traceId = UUID.randomUUID().toString()
-        LangfuseTraceContextHolder.set(traceId)
-        return LangfuseTraceContextHolder.asElement(traceId)
+    override fun beginTrace() {
+        LangfuseTraceContextHolder.set(UUID.randomUUID().toString())
     }
 
-    override fun spanContext(spanId: String): CoroutineContext =
-        if (spanId.isEmpty()) EmptyCoroutineContext
-        else LangfuseSpanContextHolder.asElement(spanId)
+    override fun clearTrace() {
+        LangfuseTraceContextHolder.clear()
+        LangfuseSpanContextHolder.clear()
+    }
+
+    override fun currentSpanId(): String? = LangfuseSpanContextHolder.get()
+
+    override fun activateSpan(spanId: String?) {
+        if (spanId == null) LangfuseSpanContextHolder.clear() else LangfuseSpanContextHolder.set(spanId)
+    }
 
     // ObservabilityPort — SpanHandle 반환
     override fun startSpan(name: String, input: Map<String, Any>, metadata: Map<String, Any>): SpanHandle {

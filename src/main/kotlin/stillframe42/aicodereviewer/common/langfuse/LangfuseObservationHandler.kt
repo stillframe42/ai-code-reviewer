@@ -25,17 +25,17 @@ class LangfuseObservationHandler(
 
     // LLM 호출 시작 시: Langfuse에 Trace + Generation 생성
     // Tool Calling 시나리오: 첫 번째 LLM 호출 후 tool 실행, 두 번째 LLM 호출이 이어진다.
-    // traceId는 ReviewAdapter가 코루틴 컨텍스트로 사전 전달 — 없으면 신규 생성 (chat 플로우 대비 fallback)
+    // traceId는 ReviewAdapter가 LangfuseTraceContextHolder(ThreadLocal)에 사전 전달 — 없으면 신규 생성 (chat 플로우 대비 fallback)
     override fun onStart(context: ChatModelObservationContext) {
         try {
-            // traceId: ReviewAdapter가 사전 생성해 코루틴 컨텍스트로 전달. 없으면 생성
+            // traceId: ReviewAdapter가 사전 생성해 LangfuseTraceContextHolder에 설정. 없으면 생성
             val traceId = LangfuseTraceContextHolder.get() ?: UUID.randomUUID().toString()
             val generationId = UUID.randomUUID().toString()
             val startTime = Instant.now().toString()
 
             // onStop에서 재사용하기 위해 IdentityHashMap에 저장
             traceInfoMap[context] = TraceInfo(traceId, generationId, startTime)
-            // (LangfuseTraceContextHolder.set 호출 불필요 — 코루틴 컨텍스트가 이미 설정됨)
+            // (LangfuseTraceContextHolder.set 호출 불필요 — ReviewAdapter가 이미 설정함)
 
             val sessionContext = ObservationSessionContextHolder.local.get()
             val metadata = sessionContext?.metadata ?: emptyMap()

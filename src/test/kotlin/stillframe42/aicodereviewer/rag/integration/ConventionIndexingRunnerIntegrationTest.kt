@@ -3,7 +3,6 @@ package stillframe42.aicodereviewer.rag.integration
 import com.github.tomakehurst.wiremock.client.WireMock.aResponse
 import com.github.tomakehurst.wiremock.client.WireMock.post
 import com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo
-import kotlinx.coroutines.runBlocking
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -73,7 +72,7 @@ class ConventionIndexingRunnerIntegrationTest : AbstractIntegrationTest() {
     @Test
     fun `이미 인덱싱된 경우 --force 없이는 스킵된다`() {
         // 1차 인덱싱
-        runBlocking { conventionIndexUseCase.index() }
+        conventionIndexUseCase.index()
         val countBefore = countRows()
 
         // --force 없이 실행 → 이미 있으므로 스킵

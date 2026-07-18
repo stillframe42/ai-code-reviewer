@@ -20,7 +20,7 @@ class DefaultEvaluationService(
     private val reviewUseCase: ReviewUseCase,
 ) : EvaluationUseCase, Logging {
 
-    override suspend fun evaluateAll(
+    override fun evaluateAll(
         cases: List<GoldenCase>,
         topK: Int,
         threshold: Double,
@@ -33,7 +33,7 @@ class DefaultEvaluationService(
             evaluateCase(case, topK, threshold)
         }
 
-    private suspend fun evaluateCase(
+    private fun evaluateCase(
         case: GoldenCase,
         topK: Int,
         threshold: Double,

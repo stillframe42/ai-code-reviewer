@@ -3,7 +3,6 @@ package stillframe42.aicodereviewer.rag.integration
 import com.github.tomakehurst.wiremock.client.WireMock.aResponse
 import com.github.tomakehurst.wiremock.client.WireMock.post
 import com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo
-import kotlinx.coroutines.runBlocking
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -46,7 +45,7 @@ class ConventionIndexerIntegrationTest : AbstractIntegrationTest() {
 
     @Test
     fun `빈 테이블에서 index() 호출 시 문서가 저장된다`() {
-        runBlocking { conventionIndexUseCase.index() }
+        conventionIndexUseCase.index()
 
         val count = countRows()
         assertThat(count).isGreaterThan(0)
@@ -54,10 +53,10 @@ class ConventionIndexerIntegrationTest : AbstractIntegrationTest() {
 
     @Test
     fun `이미 데이터가 있으면 index()가 스킵된다`() {
-        runBlocking { conventionIndexUseCase.index() }
+        conventionIndexUseCase.index()
         val countAfterFirst = countRows()
 
-        runBlocking { conventionIndexUseCase.index() }
+        conventionIndexUseCase.index()
         val countAfterSecond = countRows()
 
         assertThat(countAfterSecond).isEqualTo(countAfterFirst)
@@ -65,10 +64,10 @@ class ConventionIndexerIntegrationTest : AbstractIntegrationTest() {
 
     @Test
     fun `reindex() 호출 시 기존 데이터를 삭제하고 재저장한다`() {
-        runBlocking { conventionIndexUseCase.index() }
+        conventionIndexUseCase.index()
         val countAfterFirst = countRows()
 
-        runBlocking { conventionIndexUseCase.reindex() }
+        conventionIndexUseCase.reindex()
         val countAfterReindex = countRows()
 
         assertThat(countAfterReindex).isEqualTo(countAfterFirst)
@@ -76,7 +75,7 @@ class ConventionIndexerIntegrationTest : AbstractIntegrationTest() {
 
     @Test
     fun `저장된 문서에 category와 source 메타데이터가 포함된다`() {
-        runBlocking { conventionIndexUseCase.index() }
+        conventionIndexUseCase.index()
 
         // metadata JSONB 컬럼에서 category, source 키 존재 확인
         val metadataList = jdbcTemplate.queryForList(
@@ -90,7 +89,7 @@ class ConventionIndexerIntegrationTest : AbstractIntegrationTest() {
 
     @Test
     fun `POST reindex 엔드포인트 호출 시 200을 반환한다`() {
-        runBlocking { conventionIndexUseCase.index() }
+        conventionIndexUseCase.index()
 
         client.post()
             .uri("/internal/conventions/reindex")
@@ -101,7 +100,7 @@ class ConventionIndexerIntegrationTest : AbstractIntegrationTest() {
     @Test
     fun `search() 호출 시 topK 이하의 결과가 반환된다`() {
         // given: 인덱싱 (BeforeEach에서 WireMock 스텁 이미 설정됨)
-        runBlocking { conventionIndexUseCase.index() }
+        conventionIndexUseCase.index()
 
         // when
         val results = vectorPort.search("Kotlin null safety", topK = 3)
@@ -139,7 +138,7 @@ class ConventionIndexerIntegrationTest : AbstractIntegrationTest() {
                 )
         )
 
-        runBlocking { conventionIndexUseCase.index() }
+        conventionIndexUseCase.index()
 
         assertThat(countRows()).isGreaterThan(0)
     }

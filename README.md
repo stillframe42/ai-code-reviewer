@@ -36,12 +36,12 @@
 | 프레임워크 | Spring Boot 4.0.3 |
 | AI 통합 | Spring AI 2.0.0-M2 |
 | 외부 에이전트 | Python `ai-agent-service` (LangGraph, 별도 저장소) |
-| 비동기 | Kotlin Coroutines 1.10.2 |
+| 동시성 | JDK 21 가상 스레드 (virtual threads) |
 | 빌드 도구 | Gradle (Kotlin DSL) |
 | JDK | JDK 21 |
 | DB | PostgreSQL (운영·테스트, Testcontainers) |
 | DB 마이그레이션 | Flyway 10+ |
-| 캐시 | Redis (reactive) |
+| 캐시 | Redis |
 | 벡터 DB | PgVector (PostgreSQL 확장, HNSW 인덱스) |
 | RAG 검색 | 벡터 + 키워드 하이브리드 (RRF), multi-query, LLM 컨텍스트 압축 |
 | LLM Observability | Langfuse (자체 호스팅) |
@@ -430,7 +430,7 @@ src/main/kotlin/stillframe42/aicodereviewer/
 │   ├── AiClientConfig.kt / AdvisorConfig.kt / ReviewConfig.kt
 │   ├── GitHubConfig.kt / RedisConfig.kt / JacksonConfig.kt
 │   ├── LangfuseObservationConfig.kt / ToolObservationConfig.kt
-│   ├── RemoteAgentConfig.kt           # WebClient + ObservationRegistry (traceparent 자동 주입)
+│   ├── RemoteAgentConfig.kt           # RestClient + ObservationRegistry (traceparent 자동 주입)
 │   └── *Properties.kt                 # @ConfigurationProperties (Ai/GitHub/Langfuse/Llm/Remote/Rag/Review/...)
 ├── common/                            # 기능 횡단 공통 컴포넌트
 │   ├── GlobalExceptionHandler.kt / AiPromptBuilder.kt / TokenEstimator.kt / Logging.kt
@@ -568,7 +568,7 @@ ANTHROPIC_API_KEY=sk-ant-... OPENAI_API_KEY=sk-... ./gradlew evaluationTest
 
 ### Grafana Tempo (분산 trace)
 
-- **W3C `traceparent` 자동 주입**: Spring Boot `RemoteAgentClient` 의 WebClient 가 `ObservationRegistry` 연결로 Micrometer Tracing 이 헤더 자동 주입
+- **W3C `traceparent` 자동 주입**: Spring Boot `RemoteAgentClient` 의 RestClient 가 `ObservationRegistry` 연결로 Micrometer Tracing 이 헤더 자동 주입
 - **Python FastAPI 자동 계측**: `FastAPIInstrumentor` 가 수신 trace 를 부모 context 로 채택
 - **trace 조회**: Grafana → Explore → Tempo datasource → TraceQL 로 두 서비스 span 의 단일 trace 연결 확인
 

@@ -1,6 +1,5 @@
 package stillframe42.aicodereviewer.github.adapter.out.persistence
 
-import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -25,7 +24,7 @@ class ProcessedEventAdapterTest : AbstractIntegrationTest() {
     }
 
     @Test
-    fun `markAsProcessed 전에는 isAlreadyProcessed가 false를 반환한다`() = runBlocking {
+    fun `markAsProcessed 전에는 isAlreadyProcessed가 false를 반환한다`() {
         val result = adapter.isAlreadyProcessed(
             repositoryFullName = "owner/repo",
             pullRequestNumber = 42,
@@ -36,7 +35,7 @@ class ProcessedEventAdapterTest : AbstractIntegrationTest() {
     }
 
     @Test
-    fun `markAsProcessed 후에는 isAlreadyProcessed가 true를 반환한다`() = runBlocking {
+    fun `markAsProcessed 후에는 isAlreadyProcessed가 true를 반환한다`() {
         adapter.markAsProcessed(
             repositoryFullName = "owner/repo",
             pullRequestNumber = 42,
@@ -54,7 +53,7 @@ class ProcessedEventAdapterTest : AbstractIntegrationTest() {
     }
 
     @Test
-    fun `다른 SHA는 중복으로 간주하지 않는다`() = runBlocking {
+    fun `다른 SHA는 중복으로 간주하지 않는다`() {
         adapter.markAsProcessed(
             repositoryFullName = "owner/repo",
             pullRequestNumber = 42,
@@ -72,7 +71,7 @@ class ProcessedEventAdapterTest : AbstractIntegrationTest() {
     }
 
     @Test
-    fun `markAsProcessed 후 findLatestReviewId는 저장된 reviewId를 반환한다`() = runBlocking {
+    fun `markAsProcessed 후 findLatestReviewId는 저장된 reviewId를 반환한다`() {
         adapter.markAsProcessed(
             repositoryFullName = "owner/repo",
             pullRequestNumber = 42,
@@ -89,7 +88,7 @@ class ProcessedEventAdapterTest : AbstractIntegrationTest() {
     }
 
     @Test
-    fun `처리 이력이 없으면 findLatestReviewId는 null을 반환한다`() = runBlocking {
+    fun `처리 이력이 없으면 findLatestReviewId는 null을 반환한다`() {
         val reviewId = adapter.findLatestReviewId(
             repositoryFullName = "owner/repo",
             pullRequestNumber = 42,

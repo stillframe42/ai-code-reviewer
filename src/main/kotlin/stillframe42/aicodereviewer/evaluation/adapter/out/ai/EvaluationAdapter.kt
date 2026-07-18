@@ -2,8 +2,6 @@ package stillframe42.aicodereviewer.evaluation.adapter.out.ai
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import org.springframework.ai.chat.client.ChatClient
 import org.springframework.ai.openai.OpenAiChatOptions
 import org.springframework.beans.factory.annotation.Qualifier
@@ -32,7 +30,7 @@ class EvaluationAdapter(
     private val answerRelevancyPrompt: Resource,
 ) : RagEvaluationPort, Logging {
 
-    override suspend fun evaluateFaithfulness(
+    override fun evaluateFaithfulness(
         context: List<RagDocument>,
         generatedReview: String,
     ): EvaluationScore {
@@ -46,7 +44,7 @@ class EvaluationAdapter(
         return parseScore(raw, EvaluationMetric.FAITHFULNESS)
     }
 
-    override suspend fun evaluateContextPrecision(
+    override fun evaluateContextPrecision(
         query: String,
         retrievedDocs: List<RagDocument>,
         relevantConvention: String,
@@ -64,7 +62,7 @@ class EvaluationAdapter(
         return parseScore(raw, EvaluationMetric.CONTEXT_PRECISION)
     }
 
-    override suspend fun evaluateContextRecall(
+    override fun evaluateContextRecall(
         expectedIssues: List<String>,
         retrievedDocs: List<RagDocument>,
     ): EvaluationScore {
@@ -84,7 +82,7 @@ class EvaluationAdapter(
         return parseScore(raw, EvaluationMetric.CONTEXT_RECALL)
     }
 
-    override suspend fun evaluateAnswerRelevancy(
+    override fun evaluateAnswerRelevancy(
         inputCode: String,
         expectedIssues: List<String>,
         generatedReview: String,
@@ -102,21 +100,19 @@ class EvaluationAdapter(
         return parseScore(raw, EvaluationMetric.ANSWER_RELEVANCY)
     }
 
-    private suspend fun callLlm(systemPrompt: String): String =
-        withContext(Dispatchers.IO) {
-            chatClient.prompt()
-                .system(systemPrompt)
-                .user("위 지침에 따라 평가하고 JSON으로 응답하세요.")
-                .options(
-                    OpenAiChatOptions.builder()
-                        .model(evaluationProperties.model)
-                        .temperature(0.0),
-                )
-                .call()
-                .content()
-                ?.trim()
-                ?: ""
-        }
+    private fun callLlm(systemPrompt: String): String =
+        chatClient.prompt()
+            .system(systemPrompt)
+            .user("위 지침에 따라 평가하고 JSON으로 응답하세요.")
+            .options(
+                OpenAiChatOptions.builder()
+                    .model(evaluationProperties.model)
+                    .temperature(0.0),
+            )
+            .call()
+            .content()
+            ?.trim()
+            ?: ""
 
     // JSON 응답 파싱 — 마크다운 코드 펜스 래핑 + 앞뒤 비JSON 텍스트 제거
     private fun parseScore(raw: String, metric: EvaluationMetric): EvaluationScore {

@@ -1,7 +1,6 @@
 package stillframe42.aicodereviewer.review.adapter.`in`.web
 
 import java.math.BigDecimal
-import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
@@ -58,7 +57,7 @@ class ReviewQueryControllerTest : AbstractIntegrationTest() {
     }
 
     @Test
-    fun `리뷰가 존재하는 PR 조회 시 200과 요약 정보를 반환한다`() = runTest {
+    fun `리뷰가 존재하는 PR 조회 시 200과 요약 정보를 반환한다`() {
         // 리뷰 요청 저장
         val requestId = persistenceAdapter.saveReviewRequest("owner/repo", 42, "abc123")
 
@@ -107,7 +106,7 @@ class ReviewQueryControllerTest : AbstractIntegrationTest() {
     }
 
     @Test
-    fun `stats 엔드포인트는 집계 결과를 반환한다`() = runTest {
+    fun `stats 엔드포인트는 집계 결과를 반환한다`() {
         // 첫 번째 리뷰: SECURITY 이슈 2건, toolCallCount=3
         val requestId1 = persistenceAdapter.saveReviewRequest("owner/repo", 100, "sha001")
         val review1 = CodeReview(
@@ -177,7 +176,7 @@ class ReviewQueryControllerTest : AbstractIntegrationTest() {
     }
 
     @Test
-    fun `stats 엔드포인트는 LLM 호출 이력이 없을 때 기본값을 반환한다`() = runTest {
+    fun `stats 엔드포인트는 LLM 호출 이력이 없을 때 기본값을 반환한다`() {
         // 리뷰 데이터 없이 바로 GET /api/reviews/stats 호출
         val body = client.get().uri("/api/reviews/stats")
             .exchange()

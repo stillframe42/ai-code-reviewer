@@ -24,7 +24,6 @@ repositories {
 dependencies {
     // Web
     implementation("org.springframework.boot:spring-boot-starter-web")
-    implementation("org.springframework.boot:spring-boot-starter-webflux") // ReactiveAdapterRegistry(suspend MVC 브릿지), ReactiveRedisTemplate, WebClient
     implementation("org.springframework.boot:spring-boot-starter-validation")
 
     // Data
@@ -35,7 +34,7 @@ dependencies {
     runtimeOnly("org.postgresql:postgresql")
 
     // Redis
-    implementation("org.springframework.boot:spring-boot-starter-data-redis-reactive")
+    implementation("org.springframework.boot:spring-boot-starter-data-redis")
 
     // Actuator
     implementation("org.springframework.boot:spring-boot-starter-actuator")
@@ -65,15 +64,9 @@ dependencies {
     implementation("tools.jackson.module:jackson-module-kotlin")
     implementation("org.jetbrains.kotlin:kotlin-reflect")
 
-    // Coroutines
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-reactor:1.10.2") // Spring MVC suspend 브릿지
-    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.10.2")
-
     // Test
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
-    testImplementation("io.projectreactor:reactor-test") // StepVerifier
 
     // Test — Testcontainers (버전은 Spring Boot BOM 관리)
     testImplementation("org.testcontainers:testcontainers")

@@ -25,9 +25,8 @@ class RemoteAgentHealthIndicatorTest : AbstractIntegrationTest() {
                 .willReturn(aResponse().withStatus(200)),
         )
 
-        val health = indicator.health().block()
-        assertThat(health).isNotNull
-        assertThat(health!!.status).isEqualTo(Status.UP)
+        val health = indicator.health()
+        assertThat(health.status).isEqualTo(Status.UP)
     }
 
     @Test
@@ -37,9 +36,8 @@ class RemoteAgentHealthIndicatorTest : AbstractIntegrationTest() {
                 .willReturn(aResponse().withStatus(503)),
         )
 
-        val health = indicator.health().block()
-        assertThat(health).isNotNull
-        assertThat(health!!.status).isEqualTo(Status.DOWN)
+        val health = indicator.health()
+        assertThat(health.status).isEqualTo(Status.DOWN)
     }
 
     @Test
@@ -49,8 +47,7 @@ class RemoteAgentHealthIndicatorTest : AbstractIntegrationTest() {
                 .willReturn(aResponse().withFault(Fault.CONNECTION_RESET_BY_PEER)),
         )
 
-        val health = indicator.health().block()
-        assertThat(health).isNotNull
-        assertThat(health!!.status).isEqualTo(Status.DOWN)
+        val health = indicator.health()
+        assertThat(health.status).isEqualTo(Status.DOWN)
     }
 }

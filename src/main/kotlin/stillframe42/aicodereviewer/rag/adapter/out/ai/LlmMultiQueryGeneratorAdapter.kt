@@ -2,8 +2,6 @@ package stillframe42.aicodereviewer.rag.adapter.out.ai
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import org.springframework.ai.anthropic.AnthropicChatOptions
 import org.springframework.ai.chat.client.ChatClient
 import org.springframework.beans.factory.annotation.Qualifier
@@ -23,20 +21,18 @@ class LlmMultiQueryGeneratorAdapter(
 ) : MultiQueryGeneratorPort, Logging {
 
     // 원본 쿼리 + LLM 변형 3개 = 최대 4개 반환 (중복 제거)
-    override suspend fun generateMultipleQueries(originalQuery: String): List<String> {
+    override fun generateMultipleQueries(originalQuery: String): List<String> {
         val prompt = promptResource.getContentAsString(Charsets.UTF_8)
             .replace("{originalQuery}", originalQuery)
         return runCatching {
-            val raw = withContext(Dispatchers.IO) {
-                chatClient.prompt()
-                    .system(prompt)
-                    .user("위 지침에 따라 변형을 생성하세요.")
-                    .options(AnthropicChatOptions.builder().temperature(0.0))
-                    .call()
-                    .content()
-                    ?.trim()
-                    ?: ""
-            }
+            val raw = chatClient.prompt()
+                .system(prompt)
+                .user("위 지침에 따라 변형을 생성하세요.")
+                .options(AnthropicChatOptions.builder().temperature(0.0))
+                .call()
+                .content()
+                ?.trim()
+                ?: ""
             val map: Map<String, List<String>> = objectMapper.readValue(extractJson(raw))
             val variants = map["variants"] ?: emptyList()
             (listOf(originalQuery) + variants).distinct()

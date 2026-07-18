@@ -1,23 +1,23 @@
 package stillframe42.aicodereviewer.review.adapter.out.ai.tool
 
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.async
-import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withTimeout
 import kotlin.time.Duration.Companion.seconds
 import org.springframework.ai.chat.model.ToolContext
 import org.springframework.ai.tool.annotation.Tool
 import org.springframework.ai.tool.annotation.ToolParam
 import org.springframework.stereotype.Component
-import org.springframework.web.reactive.function.client.WebClientResponseException
+import org.springframework.web.client.HttpClientErrorException
+import org.springframework.web.client.RestClientResponseException
 import stillframe42.aicodereviewer.common.Logging
-import stillframe42.aicodereviewer.common.langfuse.LangfuseTraceContextHolder
+import stillframe42.aicodereviewer.common.concurrent.BlockingTimeout
+import stillframe42.aicodereviewer.common.langfuse.TraceContextPropagation
 import stillframe42.aicodereviewer.github.domain.model.RepositoryEntry
 import stillframe42.aicodereviewer.github.domain.model.RepositoryEntryType
 import stillframe42.aicodereviewer.github.domain.port.out.GitHubContentPort
 import stillframe42.aicodereviewer.github.domain.port.out.GitHubRateLimitPort
 import stillframe42.aicodereviewer.review.domain.port.out.ToolObservationPort
+import java.util.concurrent.Callable
+import java.util.concurrent.ExecutionException
+import java.util.concurrent.FutureTask
 import java.util.concurrent.atomic.AtomicInteger
 
 @Component
@@ -57,11 +57,20 @@ class GitHubTools(
     ) { installationId ->
         val sameDir = filePath.substringBeforeLast("/", missingDelimiterValue = "")
         val parentDir = sameDir.substringBeforeLast("/", missingDelimiterValue = "")
-        val sameDirJob = async { contentPort.getDirectoryEntries(repositoryFullName, sameDir, ref, installationId) }
-        val parentDirJob = if (sameDir != parentDir) {
-            async { contentPort.getDirectoryEntries(repositoryFullName, parentDir, ref, installationId) }
+        val sameDirFetch = TraceContextPropagation.capture {
+            contentPort.getDirectoryEntries(repositoryFullName, sameDir, ref, installationId)
+        }
+        val sameDirTask = FutureTask(Callable { sameDirFetch() })
+        Thread.ofVirtual().start(sameDirTask)
+        val parentDirEntries = if (sameDir != parentDir) {
+            contentPort.getDirectoryEntries(repositoryFullName, parentDir, ref, installationId)
         } else null
-        formatRelatedFiles(filePath, sameDir, sameDirJob.await(), parentDir, parentDirJob?.await())
+        val sameDirEntries = try {
+            sameDirTask.get()
+        } catch (e: ExecutionException) {
+            throw e.cause ?: e
+        }
+        formatRelatedFiles(filePath, sameDir, sameDirEntries, parentDir, parentDirEntries)
     }
 
     @Tool(description = "PR의 제목과 설명을 가져옵니다")
@@ -132,7 +141,7 @@ class GitHubTools(
         toolName: String,
         argsLog: String,
         notFoundMessage: String,
-        block: suspend CoroutineScope.(installationId: Long) -> String,
+        block: (installationId: Long) -> String,
     ): String {
         val installationId = toolContext.installationId()
         rateLimitGuardMessage(installationId)?.let { return it }
@@ -148,14 +157,8 @@ class GitHubTools(
             logger.warn("Tool 호출 횟수 경고: {}회 / 최대 {}회 (toolName={})", count, MAX_TOOL_CALLS, toolName)
         }
 
-        // runBlocking(Dispatchers.IO)은 새로운 스레드를 사용하므로 ThreadLocal이 전파되지 않는다.
-        // 현재 코루틴 컨텍스트에서 traceId를 캡처하고 runBlocking 코루틴 컨텍스트로 명시적으로 전달한다.
-        val currentTraceId = LangfuseTraceContextHolder.get()
-        val traceContextElement = LangfuseTraceContextHolder.asElement(currentTraceId)
         return toolCallLogger.log(toolName, argsLog) {
-            runBlocking(Dispatchers.IO + traceContextElement) {
-                executeInSpan(toolName, argsLog, count, notFoundMessage, installationId, block)
-            }
+            executeInSpan(toolName, argsLog, count, notFoundMessage, installationId, block)
         }
     }
 
@@ -168,19 +171,18 @@ class GitHubTools(
     }
 
     // Span 생명주기 관리 + 실제 실행 + 에러 메시지 변환
-    // CoroutineScope 수신자: getRelatedFile의 async { } 호출을 위해 block에 CoroutineScope를 전달한다
-    private suspend fun CoroutineScope.executeInSpan(
+    private fun executeInSpan(
         toolName: String,
         argsLog: String,
         count: Int,
         notFoundMessage: String,
         installationId: Long,
-        block: suspend CoroutineScope.(installationId: Long) -> String,
+        block: (installationId: Long) -> String,
     ): String {
         logger.info("{} 호출 ({}번째): {}", toolName, count, argsLog)
         val spanId = toolObservationPort.startSpan(toolName, mapOf("args" to argsLog, "count" to count))
         return runCatching {
-            withTimeout(TOOL_CALL_TIMEOUT) {
+            BlockingTimeout.run(TOOL_CALL_TIMEOUT) {
                 block(installationId)
             }
         }.onSuccess { result ->
@@ -190,8 +192,8 @@ class GitHubTools(
             toolObservationPort.endSpanWithError(spanId, e.message ?: e.javaClass.simpleName)
         }.getOrElse { e ->
             when (e) {
-                is WebClientResponseException.NotFound -> notFoundMessage
-                is WebClientResponseException -> "GitHub API 오류 (${e.statusCode}): ${e.message}"
+                is HttpClientErrorException.NotFound -> notFoundMessage
+                is RestClientResponseException -> "GitHub API 오류 (${e.statusCode}): ${e.message}"
                 else -> {
                     logger.warn("{} 실패", toolName, e)
                     "[ERROR] $toolName 실패: ${e.message}"

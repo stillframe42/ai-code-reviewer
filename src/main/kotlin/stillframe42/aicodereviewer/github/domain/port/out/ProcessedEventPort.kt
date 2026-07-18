@@ -4,14 +4,14 @@ package stillframe42.aicodereviewer.github.domain.port.out
 interface ProcessedEventPort {
 
     // 해당 (레포, PR번호, SHA) 조합이 이미 처리되었는지 확인한다
-    suspend fun isAlreadyProcessed(
+    fun isAlreadyProcessed(
         repositoryFullName: String,
         pullRequestNumber: Int,
         headSha: String,
     ): Boolean
 
     // 이벤트 처리 완료를 기록한다 — reviewId는 이후 dismiss 시 사용된다
-    suspend fun markAsProcessed(
+    fun markAsProcessed(
         repositoryFullName: String,
         pullRequestNumber: Int,
         headSha: String,
@@ -19,7 +19,7 @@ interface ProcessedEventPort {
     )
 
     // 해당 PR의 직전 리뷰 ID를 반환한다 — 없으면 null
-    suspend fun findLatestReviewId(
+    fun findLatestReviewId(
         repositoryFullName: String,
         pullRequestNumber: Int,
     ): Long?

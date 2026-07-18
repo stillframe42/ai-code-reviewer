@@ -1,6 +1,5 @@
 package stillframe42.aicodereviewer.review.adapter.out.ai
 
-import kotlinx.coroutines.runBlocking
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -24,7 +23,7 @@ class ReviewAdapterToolTest : AbstractIntegrationTest() {
     }
 
     @Test
-    fun `installationId 없이 호출하면 Tool 없이 정상 리뷰를 반환한다`() = runBlocking {
+    fun `installationId 없이 호출하면 Tool 없이 정상 리뷰를 반환한다`() {
         val result = aiReviewPort.reviewCode(
             code = "fun add(a: Int, b: Int) = a + b",
             provider = AiProvider.ANTHROPIC,
@@ -32,11 +31,10 @@ class ReviewAdapterToolTest : AbstractIntegrationTest() {
 
         assertThat(result.overallScore).isBetween(0, 10)
         assertThat(result.summary).isNotBlank()
-        Unit
     }
 
     @Test
-    fun `installationId 제공 시 Tool이 등록된 상태로 리뷰가 완료된다`() = runBlocking {
+    fun `installationId 제공 시 Tool이 등록된 상태로 리뷰가 완료된다`() {
         // WireMock이 stop_reason=end_turn을 반환하므로 Tool 호출 없이 리뷰가 완료된다
         val result = aiReviewPort.reviewCode(
             code = """
@@ -56,6 +54,5 @@ class ReviewAdapterToolTest : AbstractIntegrationTest() {
 
         assertThat(result.overallScore).isBetween(0, 10)
         assertThat(result.summary).isNotBlank()
-        Unit
     }
 }

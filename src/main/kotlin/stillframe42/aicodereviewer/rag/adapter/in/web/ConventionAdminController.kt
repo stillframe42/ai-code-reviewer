@@ -17,7 +17,7 @@ class ConventionAdminController(
     // 기존 인덱스를 전체 삭제하고 재인덱싱한다.
     // 컨벤션 문서가 변경된 경우 수동으로 호출한다.
     @PostMapping("/reindex")
-    suspend fun reindex(): ResponseEntity<Unit> {
+    fun reindex(): ResponseEntity<Unit> {
         conventionIndexUseCase.reindex()
         return ResponseEntity.ok().build()
     }

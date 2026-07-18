@@ -9,6 +9,6 @@ import stillframe42.aicodereviewer.rag.domain.port.out.ConventionVectorPort
 class DefaultGetRagContextService(
     private val vectorPort: ConventionVectorPort,
 ) : GetRagContextUseCase {
-    override suspend fun get(contextId: String): RagContext? =
+    override fun get(contextId: String): RagContext? =
         vectorPort.findById(contextId)?.let { RagContext(content = it.text ?: "") }
 }

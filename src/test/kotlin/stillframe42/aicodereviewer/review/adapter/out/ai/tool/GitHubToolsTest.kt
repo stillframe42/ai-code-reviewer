@@ -150,6 +150,23 @@ class GitHubToolsTest : AbstractIntegrationTest() {
         assertThat(result).startsWith("디렉토리를 찾을 수 없습니다")
     }
 
+    @Test
+    fun `루트 수준 파일에서 같은 디렉토리 조회가 실패하면 디렉토리를 찾을 수 없다는 메시지를 반환한다`() {
+        // 루트 수준 파일(sameDir == parentDir == "")은 상위 디렉토리 fetch가 없어
+        // 비동기 sameDir fetch(FutureTask)의 실패만으로 예외 경로를 태운다
+        val repo = "owner/root-dir-not-found-repo"
+        WireMockStubs.stubGitHubNotFound(wireMock, repo, "", "main")
+
+        val result = gitHubTools.getRelatedFile(
+            repositoryFullName = repo,
+            filePath = "README.md",
+            ref = "main",
+            toolContext = testContext,
+        )
+
+        assertThat(result).isEqualTo("디렉토리를 찾을 수 없습니다: (루트)")
+    }
+
     // ── getPRDescription ──────────────────────────────
 
     @Test

@@ -1,14 +1,14 @@
 package stillframe42.aicodereviewer.review.application
 
 import java.security.MessageDigest
-import kotlinx.coroutines.async
-import kotlinx.coroutines.supervisorScope
-import kotlinx.coroutines.sync.Semaphore
-import kotlinx.coroutines.sync.withPermit
-import kotlinx.coroutines.withContext
+import java.util.concurrent.Callable
+import java.util.concurrent.ExecutionException
+import java.util.concurrent.FutureTask
+import java.util.concurrent.Semaphore
 import org.springframework.stereotype.Service
 import stillframe42.aicodereviewer.common.Logging
 import stillframe42.aicodereviewer.common.exception.AiResponseException
+import stillframe42.aicodereviewer.common.langfuse.TraceContextPropagation
 import stillframe42.aicodereviewer.common.observability.ObservabilityPort
 import stillframe42.aicodereviewer.common.observability.withSpan
 import stillframe42.aicodereviewer.review.domain.service.AiModelSelector
@@ -42,51 +42,56 @@ class DefaultReviewService(
     private val aiReviewerProperties: AiReviewerProperties,
 ) : ReviewUseCase, Logging {
 
-    override suspend fun reviewCode(
+    override fun reviewCode(
         code: String,
         provider: AiProvider,
         diffOptions: DiffFilterOptions?,
         mode: ReviewMode,
-    ): CodeReview = withContext(observabilityPort.traceContext()) {
-        observabilityPort.withSpan(
-            name = "review.root",
-            input = mapOf("provider" to provider.name, "mode" to (mode::class.simpleName ?: "Unknown"), "hasDiffOptions" to (diffOptions != null)),
-            outputMapper = { review: CodeReview ->
-                mapOf(
-                    "overallScore" to review.overallScore,
-                    "issueCount" to review.issues.size,
-                    "modelName" to (review.modelName ?: "unknown"),
+    ): CodeReview {
+        observabilityPort.beginTrace()
+        try {
+            return observabilityPort.withSpan(
+                name = "review.root",
+                input = mapOf("provider" to provider.name, "mode" to (mode::class.simpleName ?: "Unknown"), "hasDiffOptions" to (diffOptions != null)),
+                outputMapper = { review: CodeReview ->
+                    mapOf(
+                        "overallScore" to review.overallScore,
+                        "issueCount" to review.issues.size,
+                        "modelName" to (review.modelName ?: "unknown"),
+                    )
+                },
+            ) {
+                val options = diffOptions ?: return@withSpan aiReviewPort.reviewCode(code, provider, mode, reviewContext = null, modelName = null)
+
+                val merged = options.copy(
+                    additionalExcludePatterns = options.additionalExcludePatterns +
+                        reviewProperties.diff.additionalExcludePatterns,
+                    maxTokens = options.maxTokens ?: reviewProperties.diff.maxTokens,
                 )
-            },
-        ) {
-            val options = diffOptions ?: return@withSpan aiReviewPort.reviewCode(code, provider, mode, reviewContext = null, modelName = null)
+                val preprocessResult = DiffPreprocessor.preprocess(code, merged)
+                logger.debug("=== 전처리된 diff (AI 전달 내용) ===\n{}", preprocessResult.diff)
 
-            val merged = options.copy(
-                additionalExcludePatterns = options.additionalExcludePatterns +
-                    reviewProperties.diff.additionalExcludePatterns,
-                maxTokens = options.maxTokens ?: reviewProperties.diff.maxTokens,
-            )
-            val preprocessResult = DiffPreprocessor.preprocess(code, merged)
-            logger.debug("=== 전처리된 diff (AI 전달 내용) ===\n{}", preprocessResult.diff)
+                val importance = prImportanceAnalyzer.analyze(preprocessResult.fileNames)
+                val modelName = aiModelSelector.selectModel(importance)
+                logger.info("PR 중요도: {}, 선택 모델: {}", importance, modelName)
 
-            val importance = prImportanceAnalyzer.analyze(preprocessResult.fileNames)
-            val modelName = aiModelSelector.selectModel(importance)
-            logger.info("PR 중요도: {}, 선택 모델: {}", importance, modelName)
+                val fileDiffs = preprocessResult.fileDiffs.filter { it.isNotBlank() }
+                val review = if (fileDiffs.size > 1)
+                    reviewParallel(fileDiffs, provider, mode, modelName)
+                else
+                    reviewWithCache(preprocessResult.diff, provider, mode, modelName,
+                        filePath = preprocessResult.fileNames.singleOrNull())
 
-            val fileDiffs = preprocessResult.fileDiffs.filter { it.isNotBlank() }
-            val review = if (fileDiffs.size > 1)
-                reviewParallel(fileDiffs, provider, mode, modelName)
-            else
-                reviewWithCache(preprocessResult.diff, provider, mode, modelName,
-                    filePath = preprocessResult.fileNames.singleOrNull())
-
-            review.copy(modelName = modelName)
+                review.copy(modelName = modelName)
+            }
+        } finally {
+            observabilityPort.clearTrace()
         }
     }
 
     // 캐시 조회 → 히트 시 즉시 반환, 미스 시 RAG 호출 후 AI 호출 후 캐시 저장
     // 메트릭/로그/저장 best-effort 처리는 MeteredReviewCacheAdapter 데코레이터에 위임한다.
-    private suspend fun reviewWithCache(
+    private fun reviewWithCache(
         diff: String,
         provider: AiProvider,
         mode: ReviewMode,
@@ -117,9 +122,9 @@ class DefaultReviewService(
         return finalReview.also { reviewCachePort.put(key, it) }
     }
 
-    // Semaphore로 동시 호출 수를 제한하며 병렬 LLM 호출 후 결과 집계
-    // supervisorScope: 개별 파일 리뷰 실패가 다른 파일 취소로 이어지지 않도록 격리
-    private suspend fun reviewParallel(
+    // Semaphore로 동시 호출 수를 제한하며 가상 스레드에서 병렬 LLM 호출 후 결과 집계
+    // 개별 파일 리뷰 실패는 스킵으로 격리 — 전부 실패 시에만 예외
+    private fun reviewParallel(
         fileDiffs: List<String>,
         provider: AiProvider,
         mode: ReviewMode,
@@ -128,20 +133,26 @@ class DefaultReviewService(
         val concurrency = reviewProperties.diff.maxConcurrency
         logger.info("파일별 병렬 리뷰 시작: {}개 파일 (최대 동시 호출: {})", fileDiffs.size, concurrency)
         val semaphore = Semaphore(concurrency)
-        return supervisorScope {
-            fileDiffs.map { diff ->
-                async {
-                    semaphore.withPermit {
-                        val filePath = extractFilePath(diff)
-                        reviewWithCache(diff, provider, mode, modelName, filePath)
-                    }
+        val tasks = fileDiffs.map { diff ->
+            val reviewTask = TraceContextPropagation.capture {
+                semaphore.acquire()
+                try {
+                    val filePath = extractFilePath(diff)
+                    reviewWithCache(diff, provider, mode, modelName, filePath)
+                } finally {
+                    semaphore.release()
                 }
             }
+            FutureTask(Callable { reviewTask() }).also { Thread.ofVirtual().start(it) }
         }
-            .mapNotNull { deferred ->
-                runCatching { deferred.await() }
-                    .onFailure { e -> logger.warn("파일 리뷰 실패 (스킵): {}", e.message) }
-                    .getOrNull()
+        return tasks
+            .mapNotNull { task ->
+                try {
+                    task.get()
+                } catch (e: ExecutionException) {
+                    logger.warn("파일 리뷰 실패 (스킵): {}", (e.cause ?: e).message)
+                    null
+                }
             }
             .takeIf { it.isNotEmpty() }
             ?.let(::aggregate)

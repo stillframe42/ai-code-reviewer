@@ -15,20 +15,20 @@ data class LlmCostSummary(
 interface ReviewQueryPort {
 
     // 특정 레포/PR의 최신 리뷰 요청+결과 조합 조회 — 없으면 null
-    suspend fun findLatestByRepoAndPr(repoFullName: String, prNumber: Int): ReviewSummaryResult?
+    fun findLatestByRepoAndPr(repoFullName: String, prNumber: Int): ReviewSummaryResult?
 
     // 전체 리뷰 요청 수
-    suspend fun countTotalReviews(): Long
+    fun countTotalReviews(): Long
 
     // 카테고리별 이슈 수 집계 — IssueCategory 4개 모두 포함 (없는 카테고리는 0)
-    suspend fun countByCategory(): Map<IssueCategory, Long>
+    fun countByCategory(): Map<IssueCategory, Long>
 
     // 전체 리뷰의 평균 Tool 호출 횟수
-    suspend fun averageToolCallCount(): Double
+    fun averageToolCallCount(): Double
 
     // 모델명별 누적 LLM 비용 합계 (llm_cost_logs GROUP BY model_name)
-    suspend fun sumCostByModel(): Map<String, BigDecimal>
+    fun sumCostByModel(): Map<String, BigDecimal>
 
     // 전체 LLM 호출 누적 비용 합계 + 호출 수 (estimatedSavings 계산용)
-    suspend fun totalLlmCostSummary(): LlmCostSummary
+    fun totalLlmCostSummary(): LlmCostSummary
 }

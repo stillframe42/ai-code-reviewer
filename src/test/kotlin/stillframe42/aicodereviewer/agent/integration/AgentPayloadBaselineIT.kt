@@ -10,7 +10,6 @@ import com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo
 import com.github.tomakehurst.wiremock.client.WireMock.urlPathMatching
 import java.io.File
 import java.time.LocalDateTime
-import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Assumptions
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable
@@ -76,7 +75,7 @@ class AgentPayloadBaselineIT {
     @Autowired private lateinit var objectMapper: ObjectMapper
 
     @Test
-    fun `AgentAnalysisRequest payload baseline 측정`() = runBlocking {
+    fun `AgentAnalysisRequest payload baseline 측정`() {
         Assumptions.assumeTrue(readOpenAiKey() != null) {
             "application-secret.yml 의 openai.api-key 가 필요합니다 (실 임베딩 호출용)"
         }
@@ -130,7 +129,7 @@ class AgentPayloadBaselineIT {
         }
     }
 
-    private suspend fun seedVectorStore() {
+    private fun seedVectorStore() {
         jdbcTemplate.execute("TRUNCATE TABLE vector_store")
         conventionIndexUseCase.reindex()
     }

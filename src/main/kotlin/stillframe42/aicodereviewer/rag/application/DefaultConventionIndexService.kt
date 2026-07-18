@@ -1,7 +1,5 @@
 package stillframe42.aicodereviewer.rag.application
 
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.runBlocking
 import org.springframework.boot.context.event.ApplicationReadyEvent
 import org.springframework.context.event.EventListener
 import org.springframework.stereotype.Service
@@ -32,11 +30,11 @@ class DefaultConventionIndexService(
     @EventListener(ApplicationReadyEvent::class)
     fun onApplicationReady() {
         if (!ragProperties.autoIndex) return
-        runBlocking { index() }
+        index()
     }
 
     // 테이블이 비어 있을 때만 인덱싱 실행.
-    override suspend fun index() {
+    override fun index() {
         if (!vectorPort.isEmpty()) {
             logger.info("컨벤션 인덱스가 이미 존재합니다. 스킵합니다.")
             return
@@ -45,13 +43,13 @@ class DefaultConventionIndexService(
     }
 
     // 기존 데이터 전체 삭제 후 재인덱싱.
-    override suspend fun reindex() {
+    override fun reindex() {
         logger.info("컨벤션 문서 재인덱싱을 시작합니다.")
         vectorPort.deleteAll()
         doIndex()
     }
 
-    private suspend fun doIndex() {
+    private fun doIndex() {
         logger.info("컨벤션 문서 인덱싱을 시작합니다.")
         val documents = splitter.prepare()
         val batches = documents.chunked(BATCH_SIZE)
@@ -66,7 +64,7 @@ class DefaultConventionIndexService(
 
     // 실패 시 Exponential Backoff 재시도 (최대 MAX_RETRIES회)
     // 대기 시간: retryBaseDelay * 2^attempt (기본: 2s → 4s → 8s)
-    private suspend fun retryWithBackoff(block: () -> Unit) {
+    private fun retryWithBackoff(block: () -> Unit) {
         val baseDelay = ragProperties.retryBaseDelay.toKotlinDuration()
         repeat(MAX_RETRIES + 1) { attempt ->
             try {
@@ -79,7 +77,7 @@ class DefaultConventionIndexService(
                     "[RETRY] 인덱싱 시도 {}/{} 실패. {} 후 재시도. 원인: {}",
                     attempt + 1, MAX_RETRIES, delayDuration, e.message,
                 )
-                delay(delayDuration)
+                Thread.sleep(delayDuration.inWholeMilliseconds)
             }
         }
     }

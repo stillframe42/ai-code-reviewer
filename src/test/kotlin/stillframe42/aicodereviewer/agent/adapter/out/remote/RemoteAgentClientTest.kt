@@ -8,14 +8,13 @@ import com.github.tomakehurst.wiremock.client.WireMock.post
 import com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor
 import com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo
 import com.github.tomakehurst.wiremock.client.WireMock.urlPathMatching
-import kotlinx.coroutines.runBlocking
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.test.context.DynamicPropertyRegistry
 import org.springframework.test.context.DynamicPropertySource
-import org.springframework.web.reactive.function.client.WebClientResponseException
+import org.springframework.web.client.RestClientResponseException
 import stillframe42.aicodereviewer.agent.domain.exception.AgentUnavailableException
 import stillframe42.aicodereviewer.agent.domain.model.AgentAnalysisCommand
 import stillframe42.aicodereviewer.integration.AbstractIntegrationTest
@@ -54,21 +53,21 @@ class RemoteAgentClientTest : AbstractIntegrationTest() {
         )
 
         val ex = assertThrows<AgentUnavailableException> {
-            runBlocking { remoteAgentClient.requestDeepAnalysis(sampleCommand) }
+            remoteAgentClient.requestDeepAnalysis(sampleCommand)
         }
         assertThat(ex.message).contains("503")
-        assertThat(ex.cause).isInstanceOf(WebClientResponseException::class.java)
+        assertThat(ex.cause).isInstanceOf(RestClientResponseException::class.java)
     }
 
     @Test
-    fun `requestDeepAnalysis 가 4xx 응답을 받으면 WebClientResponseException 가 그대로 전파된다`() {
+    fun `requestDeepAnalysis 가 4xx 응답을 받으면 RestClientResponseException 가 그대로 전파된다`() {
         wireMock.stubFor(
             post(urlPathEqualTo("/agent/analyze"))
                 .willReturn(aResponse().withStatus(400)),
         )
 
-        assertThrows<WebClientResponseException> {
-            runBlocking { remoteAgentClient.requestDeepAnalysis(sampleCommand) }
+        assertThrows<RestClientResponseException> {
+            remoteAgentClient.requestDeepAnalysis(sampleCommand)
         }
     }
 
@@ -80,7 +79,7 @@ class RemoteAgentClientTest : AbstractIntegrationTest() {
         )
 
         val ex = assertThrows<AgentUnavailableException> {
-            runBlocking { remoteAgentClient.getAnalysisResult("abc-123") }
+            remoteAgentClient.getAnalysisResult("abc-123")
         }
         assertThat(ex.message).contains("500")
     }
@@ -99,7 +98,7 @@ class RemoteAgentClientTest : AbstractIntegrationTest() {
                 ),
         )
 
-        runBlocking { remoteAgentClient.requestDeepAnalysis(sampleCommand) }
+        remoteAgentClient.requestDeepAnalysis(sampleCommand)
 
         wireMock.verify(
             postRequestedFor(urlPathEqualTo("/agent/analyze"))
@@ -119,7 +118,7 @@ class RemoteAgentClientTest : AbstractIntegrationTest() {
                 ),
         )
 
-        runBlocking { remoteAgentClient.getAnalysisResult("abc-123") }
+        remoteAgentClient.getAnalysisResult("abc-123")
 
         wireMock.verify(
             getRequestedFor(urlPathMatching("/agent/analyze/.+"))

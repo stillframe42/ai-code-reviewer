@@ -1,6 +1,5 @@
 package stillframe42.aicodereviewer.rag.integration
 
-import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Assumptions.assumeTrue
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Tag
@@ -97,7 +96,7 @@ class HybridSearchExperimentTest {
         assumeTrue(apiKey.startsWith("sk-")) {
             "실제 OpenAI API 키(sk-*)가 없습니다. application-secret.yml을 확인하세요."
         }
-        runBlocking { conventionIndexUseCase.reindex() }
+        conventionIndexUseCase.reindex()
     }
 
     private data class ExperimentScores(val vector: Int, val keyword: Int, val hybrid: Int) {
@@ -184,12 +183,10 @@ class HybridSearchExperimentTest {
     }
 
     // 단일 쿼리에 대해 3가지 검색을 실행하고 채점 결과를 반환한다.
-    // ConventionVectorPort.search()는 블로킹 함수이므로 runBlocking 불필요.
-    // keywordPort / hybridService는 suspend이므로 runBlocking으로 감싼다.
     private fun runExperiment(label: String, query: String): ExperimentRow {
         val vectorDocs = vectorPort.search(query, topK = 3, similarityThreshold = 0.0)
-        val keywordDocs = runBlocking { keywordPort.search(query, topK = 3) }
-        val hybridDocs = runBlocking { hybridService.search(query, topK = 3) }
+        val keywordDocs = keywordPort.search(query, topK = 3)
+        val hybridDocs = hybridService.search(query, topK = 3)
         val vectorSummary = buildSummary(vectorDocs)
         val keywordSummary = buildSummary(keywordDocs)
         val hybridSummary = buildSummary(hybridDocs)

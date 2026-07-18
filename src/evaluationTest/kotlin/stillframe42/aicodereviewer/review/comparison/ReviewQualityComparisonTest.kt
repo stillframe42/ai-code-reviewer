@@ -1,10 +1,7 @@
 package stillframe42.aicodereviewer.review.comparison
 
-import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withTimeout
 import tools.jackson.databind.ObjectMapper
 import kotlin.time.Duration.Companion.seconds
-import java.time.Duration
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
@@ -13,19 +10,21 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.test.web.server.LocalServerPort
 import org.springframework.http.MediaType
-import org.springframework.http.client.ReactorClientHttpRequestFactory
+import org.springframework.http.client.JdkClientHttpRequestFactory
 import org.springframework.test.context.ActiveProfiles
 import org.springframework.test.context.DynamicPropertyRegistry
 import org.springframework.test.context.DynamicPropertySource
 import org.springframework.test.web.servlet.client.RestTestClient
+import stillframe42.aicodereviewer.common.concurrent.BlockingTimeout
 import stillframe42.aicodereviewer.integration.AbstractIntegrationTest
-import reactor.netty.http.client.HttpClient
 import stillframe42.aicodereviewer.common.TokenEstimator
 import stillframe42.aicodereviewer.github.domain.port.out.GitHubApiPort
 import stillframe42.aicodereviewer.github.support.GitHubTestCredentials
 import stillframe42.aicodereviewer.review.adapter.`in`.web.dto.ReviewModeRequest
 import stillframe42.aicodereviewer.review.domain.model.CodeReview
+import java.net.http.HttpClient
 import java.nio.file.Paths
+import java.time.Duration
 import kotlin.system.measureTimeMillis
 
 // WITHOUT_TOOLS vs WITH_TOOLS 모드 품질 비교 E2E 통합 테스트
@@ -78,21 +77,18 @@ class ReviewQualityComparisonTest {
     fun setUp() {
         // 실제 GitHub + Anthropic 자격증명 검증 (미설정 시 테스트 클래스 전체 스킵)
         credentials = GitHubTestCredentials.assumeFullCredentials()
-        // AI API 응답은 수 분이 소요될 수 있으므로 Netty 기본 타임아웃(10초)을 5분으로 확장
-        val factory = ReactorClientHttpRequestFactory(
-            HttpClient.create().responseTimeout(Duration.ofMinutes(5)),
-        )
+        // AI API 응답은 수 분이 소요될 수 있으므로 JDK HttpClient 기본 타임아웃을 5분으로 확장
+        val factory = JdkClientHttpRequestFactory(HttpClient.newHttpClient())
+        factory.setReadTimeout(Duration.ofMinutes(5))
         client = RestTestClient.bindToServer(factory)
             .baseUrl("http://localhost:$port")
             .build()
-        diff = runBlocking {
-            withTimeout(30.seconds) {
-                gitHubApiPort.getPrDiff(
-                    credentials.repo,
-                    credentials.prNumber,
-                    credentials.installationId,
-                )
-            }
+        diff = BlockingTimeout.run(30.seconds) {
+            gitHubApiPort.getPrDiff(
+                credentials.repo,
+                credentials.prNumber,
+                credentials.installationId,
+            )
         }
     }
 

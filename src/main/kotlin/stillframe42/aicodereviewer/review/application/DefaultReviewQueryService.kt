@@ -16,12 +16,12 @@ class DefaultReviewQueryService(
     private val reviewCacheStatsStore: ReviewCacheStatsPort,
 ) : ReviewQueryUseCase {
 
-    override suspend fun getReviewByPr(
+    override fun getReviewByPr(
         repoFullName: String,
         prNumber: Int,
     ): ReviewSummaryResult? = reviewQueryPort.findLatestByRepoAndPr(repoFullName, prNumber)
 
-    override suspend fun getStats(): ReviewStatsResult {
+    override fun getStats(): ReviewStatsResult {
         val hitCount = reviewCacheStatsStore.getHitCount()
         val missCount = reviewCacheStatsStore.getMissCount()
         val totalCacheOps = hitCount + missCount

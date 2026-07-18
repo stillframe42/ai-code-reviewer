@@ -3,7 +3,6 @@ package stillframe42.aicodereviewer.review.application
 import com.github.tomakehurst.wiremock.client.WireMock.containing
 import com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor
 import com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo
-import kotlinx.coroutines.runBlocking
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -29,7 +28,7 @@ class DefaultReviewServiceTest : AbstractIntegrationTest() {
     }
 
     @Test
-    fun `코드를 리뷰하면 구조화된 결과를 반환한다`(): Unit = runBlocking {
+    fun `코드를 리뷰하면 구조화된 결과를 반환한다`() {
         val result = reviewUseCase.reviewCode(
             code = "fun add(a: Int, b: Int) = a + b",
             provider = AiProvider.ANTHROPIC
@@ -42,7 +41,7 @@ class DefaultReviewServiceTest : AbstractIntegrationTest() {
     }
 
     @Test
-    fun `문제가 있는 코드를 리뷰하면 이슈를 감지한다`(): Unit = runBlocking {
+    fun `문제가 있는 코드를 리뷰하면 이슈를 감지한다`() {
         val result = reviewUseCase.reviewCode(
             code = """
                 fun divide(a: Int, b: Int): Int {
@@ -58,7 +57,7 @@ class DefaultReviewServiceTest : AbstractIntegrationTest() {
     }
 
     @Test
-    fun `CRITICAL 패턴 파일이 포함된 diff는 sonnet 모델을 사용한다`(): Unit = runBlocking {
+    fun `CRITICAL 패턴 파일이 포함된 diff는 sonnet 모델을 사용한다`() {
         // SecurityConfig.kt → **/*Security* 패턴 매칭 → CRITICAL → test-sonnet-model
         reviewUseCase.reviewCode(
             code = """
@@ -80,7 +79,7 @@ class DefaultReviewServiceTest : AbstractIntegrationTest() {
     }
 
     @Test
-    fun `일반 파일만 포함된 diff는 haiku 모델을 사용한다`(): Unit = runBlocking {
+    fun `일반 파일만 포함된 diff는 haiku 모델을 사용한다`() {
         // MyService.kt → 패턴 미매칭 → NORMAL → test-haiku-model
         reviewUseCase.reviewCode(
             code = """

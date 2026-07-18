@@ -3,7 +3,6 @@ package stillframe42.aicodereviewer.rag.integration
 import com.github.tomakehurst.wiremock.client.WireMock.aResponse
 import com.github.tomakehurst.wiremock.client.WireMock.post
 import com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo
-import kotlinx.coroutines.runBlocking
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -47,7 +46,7 @@ class HybridConventionSearchCategoryAssertionIT : AbstractIntegrationTest() {
                 ),
         )
         WireMockStubs.stubOpenAiChatResponse(wireMock, body = "compressed test content")
-        runBlocking { conventionIndexUseCase.reindex() }
+        conventionIndexUseCase.reindex()
     }
 
     @Test
@@ -59,9 +58,7 @@ class HybridConventionSearchCategoryAssertionIT : AbstractIntegrationTest() {
         assertThat(category).isEqualTo(ConventionCategory.SECURITY)
 
         val query = "SecurityAuditRepository SQL injection"
-        val results = runBlocking {
-            hybridSearchService.searchRaw(query, topK = 3, category = category)
-        }
+        val results = hybridSearchService.searchRaw(query, topK = 3, category = category)
 
         logRrfResults("SECURITY", query, results)
 
@@ -80,9 +77,7 @@ class HybridConventionSearchCategoryAssertionIT : AbstractIntegrationTest() {
         assertThat(category).isEqualTo(ConventionCategory.ARCH)
 
         val query = "OrderEntity JPA data class"
-        val results = runBlocking {
-            hybridSearchService.searchRaw(query, topK = 3, category = category)
-        }
+        val results = hybridSearchService.searchRaw(query, topK = 3, category = category)
 
         logRrfResults("ARCH", query, results)
 
@@ -101,9 +96,7 @@ class HybridConventionSearchCategoryAssertionIT : AbstractIntegrationTest() {
         assertThat(category).isEqualTo(ConventionCategory.STYLE)
 
         val query = "long function local function FQCN"
-        val results = runBlocking {
-            hybridSearchService.searchRaw(query, topK = 3, category = category)
-        }
+        val results = hybridSearchService.searchRaw(query, topK = 3, category = category)
 
         logRrfResults("STYLE", query, results)
 

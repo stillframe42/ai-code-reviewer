@@ -1,6 +1,5 @@
 package stillframe42.aicodereviewer.review.adapter.out.cache
 
-import kotlinx.coroutines.test.runTest
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
@@ -14,29 +13,29 @@ class RedisReviewCacheStatsAdapterTest : AbstractIntegrationTest() {
     private lateinit var reviewCacheStatsStore: ReviewCacheStatsPort
 
     @Test
-    fun `incrementHit 호출 후 getHitCount는 1을 반환한다`() = runTest {
+    fun `incrementHit 호출 후 getHitCount는 1을 반환한다`() {
         reviewCacheStatsStore.incrementHit()
         assertThat(reviewCacheStatsStore.getHitCount()).isEqualTo(1L)
     }
 
     @Test
-    fun `incrementMiss 호출 후 getMissCount는 1을 반환한다`() = runTest {
+    fun `incrementMiss 호출 후 getMissCount는 1을 반환한다`() {
         reviewCacheStatsStore.incrementMiss()
         assertThat(reviewCacheStatsStore.getMissCount()).isEqualTo(1L)
     }
 
     @Test
-    fun `데이터가 없을 때 getHitCount는 0을 반환한다`() = runTest {
+    fun `데이터가 없을 때 getHitCount는 0을 반환한다`() {
         assertThat(reviewCacheStatsStore.getHitCount()).isEqualTo(0L)
     }
 
     @Test
-    fun `데이터가 없을 때 getMissCount는 0을 반환한다`() = runTest {
+    fun `데이터가 없을 때 getMissCount는 0을 반환한다`() {
         assertThat(reviewCacheStatsStore.getMissCount()).isEqualTo(0L)
     }
 
     @Test
-    fun `incrementHit 3회 호출 후 getHitCount는 3을 반환한다`() = runTest {
+    fun `incrementHit 3회 호출 후 getHitCount는 3을 반환한다`() {
         reviewCacheStatsStore.incrementHit()
         reviewCacheStatsStore.incrementHit()
         reviewCacheStatsStore.incrementHit()

@@ -1,6 +1,5 @@
 package stillframe42.aicodereviewer.github.application
 
-import kotlinx.coroutines.runBlocking
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
@@ -70,7 +69,7 @@ class DefaultGitHubWebhookServiceTest : AbstractIntegrationTest() {
     // ── 통합 테스트 (WireMock 모킹) ──────────────────────────────────────────
 
     @Test
-    fun `OPENED 이벤트를 처리하면 PR에 리뷰 코멘트가 등록된다`() = runBlocking {
+    fun `OPENED 이벤트를 처리하면 PR에 리뷰 코멘트가 등록된다`() {
         // 예외 없이 완료되면 성공 (WireMock이 리뷰 등록 요청을 수신)
         service.handlePullRequestEvent(
             PullRequestEvent(
@@ -83,11 +82,10 @@ class DefaultGitHubWebhookServiceTest : AbstractIntegrationTest() {
                 author = "test-user",
             ),
         )
-        Unit
     }
 
     @Test
-    fun `SYNCHRONIZE 이벤트를 처리하면 이전 리뷰를 dismiss하고 새 리뷰를 등록한다`() = runBlocking {
+    fun `SYNCHRONIZE 이벤트를 처리하면 이전 리뷰를 dismiss하고 새 리뷰를 등록한다`() {
         // 새 SHA로 이벤트 발생 시 이전 리뷰 dismiss → 새 리뷰 등록 흐름 검증
         // (이전 처리 이력이 없으면 dismiss를 건너뛰고 바로 새 리뷰 등록)
         service.handlePullRequestEvent(
@@ -101,7 +99,6 @@ class DefaultGitHubWebhookServiceTest : AbstractIntegrationTest() {
                 author = "test-user",
             ),
         )
-        Unit
     }
 
     // ── MarkdownReviewCommentFormatter 단위 검증 ──────────────────────────────

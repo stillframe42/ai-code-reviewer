@@ -3,7 +3,6 @@ package stillframe42.aicodereviewer.common.auth
 import java.time.Duration
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
-import org.springframework.util.unit.DataSize
 import stillframe42.aicodereviewer.config.RemoteAgentProperties
 import stillframe42.aicodereviewer.config.RemoteAgentProperties.CallbackProperties
 import stillframe42.aicodereviewer.config.RemoteAgentProperties.PollProperties
@@ -43,7 +42,6 @@ class InternalAuthValidatorTest {
         url = "http://localhost:8081",
         connectTimeout = Duration.ofSeconds(3),
         readTimeout = Duration.ofSeconds(60),
-        maxInMemorySize = DataSize.ofMegabytes(10),
         poll = PollProperties(maxAttempts = 30, interval = Duration.ofSeconds(2), timeout = Duration.ofSeconds(60)),
         callback = CallbackProperties(internalAuthToken = token),
     )

@@ -21,7 +21,7 @@ class AgentCallbackController(
 ) : Logging {
 
     @PostMapping("/callback")
-    suspend fun receiveAgentCallback(
+    fun receiveAgentCallback(
         @RequestHeader("X-Internal-Auth", required = false) authToken: String?,
         @RequestBody payload: AgentCallbackPayload,
     ): ResponseEntity<Unit> {

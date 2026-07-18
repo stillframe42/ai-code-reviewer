@@ -5,9 +5,9 @@ import com.github.tomakehurst.wiremock.client.WireMock.equalTo
 import com.github.tomakehurst.wiremock.client.WireMock.post
 import com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor
 import com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo
+import java.net.http.HttpTimeoutException
 import java.time.Duration
 import java.util.Base64
-import java.util.concurrent.TimeoutException
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
@@ -69,7 +69,7 @@ class LangfuseClientTest : AbstractIntegrationTest() {
     }
 
     @Test
-    fun `응답이 ingest-timeout을 초과하면 무기한 대기하지 않고 TimeoutException을 던진다`() {
+    fun `응답이 ingest-timeout을 초과하면 무기한 대기하지 않고 예외를 던진다`() {
         wireMock.stubFor(
             post(urlEqualTo("/api/public/ingestion"))
                 .willReturn(
@@ -86,6 +86,7 @@ class LangfuseClientTest : AbstractIntegrationTest() {
             client.ingest(listOf(
                 mapOf("type" to "trace-create", "id" to "evt-1", "body" to mapOf("id" to "trace-1"))
             ))
-        }.hasRootCauseInstanceOf(TimeoutException::class.java)
+        }.isInstanceOf(RuntimeException::class.java)
+            .hasRootCauseInstanceOf(HttpTimeoutException::class.java)
     }
 }

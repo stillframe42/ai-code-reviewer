@@ -1,6 +1,5 @@
 package stillframe42.aicodereviewer.github.adapter.out.github
 
-import kotlinx.coroutines.runBlocking
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -56,22 +55,20 @@ class GitHubAppTokenProviderTest : AbstractIntegrationTest() {
     // ─── 그룹 B: 통합 테스트 (WireMock으로 GitHub Token API 모킹) ─────────────
 
     @Test
-    fun `유효한 Installation ID로 Access Token을 발급받는다`() = runBlocking {
+    fun `유효한 Installation ID로 Access Token을 발급받는다`() {
         val token = tokenProvider.getInstallationToken(WireMockStubs.TEST_INSTALLATION_ID)
 
         assertThat(token).isNotBlank()
         // WireMock stub이 "ghs_test_token"을 반환한다
         assertThat(token).startsWith("ghs_")
-        Unit
     }
 
     @Test
-    fun `동일한 Installation ID로 두 번 요청하면 캐시된 동일 토큰을 반환한다`() = runBlocking {
+    fun `동일한 Installation ID로 두 번 요청하면 캐시된 동일 토큰을 반환한다`() {
         val token1 = tokenProvider.getInstallationToken(WireMockStubs.TEST_INSTALLATION_ID)
         val token2 = tokenProvider.getInstallationToken(WireMockStubs.TEST_INSTALLATION_ID)
 
         // 두 번째 호출은 캐시에서 반환되므로 동일한 토큰이어야 한다
         assertThat(token1).isEqualTo(token2)
-        Unit
     }
 }

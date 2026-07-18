@@ -2,7 +2,6 @@ package stillframe42.aicodereviewer.review.application
 
 import java.math.BigDecimal
 import java.time.Instant
-import kotlinx.coroutines.test.runTest
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -50,7 +49,7 @@ class DefaultReviewQueryServiceTest : AbstractIntegrationTest() {
     }
 
     @Test
-    fun `getReviewByPr는 존재하는 PR의 리뷰 요약을 반환한다`() = runTest {
+    fun `getReviewByPr는 존재하는 PR의 리뷰 요약을 반환한다`() {
         // 리뷰 요청 저장
         val request = reviewRequestRepository.save(
             ReviewRequestEntity(
@@ -91,7 +90,7 @@ class DefaultReviewQueryServiceTest : AbstractIntegrationTest() {
     }
 
     @Test
-    fun `getReviewByPr는 존재하지 않는 PR에 대해 null을 반환한다`() = runTest {
+    fun `getReviewByPr는 존재하지 않는 PR에 대해 null을 반환한다`() {
         // 저장된 데이터가 없으므로 null이어야 한다
         val result = service.getReviewByPr("nobody/norepo", 999)
 
@@ -99,7 +98,7 @@ class DefaultReviewQueryServiceTest : AbstractIntegrationTest() {
     }
 
     @Test
-    fun `getStats는 전체 통계를 반환한다`() = runTest {
+    fun `getStats는 전체 통계를 반환한다`() {
         // 리뷰 요청 2건 저장
         val firstRequest = reviewRequestRepository.save(
             ReviewRequestEntity(
@@ -148,7 +147,7 @@ class DefaultReviewQueryServiceTest : AbstractIntegrationTest() {
     }
 
     @Test
-    fun `getStats는 데이터가 없을 때 기본값을 반환한다`() = runTest {
+    fun `getStats는 데이터가 없을 때 기본값을 반환한다`() {
         // 저장된 데이터 없음 — tearDown 직후 상태와 동일
         val stats = service.getStats()
 
@@ -160,7 +159,7 @@ class DefaultReviewQueryServiceTest : AbstractIntegrationTest() {
     }
 
     @Test
-    fun `getStats는 비용 및 캐시 통계를 포함한다`() = runTest {
+    fun `getStats는 비용 및 캐시 통계를 포함한다`() {
         // LLM 비용 로그 2건 저장 (같은 모델, 각 0.0004 USD)
         llmCostLogRepository.saveAll(listOf(
             LlmCostLogEntity(
@@ -186,4 +185,5 @@ class DefaultReviewQueryServiceTest : AbstractIntegrationTest() {
         assertThat(stats.cacheHitRate).isEqualTo(0.0)
         // 캐시 히트 횟수 0 → estimatedSavings = 0
         assertThat(stats.estimatedSavings).isEqualByComparingTo(BigDecimal.ZERO)
-    }}
+    }
+}

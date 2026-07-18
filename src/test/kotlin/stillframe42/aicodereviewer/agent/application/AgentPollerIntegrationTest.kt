@@ -3,7 +3,6 @@ package stillframe42.aicodereviewer.agent.application
 import com.github.tomakehurst.wiremock.client.WireMock.aResponse
 import com.github.tomakehurst.wiremock.client.WireMock.get
 import com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo
-import kotlinx.coroutines.runBlocking
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
@@ -19,7 +18,7 @@ class AgentPollerIntegrationTest : AbstractIntegrationTest() {
     private lateinit var poller: AgentPoller
 
     @Test
-    fun `PROCESSING PROCESSING DONE 시퀀스에서 3번째 polling 으로 결과 반환`(): Unit = runBlocking {
+    fun `PROCESSING PROCESSING DONE 시퀀스에서 3번째 polling 으로 결과 반환`() {
         val analysisId = "int-test-1"
         WireMockStubs.stubAgentPollSequence(
             wireMock = wireMock,
@@ -35,7 +34,7 @@ class AgentPollerIntegrationTest : AbstractIntegrationTest() {
     }
 
     @Test
-    fun `FAILED 응답 즉시 AgentAnalysisFailedException`(): Unit = runBlocking {
+    fun `FAILED 응답 즉시 AgentAnalysisFailedException`() {
         val analysisId = "int-test-2"
         WireMockStubs.stubAgentPollSequence(
             wireMock = wireMock,
@@ -51,7 +50,7 @@ class AgentPollerIntegrationTest : AbstractIntegrationTest() {
     }
 
     @Test
-    fun `모든 응답이 PROCESSING 인 경우 timeout 발생`(): Unit = runBlocking {
+    fun `모든 응답이 PROCESSING 인 경우 timeout 발생`() {
         val analysisId = "int-test-3"
         // 30회 모두 PROCESSING — interval 10ms × 30 = 300ms 안에 max-attempts 도달
         WireMockStubs.stubAgentPollSequence(
@@ -67,7 +66,7 @@ class AgentPollerIntegrationTest : AbstractIntegrationTest() {
     }
 
     @Test
-    fun `5xx 응답은 AgentUnavailableException 으로 매핑되어 전파된다`(): Unit = runBlocking {
+    fun `5xx 응답은 AgentUnavailableException 으로 매핑되어 전파된다`() {
         val analysisId = "int-test-4"
         wireMock.stubFor(
             get(urlPathEqualTo("/agent/analyze/$analysisId"))

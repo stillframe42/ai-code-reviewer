@@ -2,7 +2,6 @@ package stillframe42.aicodereviewer.evaluation.integration
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
-import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable
 import org.springframework.beans.factory.annotation.Autowired
@@ -145,7 +144,7 @@ class EvaluationSweepIT {
 
     // 골격 검증 — 인덱싱 + 골든 데이터셋 로드 (LLM 호출 없음, 빠름)
     @Test
-    fun `sweep 골격 검증`() = runBlocking {
+    fun `sweep 골격 검증`() {
         conventionIndexUseCase.reindex()
         val cases = loadGoldenCases()
         check(cases.size == 20) { "골든 데이터셋 케이스가 20개여야 합니다 (실제: ${cases.size})" }
@@ -154,7 +153,7 @@ class EvaluationSweepIT {
 
     // TopK Sweep — TopK ∈ {3, 5, 7}, threshold=0.0 고정. 비용/시간: ~24분, ~$3-6.
     @Test
-    fun `B-1 TopK Sweep`() = runBlocking {
+    fun `B-1 TopK Sweep`() {
         conventionIndexUseCase.reindex()
         val cases = loadGoldenCases()
 
@@ -173,7 +172,7 @@ class EvaluationSweepIT {
     // Threshold Sweep — Threshold ∈ {0.5, 0.6, 0.7, 0.8}, TopK=OPTIMAL_TOPK_FROM_B1 고정
     // 비용/시간: ~32분, ~$4-8 (4회 × 8분, $1-2)
     @Test
-    fun `B-2 Threshold Sweep`() = runBlocking {
+    fun `B-2 Threshold Sweep`() {
         conventionIndexUseCase.reindex()
         val cases = loadGoldenCases()
 

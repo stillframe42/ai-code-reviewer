@@ -3,7 +3,6 @@ package stillframe42.aicodereviewer.review.adapter.out.ai
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor
 import com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo
-import kotlinx.coroutines.runBlocking
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
@@ -31,16 +30,14 @@ class ReviewAdapterModelOverrideIT : AbstractIntegrationTest() {
     fun `critical-model 오버라이드 시에도 yml 의 max-tokens 와 temperature 가 요청에 유지된다`() {
         WireMockStubs.stubAnthropicReview(wireMock)
 
-        runBlocking {
-            aiReviewPort.reviewCode(
-                code = "fun foo() = 1",
-                provider = AiProvider.ANTHROPIC,
-                mode = ReviewMode.Simple,
-                reviewContext = null,
-                modelName = "claude-sonnet-4-6",
-                conventionContext = null,
-            )
-        }
+        aiReviewPort.reviewCode(
+            code = "fun foo() = 1",
+            provider = AiProvider.ANTHROPIC,
+            mode = ReviewMode.Simple,
+            reviewContext = null,
+            modelName = "claude-sonnet-4-6",
+            conventionContext = null,
+        )
 
         val body = capturedAnthropicRequestBody()
         assertThat(body["model"].asText()).isEqualTo("claude-sonnet-4-6")
@@ -52,16 +49,14 @@ class ReviewAdapterModelOverrideIT : AbstractIntegrationTest() {
     fun `기본 경로(오버라이드 없음)는 yml 의 model·max-tokens·temperature 를 그대로 사용한다`() {
         WireMockStubs.stubAnthropicReview(wireMock)
 
-        runBlocking {
-            aiReviewPort.reviewCode(
-                code = "fun foo() = 1",
-                provider = AiProvider.ANTHROPIC,
-                mode = ReviewMode.Simple,
-                reviewContext = null,
-                modelName = null,
-                conventionContext = null,
-            )
-        }
+        aiReviewPort.reviewCode(
+            code = "fun foo() = 1",
+            provider = AiProvider.ANTHROPIC,
+            mode = ReviewMode.Simple,
+            reviewContext = null,
+            modelName = null,
+            conventionContext = null,
+        )
 
         val body = capturedAnthropicRequestBody()
         assertThat(body["model"].asText()).isEqualTo("claude-haiku-4-5-20251001")

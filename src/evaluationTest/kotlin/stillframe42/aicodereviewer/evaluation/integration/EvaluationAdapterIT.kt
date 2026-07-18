@@ -1,6 +1,5 @@
 package stillframe42.aicodereviewer.evaluation.integration
 
-import kotlinx.coroutines.runBlocking
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable
@@ -68,7 +67,7 @@ class EvaluationAdapterIT {
     private lateinit var ragEvaluationPort: RagEvaluationPort
 
     @Test
-    fun `Faithfulness 평가 - 컨텍스트에 근거한 리뷰는 높은 점수를 받는다`() = runBlocking {
+    fun `Faithfulness 평가 - 컨텍스트에 근거한 리뷰는 높은 점수를 받는다`() {
         val context = listOf(
             RagDocument(
                 id = UUID.randomUUID().toString(),
@@ -85,7 +84,7 @@ class EvaluationAdapterIT {
     }
 
     @Test
-    fun `Context Precision 평가 - 관련 문서 비율을 반환한다`() = runBlocking {
+    fun `Context Precision 평가 - 관련 문서 비율을 반환한다`() {
         val docs = listOf(
             RagDocument(id = "doc-1", text = "SQL Injection 방어 규칙"),
             RagDocument(id = "doc-2", text = "JPA Entity는 data class 금지"),
@@ -103,7 +102,7 @@ class EvaluationAdapterIT {
     }
 
     @Test
-    fun `Context Recall 평가 - 기대 이슈 커버 비율을 반환한다`() = runBlocking {
+    fun `Context Recall 평가 - 기대 이슈 커버 비율을 반환한다`() {
         val expectedIssues = listOf("SQL Injection 취약점 — 파라미터 바인딩 미사용")
         val docs = listOf(
             RagDocument(id = "doc-1", text = "SQL Injection 방어: 모든 DB 쿼리에 파라미터 바인딩 사용."),

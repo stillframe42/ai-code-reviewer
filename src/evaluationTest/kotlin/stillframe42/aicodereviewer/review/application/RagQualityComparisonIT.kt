@@ -5,7 +5,6 @@ import com.github.tomakehurst.wiremock.client.WireMock.post
 import com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo
 import java.io.File
 import java.time.LocalDateTime
-import kotlinx.coroutines.runBlocking
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Assumptions
 import org.junit.jupiter.api.BeforeEach
@@ -13,7 +12,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
-import org.springframework.data.redis.core.ReactiveRedisTemplate
+import org.springframework.data.redis.core.StringRedisTemplate
 import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.test.context.ActiveProfiles
 import org.springframework.test.context.DynamicPropertyRegistry
@@ -148,7 +147,7 @@ class RagQualityComparisonIT {
     private lateinit var jdbcTemplate: JdbcTemplate
 
     @Autowired
-    private lateinit var redisTemplate: ReactiveRedisTemplate<String, String>
+    private lateinit var redisTemplate: StringRedisTemplate
 
     @BeforeEach
     fun setUp() {
@@ -158,15 +157,11 @@ class RagQualityComparisonIT {
         // Langfuse 스텁 (리뷰 완료 후 관측 데이터 전송 시 필요)
         WireMockStubs.stubLangfuseIngestion(wireMock)
         // Redis 캐시 초기화 — 이전 리뷰 캐시 제거
-        redisTemplate.connectionFactory
-            .reactiveConnection
-            .serverCommands()
-            .flushAll()
-            .block()
+        redisTemplate.connectionFactory!!.connection.serverCommands().flushAll()
     }
 
     @Test
-    fun `RAG 전후 리뷰 품질 비교`(): Unit = runBlocking {
+    fun `RAG 전후 리뷰 품질 비교`(): Unit {
         val secrets = readSecrets()
         // 실제 API 키가 없으면 건너뜀 — 401 에러 대신 명확한 skip 메시지 제공
         Assumptions.assumeTrue(secrets.containsKey("anthropic") && secrets.containsKey("openai")) {
@@ -214,14 +209,11 @@ class RagQualityComparisonIT {
             // 진단 목적: 프로덕션 경로가 파일별로 내부에서 build한 context는 직접 관찰 불가.
             // 같은 쿼리 전략(파일명 마지막 세그먼트)으로 read-only 재호출해 길이만 샘플링한다.
             // vector_store는 여전히 populated 상태이므로 reviewAfter가 본 context와 동일한 결과를 낸다.
-            // joinToString 람다는 suspend가 아니므로 for 루프로 buildContext를 호출한 뒤 조립한다.
-            val perFileSections = mutableListOf<String>()
-            for (fp in filePaths) {
+            val contextAfter = filePaths.joinToString("\n\n--- FILE SEPARATOR ---\n\n") { fp ->
                 val query = fp.substringAfterLast("/")
                 val fileContext = conventionContextService.buildContext(query = query, filePath = fp)
-                perFileSections += "## $fp (query=$query, ${fileContext.length}자)\n\n$fileContext"
+                "## $fp (query=$query, ${fileContext.length}자)\n\n$fileContext"
             }
-            val contextAfter = perFileSections.joinToString("\n\n--- FILE SEPARATOR ---\n\n")
 
             writeRunResult(
                 fixtureName = fixtureName,
@@ -452,11 +444,7 @@ class RagQualityComparisonIT {
     // Redis 전체 flush. DefaultReviewService가 쓰는 review 캐시를 제거해
     // 같은 diff에 대한 이전 실행 결과가 캐시 히트로 재사용되지 않게 한다.
     private fun flushRedis() {
-        redisTemplate.connectionFactory
-            .reactiveConnection
-            .serverCommands()
-            .flushAll()
-            .block()
+        redisTemplate.connectionFactory!!.connection.serverCommands().flushAll()
     }
 
 }

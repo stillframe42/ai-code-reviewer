@@ -7,7 +7,6 @@ import com.github.tomakehurst.wiremock.client.WireMock.okJson
 import com.github.tomakehurst.wiremock.client.WireMock.post
 import com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor
 import com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo
-import kotlinx.coroutines.test.runTest
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
@@ -20,7 +19,7 @@ class RemoteAgentClientIntegrationTest : AbstractIntegrationTest() {
     private lateinit var remoteAgentClient: RemoteAgentClient
 
     @Test
-    fun `requestDeepAnalysis - 200 응답을 도메인 결과로 매핑한다`() = runTest {
+    fun `requestDeepAnalysis - 200 응답을 도메인 결과로 매핑한다`() {
         wireMock.stubFor(
             post(urlPathEqualTo("/agent/analyze"))
                 .willReturn(
@@ -56,7 +55,7 @@ class RemoteAgentClientIntegrationTest : AbstractIntegrationTest() {
     }
 
     @Test
-    fun `requestDeepAnalysis - 요청 바디가 snake_case 로 직렬화된다`() = runTest {
+    fun `requestDeepAnalysis - 요청 바디가 snake_case 로 직렬화된다`() {
         wireMock.stubFor(
             post(urlPathEqualTo("/agent/analyze"))
                 .willReturn(okJson("""{"analysis_id":"x","status":"DONE","issues":[]}""")),
@@ -93,7 +92,7 @@ class RemoteAgentClientIntegrationTest : AbstractIntegrationTest() {
     }
 
     @Test
-    fun `requestDeepAnalysis - sessionId 가 null 이면 페이로드의 session_id 도 null 로 전송된다`() = runTest {
+    fun `requestDeepAnalysis - sessionId 가 null 이면 페이로드의 session_id 도 null 로 전송된다`() {
         wireMock.stubFor(
             post(urlPathEqualTo("/agent/analyze"))
                 .willReturn(okJson("""{"analysis_id":"x","status":"DONE","issues":[]}""")),
@@ -128,7 +127,7 @@ class RemoteAgentClientIntegrationTest : AbstractIntegrationTest() {
     }
 
     @Test
-    fun `getAnalysisResult - IN_PROGRESS 응답을 그대로 반환한다 (폴링 없음)`() = runTest {
+    fun `getAnalysisResult - IN_PROGRESS 응답을 그대로 반환한다 (폴링 없음)`() {
         wireMock.stubFor(
             get(urlPathEqualTo("/agent/analyze/id-002"))
                 .willReturn(okJson("""{"analysis_id":"id-002","status":"IN_PROGRESS","issues":[]}""")),
@@ -142,7 +141,7 @@ class RemoteAgentClientIntegrationTest : AbstractIntegrationTest() {
     }
 
     @Test
-    fun `getAnalysisResult - DONE 응답에서 findings 를 매핑한다`() = runTest {
+    fun `getAnalysisResult - DONE 응답에서 findings 를 매핑한다`() {
         wireMock.stubFor(
             get(urlPathEqualTo("/agent/analyze/id-003"))
                 .willReturn(
@@ -174,7 +173,7 @@ class RemoteAgentClientIntegrationTest : AbstractIntegrationTest() {
     }
 
     @Test
-    fun `checkHealth - 200 응답시 true 를 반환한다`() = runTest {
+    fun `checkHealth - 200 응답시 true 를 반환한다`() {
         wireMock.stubFor(
             get(urlPathEqualTo("/health")).willReturn(aResponse().withStatus(200)),
         )
@@ -183,7 +182,7 @@ class RemoteAgentClientIntegrationTest : AbstractIntegrationTest() {
     }
 
     @Test
-    fun `checkHealth - 5xx 응답시 false 를 반환한다`() = runTest {
+    fun `checkHealth - 5xx 응답시 false 를 반환한다`() {
         wireMock.stubFor(
             get(urlPathEqualTo("/health")).willReturn(aResponse().withStatus(503)),
         )
@@ -192,7 +191,7 @@ class RemoteAgentClientIntegrationTest : AbstractIntegrationTest() {
     }
 
     @Test
-    fun `checkHealth - stub 이 없으면 (404) false 를 반환한다`() = runTest {
+    fun `checkHealth - stub 이 없으면 (404) false 를 반환한다`() {
         // WireMock 은 매칭되는 stub 이 없으면 404 — 어댑터가 false 로 처리해야 한다
         assertThat(remoteAgentClient.checkHealth()).isFalse()
     }

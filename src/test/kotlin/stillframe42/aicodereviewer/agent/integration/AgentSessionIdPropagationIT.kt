@@ -7,7 +7,6 @@ import com.github.tomakehurst.wiremock.client.WireMock.post
 import com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor
 import com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo
 import com.github.tomakehurst.wiremock.client.WireMock.urlPathMatching
-import kotlinx.coroutines.runBlocking
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
@@ -23,7 +22,7 @@ class AgentSessionIdPropagationIT : AbstractIntegrationTest() {
     @Autowired private lateinit var objectMapper: ObjectMapper
 
     @Test
-    fun `reviewRequestId 가 outgoing 페이로드의 session_id 로 흐른다`(): Unit = runBlocking {
+    fun `reviewRequestId 가 outgoing 페이로드의 session_id 로 흐른다`() {
         stubRemoteAgent()
         WireMockStubs.stubOpenAiEmbedding(wireMock)
 
@@ -44,7 +43,7 @@ class AgentSessionIdPropagationIT : AbstractIntegrationTest() {
     }
 
     @Test
-    fun `reviewRequestId 가 null 이면 outgoing 페이로드의 session_id 도 null 이다`(): Unit = runBlocking {
+    fun `reviewRequestId 가 null 이면 outgoing 페이로드의 session_id 도 null 이다`() {
         stubRemoteAgent()
         WireMockStubs.stubOpenAiEmbedding(wireMock)
 

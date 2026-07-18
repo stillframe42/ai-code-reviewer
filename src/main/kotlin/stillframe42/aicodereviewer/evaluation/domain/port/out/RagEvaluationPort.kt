@@ -5,23 +5,23 @@ import stillframe42.aicodereviewer.rag.domain.model.RagDocument
 
 interface RagEvaluationPort {
 
-    suspend fun evaluateFaithfulness(
+    fun evaluateFaithfulness(
         context: List<RagDocument>,
         generatedReview: String,
     ): EvaluationScore
 
-    suspend fun evaluateContextPrecision(
+    fun evaluateContextPrecision(
         query: String,
         retrievedDocs: List<RagDocument>,
         relevantConvention: String,
     ): EvaluationScore
 
-    suspend fun evaluateContextRecall(
+    fun evaluateContextRecall(
         expectedIssues: List<String>,
         retrievedDocs: List<RagDocument>,
     ): EvaluationScore
 
-    suspend fun evaluateAnswerRelevancy(
+    fun evaluateAnswerRelevancy(
         inputCode: String,
         expectedIssues: List<String>,
         generatedReview: String,

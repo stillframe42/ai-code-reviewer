@@ -8,7 +8,6 @@ import com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor
 import com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo
 import com.github.tomakehurst.wiremock.client.WireMock.urlPathMatching
 import io.micrometer.core.instrument.MeterRegistry
-import kotlinx.coroutines.runBlocking
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
@@ -65,7 +64,7 @@ class DefaultPrReviewOrchestrationServiceTest : AbstractIntegrationTest() {
     }
 
     @Test
-    fun `일반 PR 은 Spring AI 경로로 리뷰하고 DONE 상태로 저장한다`(): Unit = runBlocking {
+    fun `일반 PR 은 Spring AI 경로로 리뷰하고 DONE 상태로 저장한다`() {
         val review = orchestration.orchestrate(command(prNumber = 42, prFiles = listOf(normalPrFile())))
 
         assertThat(review).isNotNull
@@ -76,7 +75,7 @@ class DefaultPrReviewOrchestrationServiceTest : AbstractIntegrationTest() {
     }
 
     @Test
-    fun `AI 호출이 실패하면 null 을 반환하고 FAILED 상태로 저장한다`(): Unit = runBlocking {
+    fun `AI 호출이 실패하면 null 을 반환하고 FAILED 상태로 저장한다`() {
         WireMockStubs.stubAnthropicError(wireMock)
 
         val review = orchestration.orchestrate(command(prNumber = 43, prFiles = listOf(normalPrFile())))
@@ -86,7 +85,7 @@ class DefaultPrReviewOrchestrationServiceTest : AbstractIntegrationTest() {
     }
 
     @Test
-    fun `보안 파일 PR 은 agent 경로로 리뷰한다`(): Unit = runBlocking {
+    fun `보안 파일 PR 은 agent 경로로 리뷰한다`() {
         stubRemoteAgentDone()
 
         val review = orchestration.orchestrate(command(prNumber = 44, prFiles = listOf(securityPrFile())))
@@ -97,7 +96,7 @@ class DefaultPrReviewOrchestrationServiceTest : AbstractIntegrationTest() {
     }
 
     @Test
-    fun `agent 가 실패하면 Spring AI 로 폴백하고 폴백 메트릭이 증가한다`(): Unit = runBlocking {
+    fun `agent 가 실패하면 Spring AI 로 폴백하고 폴백 메트릭이 증가한다`() {
         wireMock.stubFor(
             post(urlPathEqualTo("/agent/analyze")).willReturn(aResponse().withStatus(503)),
         )

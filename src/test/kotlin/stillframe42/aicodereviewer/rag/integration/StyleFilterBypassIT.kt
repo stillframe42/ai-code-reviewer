@@ -3,7 +3,6 @@ package stillframe42.aicodereviewer.rag.integration
 import com.github.tomakehurst.wiremock.client.WireMock.aResponse
 import com.github.tomakehurst.wiremock.client.WireMock.post
 import com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo
-import kotlinx.coroutines.runBlocking
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -38,7 +37,7 @@ class StyleFilterBypassIT : AbstractIntegrationTest() {
     }
 
     @Test
-    fun `bypass=true 시 STYLE 쿼리 호출이 정상 응답한다`(): Unit = runBlocking {
+    fun `bypass=true 시 STYLE 쿼리 호출이 정상 응답한다`() {
         conventionIndexUseCase.reindex()
 
         // bypass=true 분기로 effectiveCategory=null 이 되어 카테고리 필터 없이 검색됨.

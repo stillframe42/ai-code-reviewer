@@ -3,7 +3,6 @@ package stillframe42.aicodereviewer.rag.integration
 import com.github.tomakehurst.wiremock.client.WireMock.aResponse
 import com.github.tomakehurst.wiremock.client.WireMock.post
 import com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo
-import kotlinx.coroutines.runBlocking
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -39,17 +38,15 @@ class ConventionContextServiceIntegrationTest : AbstractIntegrationTest() {
         )
         // LlmContextCompressorAdapter가 호출하는 OpenAI Chat API 스텁 (압축 정상 경로)
         WireMockStubs.stubOpenAiChatResponse(wireMock, body = "compressed test content")
-        runBlocking { conventionIndexUseCase.reindex() }
+        conventionIndexUseCase.reindex()
     }
 
     @Test
     fun `SECURITY 파일 경로로 buildContext 호출 시 비어있지 않은 컨텍스트를 반환한다`() {
-        val context = runBlocking {
-            conventionContextService.buildContext(
-                query = "SecurityConfig.kt",
-                filePath = "src/main/kotlin/stillframe42/SecurityConfig.kt",
-            )
-        }
+        val context = conventionContextService.buildContext(
+            query = "SecurityConfig.kt",
+            filePath = "src/main/kotlin/stillframe42/SecurityConfig.kt",
+        )
         assertThat(context).isNotBlank()
     }
 
@@ -57,31 +54,25 @@ class ConventionContextServiceIntegrationTest : AbstractIntegrationTest() {
     fun `빈 DB에서 검색하면 빈 문자열을 반환한다`() {
         // reindex() 없이 빈 DB 상태로 검색 — 결과 없음 → 빈 문자열 반환
         jdbcTemplate.execute("DELETE FROM vector_store")
-        val context = runBlocking {
-            conventionContextService.buildContext(
-                query = "xyznotexisttoken99999",
-            )
-        }
+        val context = conventionContextService.buildContext(
+            query = "xyznotexisttoken99999",
+        )
         assertThat(context).isEmpty()
     }
 
     @Test
     fun `filePath가 null이면 카테고리 없이 전체 검색하며 예외가 발생하지 않는다`() {
-        val context = runBlocking {
-            conventionContextService.buildContext(query = "OWASP injection")
-        }
+        val context = conventionContextService.buildContext(query = "OWASP injection")
         // 전체 검색이므로 결과 존재 가능 — 예외 없이 String을 반환하는지만 검증
         assertThat(context).isNotNull()
     }
 
     @Test
     fun `반환된 컨텍스트는 구분자(---)로 문서를 구분한다`() {
-        val context = runBlocking {
-            conventionContextService.buildContext(
-                query = "SecurityConfig.kt",
-                filePath = "src/main/kotlin/stillframe42/SecurityConfig.kt",
-            )
-        }
+        val context = conventionContextService.buildContext(
+            query = "SecurityConfig.kt",
+            filePath = "src/main/kotlin/stillframe42/SecurityConfig.kt",
+        )
         // 구분자로 분리된 각 파트는 빈 문자열이 아니어야 한다
         val parts = context.split("\n\n---\n\n")
         assertThat(parts).allSatisfy { part ->
@@ -91,12 +82,10 @@ class ConventionContextServiceIntegrationTest : AbstractIntegrationTest() {
 
     @Test
     fun `buildContextIds — ragEnabled 상태에서 hybridSearch 결과의 Document id 리스트를 반환한다`() {
-        val ids = runBlocking {
-            conventionContextService.buildContextIds(
-                query = "security review for changed files",
-                filePath = "src/main/kotlin/stillframe42/SecurityConfig.kt",
-            )
-        }
+        val ids = conventionContextService.buildContextIds(
+            query = "security review for changed files",
+            filePath = "src/main/kotlin/stillframe42/SecurityConfig.kt",
+        )
         assertThat(ids).isNotEmpty()
         // pgvector row id는 UUID 형식
         assertThat(ids).allSatisfy { id ->

@@ -3,7 +3,6 @@ package stillframe42.aicodereviewer.rag.integration
 import com.github.tomakehurst.wiremock.client.WireMock.aResponse
 import com.github.tomakehurst.wiremock.client.WireMock.post
 import com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo
-import kotlinx.coroutines.runBlocking
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -44,12 +43,12 @@ class ConventionKeywordSearchIntegrationTest : AbstractIntegrationTest() {
                         .withTransformers("openai-embedding-batch")
                 )
         )
-        runBlocking { conventionIndexUseCase.reindex() }
+        conventionIndexUseCase.reindex()
     }
 
     @Test
     fun `OWASP injection 키워드로 검색하면 관련 문서를 반환한다`() {
-        val results = runBlocking { keywordSearchPort.search("OWASP injection", 5) }
+        val results = keywordSearchPort.search("OWASP injection", 5)
 
         assertThat(results).isNotEmpty()
         assertThat(results.first().id).isNotNull()
@@ -58,7 +57,7 @@ class ConventionKeywordSearchIntegrationTest : AbstractIntegrationTest() {
 
     @Test
     fun `PreparedStatement SQL 키워드로 검색하면 관련 문서를 반환한다`() {
-        val results = runBlocking { keywordSearchPort.search("PreparedStatement SQL", 5) }
+        val results = keywordSearchPort.search("PreparedStatement SQL", 5)
 
         assertThat(results).isNotEmpty()
         assertThat(results.first().text).containsIgnoringCase("preparedstatement")
@@ -66,23 +65,21 @@ class ConventionKeywordSearchIntegrationTest : AbstractIntegrationTest() {
 
     @Test
     fun `매칭되지 않는 키워드로 검색하면 빈 결과를 반환한다`() {
-        val results = runBlocking { keywordSearchPort.search("xyzabcnotexisttoken", 5) }
+        val results = keywordSearchPort.search("xyzabcnotexisttoken", 5)
 
         assertThat(results).isEmpty()
     }
 
     @Test
     fun `topK를 1로 지정하면 최대 1개 결과만 반환한다`() {
-        val results = runBlocking { keywordSearchPort.search("OWASP injection", 1) }
+        val results = keywordSearchPort.search("OWASP injection", 1)
 
         assertThat(results).hasSizeLessThanOrEqualTo(1)
     }
 
     @Test
     fun `category SECURITY 필터 적용 시 SECURITY 문서만 반환한다`() {
-        val results = runBlocking {
-            keywordSearchPort.search("OWASP injection", 5, ConventionCategory.SECURITY)
-        }
+        val results = keywordSearchPort.search("OWASP injection", 5, ConventionCategory.SECURITY)
 
         assertThat(results).isNotEmpty()
         assertThat(results).allSatisfy { doc ->
@@ -93,9 +90,7 @@ class ConventionKeywordSearchIntegrationTest : AbstractIntegrationTest() {
     @Test
     fun `category ARCH 필터 적용 시 SECURITY 문서가 포함되지 않는다`() {
         // "Hexagonal"은 architecture-guide.md(ARCH)에 포함된 토큰 — ARCH 결과 보장
-        val results = runBlocking {
-            keywordSearchPort.search("Hexagonal", 10, ConventionCategory.ARCH)
-        }
+        val results = keywordSearchPort.search("Hexagonal", 10, ConventionCategory.ARCH)
 
         assertThat(results).isNotEmpty()
         assertThat(results).allSatisfy { doc ->

@@ -18,7 +18,7 @@ import stillframe42.aicodereviewer.e2e.support.WireMockScenarios
 // 다운 시뮬레이션 메커니즘:
 //   - companion 의 static init 에서 System property `e2e.agent.remote.url.override` 를 WireMock URL 로 설정 →
 //     AbstractE2ETest.overrideProperties 의 supplier 가 그 값을 우선 사용 (companion init 은 Spring 컨텍스트 부팅 전에 실행).
-//   - WireMock 에 POST /agent/analyze 의 ConnectionReset fault stub → 호출 시 WebClientRequestException → AgentUnavailableException.
+//   - WireMock 에 POST /agent/analyze 의 ConnectionReset fault stub → 호출 시 ResourceAccessException → AgentUnavailableException.
 //   - @TestPropertySource 의 marker 가 컨텍스트 cache key 를 분리 → 다른 e2e 테스트 컨텍스트와 독립 (HikariPool +1).
 //   - @AfterAll 에서 System property 클리어 → 다른 e2eTest 영향 0.
 @TestPropertySource(properties = ["e2e.scenario=agent-down"])

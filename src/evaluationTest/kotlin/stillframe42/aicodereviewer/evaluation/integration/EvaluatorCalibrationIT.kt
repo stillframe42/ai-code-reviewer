@@ -1,7 +1,6 @@
 package stillframe42.aicodereviewer.evaluation.integration
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import kotlinx.coroutines.runBlocking
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable
@@ -91,7 +90,7 @@ class EvaluatorCalibrationIT {
     private lateinit var objectMapper: ObjectMapper
 
     @Test
-    fun `GT 10 case로 단계별 evaluator 측정`(): Unit = runBlocking {
+    fun `GT 10 case로 단계별 evaluator 측정`(): Unit {
         val gtJson = javaClass.classLoader
             .getResourceAsStream("fixtures/evaluation/faithfulness-ground-truth.json")!!
             .bufferedReader().readText()
@@ -143,7 +142,7 @@ class EvaluatorCalibrationIT {
         assertThat(hallResults.size).isEqualTo(5)
     }
 
-    private suspend fun evaluateOne(case: Map<String, Any>): Map<String, Any> {
+    private fun evaluateOne(case: Map<String, Any>): Map<String, Any> {
         val context = case["context"] as String
         val reviewText = case["review_text"] as String
         // RagDocument 에 context 를 단일 chunk 로 wrap (Faithfulness 평가 시 join 하므로 1 개여도 OK)

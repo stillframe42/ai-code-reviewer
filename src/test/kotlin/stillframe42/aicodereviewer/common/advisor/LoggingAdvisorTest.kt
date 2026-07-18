@@ -12,15 +12,12 @@ import org.mockito.Mockito.verify
 import org.mockito.Mockito.`when`
 import org.slf4j.LoggerFactory
 import org.springframework.ai.chat.client.advisor.api.CallAdvisorChain
-import org.springframework.ai.chat.client.advisor.api.StreamAdvisorChain
 import org.springframework.ai.chat.client.ChatClientRequest
 import org.springframework.ai.chat.client.ChatClientResponse
 import org.springframework.ai.chat.model.ChatResponse
 import org.springframework.ai.chat.metadata.ChatResponseMetadata
 import org.springframework.ai.chat.metadata.Usage
 import org.springframework.ai.chat.prompt.Prompt
-import reactor.core.publisher.Flux
-import reactor.test.StepVerifier
 
 class LoggingAdvisorTest {
 
@@ -134,26 +131,6 @@ class LoggingAdvisorTest {
 
         val logs = appender.list.map { it.formattedMessage }
         assertThat(logs).anyMatch { it.matches(Regex(".*\\|\\s*\\d+ms.*")) }
-    }
-
-    @Test
-    fun `streaming 호출 시 집계 완료 후 로그를 1회 기록한다`() {
-        val request = mockRequest()
-        val response = mockResponseWithUsage()
-        val streamChain = mock(StreamAdvisorChain::class.java)
-        // 단일 청크 Flux 반환
-        `when`(streamChain.nextStream(request)).thenReturn(Flux.just(response))
-
-        val resultFlux = loggingAdvisor.adviseStream(request, streamChain)
-        // Flux를 구독하여 완전히 소비해야 집계 및 로깅이 실행됨
-        StepVerifier.create(resultFlux)
-            .expectNextCount(1)
-            .verifyComplete()
-
-        // 로그가 1회 기록됐는지 확인
-        val logs = appender.list.map { it.formattedMessage }
-        assertThat(logs).hasSize(1)
-        assertThat(logs[0]).contains("[LLM]")
     }
 
     @Test

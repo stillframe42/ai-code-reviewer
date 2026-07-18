@@ -91,7 +91,7 @@ object WireMockScenarios {
         stubAgentConnectionReset(wm)
     }
 
-    // POST /agent/analyze — connection reset fault 로 WebClientRequestException 유발.
+    // POST /agent/analyze — connection reset fault 로 ResourceAccessException 유발.
     // AgentFallbackIntegrationTest 의 connection reset 시나리오와 동일 패턴.
     private fun stubAgentConnectionReset(wm: WireMockServer) {
         wm.stubFor(post(urlMatching("/agent/analyze"))

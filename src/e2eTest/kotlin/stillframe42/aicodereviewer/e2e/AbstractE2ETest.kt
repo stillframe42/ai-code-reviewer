@@ -6,7 +6,7 @@ import org.junit.jupiter.api.BeforeEach
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.test.web.server.LocalServerPort
-import org.springframework.data.redis.core.ReactiveRedisTemplate
+import org.springframework.data.redis.core.StringRedisTemplate
 import org.springframework.test.context.ActiveProfiles
 import org.springframework.test.context.DynamicPropertyRegistry
 import org.springframework.test.context.DynamicPropertySource
@@ -120,7 +120,7 @@ abstract class AbstractE2ETest {
         get() = tempo.getMappedPort(3200)
 
     @Autowired
-    protected lateinit var redisTemplate: ReactiveRedisTemplate<String, String>
+    protected lateinit var redisTemplate: StringRedisTemplate
 
     // 동일 PR (repo, prNumber, headSha) 를 fixture 로 공유하는 테스트 간 격리 — `skipIfAlreadyProcessed` 우회 방지.
     @Autowired
@@ -129,11 +129,7 @@ abstract class AbstractE2ETest {
     @BeforeEach
     fun setUpBase() {
         wireMock.resetAll()
-        redisTemplate.connectionFactory
-            .reactiveConnection
-            .serverCommands()
-            .flushAll()
-            .block()
+        redisTemplate.connectionFactory!!.connection.serverCommands().flushAll()
         processedEventRepository.deleteAll()
         client = RestTestClient.bindToServer()
             .baseUrl("http://localhost:$port")
