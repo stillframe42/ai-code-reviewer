@@ -1,6 +1,5 @@
 package stillframe42.aicodereviewer.evaluation.integration
 
-import kotlinx.coroutines.runBlocking
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable
@@ -80,7 +79,7 @@ class EvaluationRunnerIT {
     private lateinit var conventionIndexUseCase: ConventionIndexUseCase
 
     @Test
-    fun `골든 데이터셋 20개 케이스 일괄 평가 실행`() = runBlocking {
+    fun `골든 데이터셋 20개 케이스 일괄 평가 실행`() {
         // 벡터 스토어에 컨벤션 문서 인덱싱 — 테스트 환경에서는 WireMock으로 인해 자동 인덱싱 실패하므로 수동 실행
         conventionIndexUseCase.reindex()
 

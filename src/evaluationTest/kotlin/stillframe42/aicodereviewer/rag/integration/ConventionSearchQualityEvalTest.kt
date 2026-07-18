@@ -1,6 +1,5 @@
 package stillframe42.aicodereviewer.rag.integration
 
-import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
@@ -104,7 +103,7 @@ class ConventionSearchQualityEvalTest : Logging {
     @Test
     fun `검색 품질 평가 결과를 마크다운으로 저장한다`() {
         // 1. 실제 OpenAI 임베딩으로 전체 문서 인덱싱
-        runBlocking { conventionIndexUseCase.reindex() }
+        conventionIndexUseCase.reindex()
         val totalChunks = jdbcTemplate.queryForObject(
             "SELECT count(*) FROM vector_store",
             Long::class.java,

@@ -685,4 +685,4 @@ components:
         content:
           type: string
           description: pgvector vector_store 의 해당 row 본문 (joined 텍스트 1개 — 청크 1개)
-          example: "## 코루틴 규칙\n- 단일 응답 반환: suspend fun\n- 스트리밍: Flow<T>\n..."
+          example: "## 동시성 규칙\n- JDK 21 가상 스레드 기반 동기 블로킹 모델 사용\n- 코루틴(suspend, Flow) 도입 금지\n..."

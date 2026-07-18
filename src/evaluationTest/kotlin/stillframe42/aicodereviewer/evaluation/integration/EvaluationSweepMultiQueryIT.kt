@@ -2,7 +2,6 @@ package stillframe42.aicodereviewer.evaluation.integration
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
-import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable
 import org.springframework.beans.factory.annotation.Autowired
@@ -91,7 +90,7 @@ class EvaluationSweepMultiQueryIT {
     private val sweepResultsDir = File("plans/202604-3w/sweep-results").also { it.mkdirs() }
 
     @Test
-    fun `B-3 Multi-query Evaluation`() = runBlocking {
+    fun `B-3 Multi-query Evaluation`() {
         conventionIndexUseCase.reindex()
         val cases = loadGoldenCases()
         val results = evaluationUseCase.evaluateAll(

@@ -2,7 +2,6 @@ package stillframe42.aicodereviewer.evaluation.integration
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
-import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable
 import org.springframework.beans.factory.annotation.Autowired
@@ -144,7 +143,7 @@ class EvaluationSweepV14IT {
     }
 
     @Test
-    fun `B2-1 v14 20case sweep`() = runBlocking {
+    fun `B2-1 v14 20case sweep`() {
         conventionIndexUseCase.reindex()
         val cases = loadGoldenCases()
         val results = evaluationUseCase.evaluateAll(cases, topK = 3, threshold = 0.7)

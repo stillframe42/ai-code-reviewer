@@ -2,7 +2,6 @@ package stillframe42.aicodereviewer.evaluation.integration
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
-import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable
 import org.springframework.beans.factory.annotation.Autowired
@@ -142,7 +141,7 @@ class StyleSearchSweepIT {
 
     // S0: 베이스라인 재측정 — 현 코드 그대로, STYLE 5 케이스만
     @Test
-    fun `S0 baseline rerun`() = runBlocking {
+    fun `S0 baseline rerun`() {
         conventionIndexUseCase.reindex()
         val cases = loadStyleCases()
         val results = evaluationUseCase.evaluateAll(cases, topK = 3, threshold = 0.0)
@@ -155,7 +154,7 @@ class StyleSearchSweepIT {
 
     // S1: 전략 1 — 코드 본문 쿼리 (DefaultReviewService 변경 후 측정)
     @Test
-    fun `S1 code body query`() = runBlocking {
+    fun `S1 code body query`() {
         conventionIndexUseCase.reindex()
         val cases = loadStyleCases()
         val results = evaluationUseCase.evaluateAll(cases, topK = 3, threshold = 0.0)

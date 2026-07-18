@@ -2,7 +2,6 @@ package stillframe42.aicodereviewer.rag.integration
 
 import java.io.File
 import java.time.LocalDateTime
-import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Assumptions
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable
@@ -95,7 +94,7 @@ class RagContextCompressionComparisonIT {
     private lateinit var jdbcTemplate: JdbcTemplate
 
     @Test
-    fun `RAG 컨텍스트 압축 전후 비교 측정`() = runBlocking {
+    fun `RAG 컨텍스트 압축 전후 비교 측정`() {
         val secrets = readSecrets()
         Assumptions.assumeTrue(secrets.containsKey("openai")) {
             "application-secret.yml의 openai.api-key가 필요합니다 (검색 + 압축 모두 OpenAI 사용)"

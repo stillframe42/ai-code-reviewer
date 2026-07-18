@@ -2,7 +2,6 @@ package stillframe42.aicodereviewer.evaluation.integration
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
-import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable
 import org.springframework.beans.factory.annotation.Autowired
@@ -77,7 +76,7 @@ class EvaluationSweepC2FewShotIT {
     private val sweepResultsDir = File("plans/202604-3w/sweep-results").also { it.mkdirs() }
 
     @Test
-    fun `C-2 Few-shot Evaluation (v13)`() = runBlocking {
+    fun `C-2 Few-shot Evaluation (v13)`() {
         conventionIndexUseCase.reindex()
         val cases = loadGoldenCases()
         val results = evaluationUseCase.evaluateAll(cases, topK = 3, threshold = 0.7)

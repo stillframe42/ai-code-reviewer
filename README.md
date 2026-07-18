@@ -36,12 +36,12 @@
 | 프레임워크 | Spring Boot 4.0.3 |
 | AI 통합 | Spring AI 2.0.0-M2 |
 | 외부 에이전트 | Python `ai-agent-service` (LangGraph, 별도 저장소) |
-| 비동기 | Kotlin Coroutines 1.10.2 |
+| 동시성 | JDK 21 가상 스레드 (virtual threads) |
 | 빌드 도구 | Gradle (Kotlin DSL) |
 | JDK | JDK 21 |
 | DB | PostgreSQL (운영·테스트, Testcontainers) |
 | DB 마이그레이션 | Flyway 10+ |
-| 캐시 | Redis (reactive) |
+| 캐시 | Redis |
 | 벡터 DB | PgVector (PostgreSQL 확장, HNSW 인덱스) |
 | RAG 검색 | 벡터 + 키워드 하이브리드 (RRF), multi-query, LLM 컨텍스트 압축 |
 | LLM Observability | Langfuse (자체 호스팅) |

@@ -124,9 +124,9 @@ class WebhookFlowIntegrationTest : AbstractIntegrationTest() {
 
     @Test
     fun `AI API 오류 시 에러 안내 리뷰가 GitHub에 등록된다`() {
-        // PR #99 사용 — 다른 테스트(PR #42)에서 누출된 코루틴이 이 테스트의 stub을 오염시키지 않도록
-        // applicationScope는 싱글톤이므로 이전 테스트의 백그라운드 코루틴이 다음 테스트와 겹칠 수 있다.
-        // PR 번호를 분리하면 누출된 코루틴이 PR 42용 stub에 접근해도 이 테스트의 검증에 영향 없음.
+        // PR #99 사용 — 다른 테스트(PR #42)에서 누출된 백그라운드 작업이 이 테스트의 stub을 오염시키지 않도록
+        // applicationExecutor는 싱글톤이므로 이전 테스트의 백그라운드 작업이 다음 테스트와 겹칠 수 있다.
+        // PR 번호를 분리하면 누출된 작업이 PR 42용 stub에 접근해도 이 테스트의 검증에 영향 없음.
         val errorTestPayload = """
             {
               "action": "opened",
