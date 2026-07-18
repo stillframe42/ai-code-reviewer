@@ -55,14 +55,12 @@ flowchart TB
         WebhookCtrl["WebhookController\nPOST /api/github/webhook"]
         ReviewCtrl["ReviewController\nPOST /api/review"]
         ReviewQueryCtrl["ReviewQueryController\nGET /api/reviews/..."]
-        ChatCtrl["ChatController\nPOST /api/chat"]
     end
 
     subgraph Application["Application Layer (application)"]
         WebhookSvc["DefaultGitHubWebhookService"]
         ReviewSvc["DefaultReviewService"]
         QuerySvc["DefaultReviewQueryService"]
-        ChatSvc["DefaultChatService"]
     end
 
     subgraph Domain["Domain Layer"]
@@ -70,7 +68,6 @@ flowchart TB
             GitHubWebhookUC["GitHubWebhookUseCase"]
             ReviewUC["ReviewUseCase"]
             ReviewQueryUC["ReviewQueryUseCase"]
-            ChatUC["ChatUseCase"]
         end
         subgraph DomainSvc["Domain Service"]
             DiffPre["DiffPreprocessor"]
@@ -116,12 +113,12 @@ flowchart TB
 | 계층 | 역할 | 주요 클래스 |
 |------|------|------------|
 | `domain/model` | 순수 도메인 모델 (외부 의존 없음) | `CodeReview`, `CodeIssue`, `DiffFilterOptions`, `PullRequestEvent` |
-| `domain/port/in` | 인바운드 포트 — UseCase 인터페이스·결과 타입 | `ChatUseCase`, `ReviewUseCase`, `ReviewQueryUseCase`, `ReviewQueryResult`, `GitHubWebhookUseCase` |
-| `domain/port/out` | 아웃바운드 포트 — 외부 시스템 추상화 | `AiChatPort`, `AiReviewPort`, `ReviewPersistencePort`, `ReviewCacheStore`, `GitHubApiPort`, `ProcessedEventPort` |
+| `domain/port/in` | 인바운드 포트 — UseCase 인터페이스·결과 타입 | `ReviewUseCase`, `ReviewQueryUseCase`, `ReviewQueryResult`, `GitHubWebhookUseCase` |
+| `domain/port/out` | 아웃바운드 포트 — 외부 시스템 추상화 | `AiReviewPort`, `ReviewPersistencePort`, `ReviewCacheStore`, `GitHubApiPort`, `ProcessedEventPort` |
 | `domain/service` | 순수 도메인 로직 | `DiffPreprocessor`, `FileExtensionClassifier`, `AiModelSelector`, `PrImportanceAnalyzer`, `DiffPositionResolver` |
-| `application` | UseCase 구현체 — 포트 조합 | `DefaultChatService`, `DefaultReviewService`, `DefaultReviewQueryService`, `DefaultGitHubWebhookService` |
-| `adapter/in/web` | HTTP 컨트롤러 | `ChatController`, `ReviewController`, `ReviewQueryController`, `WebhookController` |
-| `adapter/out/ai` | AI API 클라이언트 | `ChatAdapter`, `ReviewAdapter` |
+| `application` | UseCase 구현체 — 포트 조합 | `DefaultReviewService`, `DefaultReviewQueryService`, `DefaultGitHubWebhookService` |
+| `adapter/in/web` | HTTP 컨트롤러 | `ReviewController`, `ReviewQueryController`, `WebhookController` |
+| `adapter/out/ai` | AI API 클라이언트 | `ReviewAdapter` |
 | `adapter/out/github` | GitHub API 클라이언트 | `GitHubApiAdapter`, `GitHubAppTokenProvider`, `JwtSigner`, `RsaKeyLoader` |
 | `adapter/out/persistence` | DB 영속성 어댑터 | `ReviewPersistenceAdapter`, `ReviewQueryAdapter`, `CostLogAdapter`, `ProcessedEventAdapter` |
 | `adapter/out/cache` | Redis 캐시 어댑터 | `RedisReviewCacheAdapter`, `RedisReviewCacheStatsAdapter` |

@@ -40,29 +40,6 @@ object WireMockStubs {
         )
     }
 
-    // Anthropic 채팅 응답 (비스트리밍) — DefaultChatService / ChatController 테스트용
-    fun stubAnthropicChat(server: WireMockServer) {
-        server.stubFor(
-            post(urlPathEqualTo("/v1/messages"))
-                .willReturn(okJson(AnthropicResponseFixtures.CHAT_SUCCESS))
-        )
-    }
-
-    // Anthropic 채팅 스트리밍 응답 — /api/chat/stream 테스트용
-    // "stream":true 요청 본문 매처로 비스트리밍 스텁보다 우선 매칭된다
-    fun stubAnthropicChatStream(server: WireMockServer) {
-        server.stubFor(
-            post(urlPathEqualTo("/v1/messages"))
-                .withRequestBody(containing("\"stream\":true"))
-                .willReturn(
-                    aResponse()
-                        .withStatus(200)
-                        .withHeader("Content-Type", "text/event-stream")
-                        .withBody(AnthropicResponseFixtures.CHAT_STREAM_SUCCESS)
-                )
-        )
-    }
-
     // Anthropic 이슈 포함 리뷰 응답 — DefaultReviewServiceTest 이슈 감지 테스트용
     fun stubAnthropicReviewWithIssues(server: WireMockServer) {
         server.stubFor(

@@ -60,7 +60,7 @@
 | 계층 | 역할 | 예시 |
 |------|------|------|
 | `domain/model` | 순수 도메인 모델 (외부 의존 없음) | `CodeReview`, `CodeIssue`, `RagDocument` |
-| `domain/port/in` | 인바운드 포트 — UseCase 인터페이스 | `ReviewUseCase`, `AgentReviewUseCase`, `ChatUseCase` |
+| `domain/port/in` | 인바운드 포트 — UseCase 인터페이스 | `ReviewUseCase`, `AgentReviewUseCase`, `GitHubWebhookUseCase` |
 | `domain/port/out` | 아웃바운드 포트 — 외부 시스템 추상화 | `AiReviewPort`, `AgentAnalysisPort`, `ConventionVectorPort`, `MultiQueryGeneratorPort` |
 | `domain/service` | 도메인 서비스 (순수 함수 또는 properties 의존 빈) | `SecurityFileDetector`, `DiffPreprocessor` (object), `PrImportanceAnalyzer` (@Component) |
 | `application` | UseCase 구현체 — 포트를 조합 | `DefaultReviewService`, `DefaultAgentReviewService` |
@@ -223,43 +223,6 @@ github:
 ---
 
 ## API 사용 예시
-
-### POST /api/chat — 단일 응답
-
-```bash
-curl -X POST http://localhost:8080/api/chat \
-  -H "Content-Type: application/json" \
-  -d '{
-    "message": "코틀린에서 data class와 일반 class의 차이점을 설명해줘",
-    "provider": "ANTHROPIC"
-  }'
-```
-
-```json
-{
-  "answer": "data class는 equals(), hashCode(), copy(), toString()을 자동 생성합니다..."
-}
-```
-
-### POST /api/chat/stream — SSE 스트리밍
-
-```bash
-curl -X POST http://localhost:8080/api/chat/stream \
-  -H "Content-Type: application/json" \
-  -H "Accept: text/event-stream" \
-  -d '{
-    "message": "Spring AI란 무엇인가요?",
-    "provider": "ANTHROPIC"
-  }'
-```
-
-```
-data: Spring
-
-data: AI는
-
-data: LLM을 ...
-```
 
 ### POST /api/review — 코드 리뷰
 
@@ -464,7 +427,7 @@ src/main/kotlin/stillframe42/aicodereviewer/
 ├── core/
 │   └── AiProvider.kt                  # ANTHROPIC, OPENAI 열거형
 ├── config/                            # 전역 빈 설정
-│   ├── ChatClientConfig.kt / AdvisorConfig.kt / ReviewConfig.kt
+│   ├── AiClientConfig.kt / AdvisorConfig.kt / ReviewConfig.kt
 │   ├── GitHubConfig.kt / RedisConfig.kt / JacksonConfig.kt
 │   ├── LangfuseObservationConfig.kt / ToolObservationConfig.kt
 │   ├── RemoteAgentConfig.kt           # WebClient + ObservationRegistry (traceparent 자동 주입)
@@ -479,10 +442,6 @@ src/main/kotlin/stillframe42/aicodereviewer/
 │   ├── metrics/                       # Micrometer 메트릭 + 이벤트
 │   ├── observability/                 # 기술 중립 관측 포트 (ObservabilityPort, WithSpan)
 │   └── port/CostLogPort.kt
-├── chat/                              # 채팅 기능
-│   ├── domain/port/{in,out}/
-│   ├── application/DefaultChatService.kt
-│   └── adapter/{in/web,out/ai}/
 ├── review/                            # 코드 리뷰 기능
 │   ├── domain/
 │   │   ├── model/                     # CodeReview, CodeIssue, DiffFilterOptions, PrImportance 등
@@ -550,7 +509,6 @@ src/main/resources/
 ├── conventions/{architecture-guide, api-design, kotlin-style, security-checklist}.md
 └── prompts/
     ├── review/{review-system-v1~v13, review-user, review-claim-verification}.st
-    ├── chat/{chat-system, chat-user}.st
     ├── rag/{context-compressor, rag-multi-query}.st
     ├── evaluation/{evaluation-context-precision, evaluation-context-recall, evaluation-answer-relevancy, evaluation-faithfulness}.st
     └── README.md                       # 버전별 변경 이력

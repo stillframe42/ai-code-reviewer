@@ -10,7 +10,7 @@ import org.springframework.context.annotation.Configuration
 import stillframe42.aicodereviewer.core.AiProvider
 
 @Configuration
-class ChatClientConfig {
+class AiClientConfig {
 
     // Anthropic Claude 기반 ChatClient 빈 — ObservationRegistry 연결로 Langfuse 추적 활성화
     @Bean("anthropicChatClient")

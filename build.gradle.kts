@@ -24,7 +24,7 @@ repositories {
 dependencies {
     // Web
     implementation("org.springframework.boot:spring-boot-starter-web")
-    implementation("org.springframework.boot:spring-boot-starter-webflux") // ReactiveAdapterRegistry, ServerSentEvent, WebTestClient
+    implementation("org.springframework.boot:spring-boot-starter-webflux") // ReactiveAdapterRegistry(suspend MVC 브릿지), ReactiveRedisTemplate, WebClient
     implementation("org.springframework.boot:spring-boot-starter-validation")
 
     // Data

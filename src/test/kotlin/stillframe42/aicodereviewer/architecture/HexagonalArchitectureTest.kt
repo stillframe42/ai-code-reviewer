@@ -61,6 +61,6 @@ class HexagonalArchitectureTest {
 
     companion object {
         private const val BASE = "stillframe42.aicodereviewer"
-        private val FEATURES = listOf("agent", "chat", "evaluation", "github", "rag", "review")
+        private val FEATURES = listOf("agent", "evaluation", "github", "rag", "review")
     }
 }

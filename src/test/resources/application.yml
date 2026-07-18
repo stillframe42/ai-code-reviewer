@@ -14,8 +14,6 @@ app:
           output-per-1k: 0.000600
   prompt:
     review-system: classpath:prompts/review/review-system-v10.st
-    chat-system: classpath:prompts/chat/chat-system.st
-    chat-user: classpath:prompts/chat/chat-user.st
   review:
     diff:
       # 파일별 병렬 AI 호출 최대 동시 실행 수 — main application.yml과 동일

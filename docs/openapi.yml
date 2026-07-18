@@ -5,8 +5,6 @@ info:
   version: 1.0.0
 
 tags:
-  - name: chat
-    description: AI 채팅 엔드포인트
   - name: review
     description: AI 코드 리뷰 엔드포인트
   - name: webhook
@@ -17,95 +15,6 @@ tags:
     description: RAG 컨텍스트 조회 엔드포인트 (내부용)
 
 paths:
-  /api/chat:
-    post:
-      operationId: chat
-      summary: 단일 채팅 응답
-      description: AI 프로바이더에게 메시지를 전달하고 단일 응답을 반환합니다.
-      tags:
-        - chat
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ChatRequest'
-            example:
-              message: "다음 코드의 문제점을 알려주세요: fun add(a: Int, b: Int) = a + b"
-              provider: ANTHROPIC
-      responses:
-        '200':
-          description: AI 응답 성공
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ChatResponse'
-              example:
-                answer: "해당 함수는 단순하지만 오버플로우 처리가 없습니다."
-        '400':
-          description: 요청 유효성 검증 실패
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ValidationErrorResponse'
-              example:
-                errors:
-                  message: "메시지를 입력해주세요"
-        '500':
-          description: 서버 내부 오류
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-              example:
-                error: "AI로부터 응답을 받지 못했습니다"
-
-  /api/chat/stream:
-    post:
-      operationId: streamChat
-      summary: SSE 스트리밍 채팅
-      description: AI 프로바이더에게 메시지를 전달하고 응답 토큰을 Server-Sent Events 형식으로 스트리밍합니다.
-      tags:
-        - chat
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ChatRequest'
-            example:
-              message: "코루틴과 쓰레드의 차이를 설명해주세요"
-              provider: ANTHROPIC
-      responses:
-        '200':
-          description: SSE 스트림 시작 성공
-          content:
-            text/event-stream:
-              schema:
-                type: string
-                description: 토큰 단위로 전송되는 SSE 데이터 스트림
-              example: |
-                data: 코루틴은
-                data:  경량
-                data:  스레드입니다.
-        '400':
-          description: 요청 유효성 검증 실패
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ValidationErrorResponse'
-              example:
-                errors:
-                  message: "메시지를 입력해주세요"
-        '500':
-          description: 서버 내부 오류
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-              example:
-                error: "스트리밍 중 오류가 발생했습니다"
-
   /api/review:
     post:
       operationId: reviewCode
@@ -360,19 +269,6 @@ components:
   schemas:
     # ── 요청 스키마 ──────────────────────────────────────────────────────────
 
-    ChatRequest:
-      type: object
-      required:
-        - message
-      properties:
-        message:
-          type: string
-          minLength: 1
-          description: AI에게 전달할 메시지
-          example: "다음 코드의 문제점을 알려주세요"
-        provider:
-          $ref: '#/components/schemas/AiProvider'
-
     ReviewRequest:
       type: object
       required:
@@ -449,15 +345,6 @@ components:
             "src/main/kotlin/**": "FullReview"
 
     # ── 응답 스키마 ──────────────────────────────────────────────────────────
-
-    ChatResponse:
-      type: object
-      required:
-        - answer
-      properties:
-        answer:
-          type: string
-          description: AI 응답 텍스트
 
     CodeReview:
       type: object

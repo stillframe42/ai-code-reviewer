@@ -50,7 +50,7 @@
 | 패키지 | 내용 | 예시 |
 |--------|------|------|
 | `domain/model` | 도메인 모델 (data class) | `CodeReview`, `CodeIssue`, `PrFile` |
-| `domain/port/in` | 인바운드 포트 (UseCase 인터페이스) | `ReviewUseCase`, `ChatUseCase` |
+| `domain/port/in` | 인바운드 포트 (UseCase 인터페이스) | `ReviewUseCase`, `GitHubWebhookUseCase` |
 | `domain/port/out` | 아웃바운드 포트 (외부 시스템 인터페이스) | `AiReviewPort`, `GitHubApiPort` |
 | `domain/service` | 도메인 서비스 (순수 로직) | `DiffPreprocessor`, `FileExtensionClassifier` |
 
@@ -257,7 +257,7 @@ package stillframe42.aicodereviewer.review.adapter.out.persistence
 
 | 계층 | 패턴 | 예시 |
 |------|------|------|
-| 인바운드 포트 (UseCase) | `{기능}UseCase` | `ReviewUseCase`, `ChatUseCase` |
+| 인바운드 포트 (UseCase) | `{기능}UseCase` | `ReviewUseCase`, `GitHubWebhookUseCase` |
 | Application 구현체 | `Default{기능}Service` | `DefaultReviewService` |
 | 아웃바운드 포트 | `{기능}Port` 또는 `Ai{기능}Port` | `AiReviewPort`, `GitHubApiPort` |
 | 인바운드 어댑터 | `{기능}Controller` | `ReviewController` |

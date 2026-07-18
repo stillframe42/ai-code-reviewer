@@ -52,8 +52,8 @@ internal val SAMPLE_QUERIES: List<SampleQuery> = listOf(
     // API (Controller, REST)
     SampleQuery("api-1", "OrderController.kt",
         "src/test/resources/fixtures/rag/sample-queries/OrderController.kt", API),
-    SampleQuery("api-2", "ChatController.kt",
-        "src/test/resources/fixtures/rag/sample-queries/ChatController.kt", API),
+    SampleQuery("api-2", "NotificationController.kt",
+        "src/test/resources/fixtures/rag/sample-queries/NotificationController.kt", API),
 
     // STYLE (Kotlin 컨벤션) — 키워드 미매칭 파일명
     SampleQuery("style-1", "DiffPreprocessor.kt",
