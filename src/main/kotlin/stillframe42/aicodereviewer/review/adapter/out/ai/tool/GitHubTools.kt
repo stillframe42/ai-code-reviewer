@@ -10,7 +10,8 @@ import org.springframework.ai.chat.model.ToolContext
 import org.springframework.ai.tool.annotation.Tool
 import org.springframework.ai.tool.annotation.ToolParam
 import org.springframework.stereotype.Component
-import org.springframework.web.reactive.function.client.WebClientResponseException
+import org.springframework.web.client.HttpClientErrorException
+import org.springframework.web.client.RestClientResponseException
 import stillframe42.aicodereviewer.common.Logging
 import stillframe42.aicodereviewer.common.langfuse.LangfuseTraceContextHolder
 import stillframe42.aicodereviewer.github.domain.model.RepositoryEntry
@@ -190,8 +191,8 @@ class GitHubTools(
             toolObservationPort.endSpanWithError(spanId, e.message ?: e.javaClass.simpleName)
         }.getOrElse { e ->
             when (e) {
-                is WebClientResponseException.NotFound -> notFoundMessage
-                is WebClientResponseException -> "GitHub API 오류 (${e.statusCode}): ${e.message}"
+                is HttpClientErrorException.NotFound -> notFoundMessage
+                is RestClientResponseException -> "GitHub API 오류 (${e.statusCode}): ${e.message}"
                 else -> {
                     logger.warn("{} 실패", toolName, e)
                     "[ERROR] $toolName 실패: ${e.message}"

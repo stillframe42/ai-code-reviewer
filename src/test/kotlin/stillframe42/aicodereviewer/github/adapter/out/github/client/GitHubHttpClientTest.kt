@@ -1,6 +1,5 @@
 package stillframe42.aicodereviewer.github.adapter.out.github.client
 
-import kotlinx.coroutines.runBlocking
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -37,18 +36,17 @@ class GitHubHttpClientTest : AbstractIntegrationTest() {
     }
 
     @Test
-    fun `유효한 Installation ID로 토큰을 발급받는다`() = runBlocking {
+    fun `유효한 Installation ID로 토큰을 발급받는다`() {
         val jwt = jwtGenerator.generate()
         val response = gitHubHttpClient.fetchInstallationToken(WireMockStubs.TEST_INSTALLATION_ID, jwt)
 
         // WireMock stub이 "ghs_test_token"을 반환한다
         assertThat(response.token).startsWith("ghs_")
         assertThat(response.expiresAt).isNotBlank()
-        Unit
     }
 
     @Test
-    fun `유효한 PR 번호로 diff를 조회하면 diff --git을 포함한다`() = runBlocking {
+    fun `유효한 PR 번호로 diff를 조회하면 diff --git을 포함한다`() {
         val jwt = jwtGenerator.generate()
         val tokenResponse = gitHubHttpClient.fetchInstallationToken(WireMockStubs.TEST_INSTALLATION_ID, jwt)
 
@@ -56,11 +54,10 @@ class GitHubHttpClientTest : AbstractIntegrationTest() {
 
         assertThat(diff).isNotBlank()
         assertThat(diff).contains("diff --git")
-        Unit
     }
 
     @Test
-    fun `유효한 PR에 리뷰를 등록하면 양수 review ID가 반환된다`() = runBlocking {
+    fun `유효한 PR에 리뷰를 등록하면 양수 review ID가 반환된다`() {
         val jwt = jwtGenerator.generate()
         val tokenResponse = gitHubHttpClient.fetchInstallationToken(WireMockStubs.TEST_INSTALLATION_ID, jwt)
 
@@ -75,11 +72,10 @@ class GitHubHttpClientTest : AbstractIntegrationTest() {
         )
 
         assertThat(reviewId).isPositive()
-        Unit
     }
 
     @Test
-    fun `등록된 리뷰를 dismiss하면 예외가 발생하지 않는다`() = runBlocking {
+    fun `등록된 리뷰를 dismiss하면 예외가 발생하지 않는다`() {
         val jwt = jwtGenerator.generate()
         val tokenResponse = gitHubHttpClient.fetchInstallationToken(WireMockStubs.TEST_INSTALLATION_ID, jwt)
 
@@ -100,11 +96,10 @@ class GitHubHttpClientTest : AbstractIntegrationTest() {
             reviewId = reviewId,
             token = tokenResponse.token,
         )
-        Unit
     }
 
     @Test
-    fun `디렉토리 경로를 조회하면 항목 목록을 반환한다`() = runBlocking {
+    fun `디렉토리 경로를 조회하면 항목 목록을 반환한다`() {
         val jwt = jwtGenerator.generate()
         val tokenResponse = gitHubHttpClient.fetchInstallationToken(WireMockStubs.TEST_INSTALLATION_ID, jwt)
 
@@ -120,6 +115,5 @@ class GitHubHttpClientTest : AbstractIntegrationTest() {
         assertThat(entries).allMatch { it.name.isNotBlank() }
         assertThat(entries).allMatch { it.path.isNotBlank() }
         assertThat(entries).allMatch { it.type in listOf("file", "dir", "symlink") }
-        Unit
     }
 }

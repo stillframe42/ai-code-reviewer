@@ -1,7 +1,5 @@
 package stillframe42.aicodereviewer.github.adapter.out.github
 
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import org.springframework.stereotype.Component
 import stillframe42.aicodereviewer.github.domain.port.out.GitHubTokenPort
 import stillframe42.aicodereviewer.github.adapter.out.github.client.GitHubHttpClient
@@ -18,7 +16,7 @@ class GitHubAppTokenProvider(
     // 토큰 캐시 — installationId → CachedToken
     private val tokenCache = ConcurrentHashMap<Long, CachedToken>()
 
-    override suspend fun getInstallationToken(installationId: Long): String {
+    override fun getInstallationToken(installationId: Long): String {
         // 유효한 캐시가 있으면 즉시 반환
         tokenCache[installationId]
             ?.takeUnless { it.isExpiredOrExpiringSoon() }
@@ -27,18 +25,17 @@ class GitHubAppTokenProvider(
         return fetchAndCacheToken(installationId)
     }
 
-    private suspend fun fetchAndCacheToken(installationId: Long): String =
-        withContext(Dispatchers.IO) {
-            val jwt = jwtGenerator.generate()
-            val response = gitHubHttpClient.fetchInstallationToken(installationId, jwt)
+    private fun fetchAndCacheToken(installationId: Long): String {
+        val jwt = jwtGenerator.generate()
+        val response = gitHubHttpClient.fetchInstallationToken(installationId, jwt)
 
-            val cached = CachedToken(
-                token = response.token,
-                expiresAt = Instant.parse(response.expiresAt),
-            )
-            tokenCache[installationId] = cached
-            response.token
-        }
+        val cached = CachedToken(
+            token = response.token,
+            expiresAt = Instant.parse(response.expiresAt),
+        )
+        tokenCache[installationId] = cached
+        return response.token
+    }
 
     // 만료 5분 전이면 갱신 대상으로 판단
     internal data class CachedToken(val token: String, val expiresAt: Instant) {

@@ -1,6 +1,5 @@
 package stillframe42.aicodereviewer.github.adapter.out.github
 
-import kotlinx.coroutines.runBlocking
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -28,7 +27,7 @@ class GitHubApiAdapterTest : AbstractIntegrationTest() {
     }
 
     @Test
-    fun `유효한 PR 번호로 diff를 조회하면 내용이 비어있지 않다`() = runBlocking {
+    fun `유효한 PR 번호로 diff를 조회하면 내용이 비어있지 않다`() {
         val prDiff = gitHubApiPort.getPrDiff(
             repositoryFullName = WireMockStubs.TEST_REPO,
             pullRequestNumber = WireMockStubs.TEST_PR_NUMBER,
@@ -38,11 +37,10 @@ class GitHubApiAdapterTest : AbstractIntegrationTest() {
         assertThat(prDiff).isNotBlank()
         // unified diff 형식은 "diff --git"으로 시작한다
         assertThat(prDiff).contains("diff --git")
-        Unit
     }
 
     @Test
-    fun `PR 파일 목록을 조회하면 파일 정보가 반환된다`() = runBlocking {
+    fun `PR 파일 목록을 조회하면 파일 정보가 반환된다`() {
         val files = gitHubApiPort.getPrFiles(
             repositoryFullName = WireMockStubs.TEST_REPO,
             pullRequestNumber = WireMockStubs.TEST_PR_NUMBER,
@@ -54,11 +52,10 @@ class GitHubApiAdapterTest : AbstractIntegrationTest() {
             assertThat(file.filename).isNotBlank()
             assertThat(file.changes).isGreaterThanOrEqualTo(0)
         }
-        Unit
     }
 
     @Test
-    fun `유효한 PR에 리뷰를 등록하면 양수 review ID가 반환된다`() = runBlocking {
+    fun `유효한 PR에 리뷰를 등록하면 양수 review ID가 반환된다`() {
         val reviewId = gitHubApiPort.postPrReview(
             repositoryFullName = WireMockStubs.TEST_REPO,
             pullRequestNumber = WireMockStubs.TEST_PR_NUMBER,
@@ -67,11 +64,10 @@ class GitHubApiAdapterTest : AbstractIntegrationTest() {
         )
 
         assertThat(reviewId).isPositive()
-        Unit
     }
 
     @Test
-    fun `등록된 REQUEST_CHANGES 리뷰를 dismiss하면 예외가 발생하지 않는다`() = runBlocking {
+    fun `등록된 REQUEST_CHANGES 리뷰를 dismiss하면 예외가 발생하지 않는다`() {
         // REQUEST_CHANGES 타입만 dismiss 가능 — stub은 @BeforeEach에서 reviewId=9001L로 등록됨
         val reviewId = gitHubApiPort.postPrReview(
             repositoryFullName = WireMockStubs.TEST_REPO,
@@ -89,6 +85,5 @@ class GitHubApiAdapterTest : AbstractIntegrationTest() {
             reviewId = reviewId,
             installationId = WireMockStubs.TEST_INSTALLATION_ID,
         )
-        Unit
     }
 }

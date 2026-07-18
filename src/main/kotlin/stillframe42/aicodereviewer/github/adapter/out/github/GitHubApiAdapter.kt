@@ -18,7 +18,7 @@ class GitHubApiAdapter(
 ) : GitHubApiPort {
 
     // PR의 unified diff를 조회한다
-    override suspend fun getPrDiff(
+    override fun getPrDiff(
         repositoryFullName: String,
         pullRequestNumber: Int,
         installationId: Long,
@@ -28,7 +28,7 @@ class GitHubApiAdapter(
     }
 
     // PR의 변경 파일 목록과 메타데이터를 조회한다
-    override suspend fun getPrFiles(
+    override fun getPrFiles(
         repositoryFullName: String,
         pullRequestNumber: Int,
         installationId: Long,
@@ -39,7 +39,7 @@ class GitHubApiAdapter(
     }
 
     // PR Reviews API로 코드 리뷰를 등록하고 생성된 review ID를 반환한다
-    override suspend fun postPrReview(
+    override fun postPrReview(
         repositoryFullName: String,
         pullRequestNumber: Int,
         review: PrReview,
@@ -56,7 +56,7 @@ class GitHubApiAdapter(
     }
 
     // 기존 리뷰를 dismiss한다 — 새 커밋 push 시 이전 리뷰 무효화에 사용
-    override suspend fun dismissPrReview(
+    override fun dismissPrReview(
         repositoryFullName: String,
         pullRequestNumber: Int,
         reviewId: Long,
