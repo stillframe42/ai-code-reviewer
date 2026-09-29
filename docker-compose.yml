@@ -7,7 +7,7 @@ services:
       POSTGRES_USER: aireviewer
       POSTGRES_PASSWORD: aireviewer
     ports:
-      - "15432:5432"
+      - "127.0.0.1:15432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./docker/init:/docker-entrypoint-initdb.d   # 초기화 스크립트 마운트
@@ -25,7 +25,7 @@ services:
       postgres:
         condition: service_healthy
     ports:
-      - "3000:3000"
+      - "127.0.0.1:3000:3000"
     environment:
       DATABASE_URL: postgresql://aireviewer:aireviewer@postgres:5432/langfuse
       NEXTAUTH_URL: http://localhost:3000
@@ -37,7 +37,7 @@ services:
     image: redis:7-alpine
     container_name: aireviewer-redis
     ports:
-      - "16379:6379"
+      - "127.0.0.1:16379:6379"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
@@ -48,7 +48,7 @@ services:
     build: ../ai-agent-service
     container_name: aireviewer-agent
     ports:
-      - "8081:8081"
+      - "127.0.0.1:8081:8081"
     environment:
       OPENAI_API_KEY: ${OPENAI_API_KEY}
       GITHUB_TOKEN: ${GITHUB_TOKEN}
